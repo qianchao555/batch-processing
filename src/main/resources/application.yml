@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: springbatch
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
+    username: root
+    password: 919550
+  batch:
+  main:
+    allow-bean-definition-overriding: true
+
