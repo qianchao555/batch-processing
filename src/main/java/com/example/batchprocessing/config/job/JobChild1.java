@@ -3,7 +3,6 @@ package com.example.batchprocessing.config.job;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -18,12 +17,12 @@ import org.springframework.context.annotation.Configuration;
  * @projectName:batch-processing
  * @see:com.example.batchprocessing.config.job
  * @author:xiaoyige
- * @createTime:2021/11/1 22:19
+ * @createTime:2021/11/2 21:38
  * @version:1.0
  */
 @Configuration
-@EnableBatchProcessing
-public class JobDemo {
+public class JobChild1 {
+
     @Autowired
     private JobBuilderFactory jobBuilderFactory;
 
@@ -31,22 +30,19 @@ public class JobDemo {
     private StepBuilderFactory stepBuilderFactory;
 
     @Bean
-    public Job job(){
-        return jobBuilderFactory.get("job")
-                .start(step1())
-                .on("COMPLETED").to(step2())
-                .from(step2()).on("COMPLETED").to(step3())
-                .from(step3()).end()
+    public Job JobChildOne(){
+        return jobBuilderFactory.get("JobChildOne")
+                .start(jobChildStep3())
                 .build();
     }
 
     @Bean
-    public Step step3() {
-        return stepBuilderFactory.get("step3").tasklet(
+    public Step jobChildStep1() {
+        return stepBuilderFactory.get("jobChildStep1").tasklet(
                 new Tasklet() {
                     @Override
                     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-                        System.out.println("3333");
+                        System.out.println("jobChildStep1");
                         return RepeatStatus.FINISHED;
                     }
                 }
@@ -54,12 +50,12 @@ public class JobDemo {
     }
 
     @Bean
-    public Step step2() {
-        return stepBuilderFactory.get("step2").tasklet(
+    public Step jobChildStep2() {
+        return stepBuilderFactory.get("jobChildStep2").tasklet(
                 new Tasklet() {
                     @Override
                     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-                        System.out.println("22222");
+                        System.out.println("jobChildStep2");
                         return RepeatStatus.FINISHED;
                     }
                 }
@@ -67,12 +63,12 @@ public class JobDemo {
     }
 
     @Bean
-    public Step step1() {
-        return stepBuilderFactory.get("step1").tasklet(
+    public Step jobChildStep3() {
+        return stepBuilderFactory.get("jobChildStep3").tasklet(
                 new Tasklet() {
                     @Override
                     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-                        System.out.println("11111");
+                        System.out.println("jobChildStep3");
                         return RepeatStatus.FINISHED;
                     }
                 }
