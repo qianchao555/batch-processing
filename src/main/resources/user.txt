@@ -1,0 +1,7 @@
+id,name,address,age,nation
+1,qianchao,cd,12,zg
+2,ych,rb,44,zg
+3,qiantian,cd,6,zg
+4,qianlian,fs,33,zg
+5,xulanying,fs,89,zg
+6,qianzegao,fs,89,zg

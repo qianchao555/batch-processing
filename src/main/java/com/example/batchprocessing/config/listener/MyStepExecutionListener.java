@@ -1,9 +1,9 @@
 package com.example.batchprocessing.config.listener;
 
-import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.*;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.Map;
 
 /**
  * @description:
@@ -15,9 +15,10 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class MyStepExecutionListener implements StepExecutionListener {
+    Map<String, JobParameter> parameters;
     @Override
     public void beforeStep(StepExecution stepExecution) {
-
+         parameters = stepExecution.getJobParameters().getParameters();
     }
 
     @Override

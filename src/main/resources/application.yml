@@ -7,6 +7,9 @@ spring:
     username: root
     password: 919550
   batch:
+    job:
+      enabled: false #任务自动执行 关闭
+  #      names: parentJob   #父Job名字
   main:
     allow-bean-definition-overriding: true
 
