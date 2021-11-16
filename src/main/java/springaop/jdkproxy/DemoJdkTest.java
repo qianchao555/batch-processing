@@ -12,7 +12,7 @@ public class DemoJdkTest {
     public static void main(String[] args) {
         //需要增强的类
         DayWorkImpl dayWork=new DayWorkImpl();
-
+        //代理类
         TimeHandler timeHandler=new TimeHandler(dayWork);
         /**
          * Proxy.newProxyInstance：返回代理类对象。创建的代理对象是在JVM运行时动态生成的一个对象，
