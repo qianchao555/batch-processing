@@ -1,11 +1,8 @@
 package springaop.aop;
 
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.After;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.aspectj.lang.annotation.*;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -17,6 +14,9 @@ import org.springframework.stereotype.Component;
 @Component
 @Aspect
 public class Broker {
+    //切入点
+    @Pointcut("execution (* springaop.aop.Landlord.service())")
+    public void aspectPoint(){}
 //    @Before("execution (* springaop.Landlord.service())")
 //    public void before(){
 //        System.out.println("带租客看房");
@@ -27,7 +27,8 @@ public class Broker {
 //    public void after(){
 //        System.out.println("交钥匙");
 //    }
-    @Around("execution (* springaop.aop.Landlord.service())")
+    //aspectPoint切入点  可以像上面一样写在属性里面
+    @Around("aspectPoint()")
     public void around(ProceedingJoinPoint proceedingJoinPoint){
         System.out.println("前置通知：带租客看房");
         System.out.println("前置通知：谈价格");

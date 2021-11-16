@@ -1,0 +1,3 @@
+@Order定义Spring容器加载Bean的顺序
+order的值越小，优先级越高
+order如果不标注数字，默认最低优先级，因为其默认值是int最大值

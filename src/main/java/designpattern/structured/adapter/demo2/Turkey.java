@@ -1,0 +1,12 @@
+package designpattern.structured.adapter.demo2;
+
+/**
+ * 火鸡
+ * @Author qianchao
+ * @Date 2021/11/16
+ * @Version OPRA V1.0
+ **/
+public interface Turkey {
+    void gobble();
+    void fly();
+}
