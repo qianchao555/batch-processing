@@ -1,4 +1,4 @@
-package springaop;
+package springaop.aop;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.After;
@@ -27,7 +27,7 @@ public class Broker {
 //    public void after(){
 //        System.out.println("交钥匙");
 //    }
-    @Around("execution (* springaop.Landlord.service())")
+    @Around("execution (* springaop.aop.Landlord.service())")
     public void around(ProceedingJoinPoint proceedingJoinPoint){
         System.out.println("前置通知：带租客看房");
         System.out.println("前置通知：谈价格");

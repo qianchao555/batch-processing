@@ -18,6 +18,7 @@ public class TimeHandler implements InvocationHandler {
 
     /**
      * 代理实例、调用的方法、方法的参数列表
+     *
      * @param proxy
      * @param method
      * @param args
@@ -30,6 +31,8 @@ public class TimeHandler implements InvocationHandler {
         //调用真正的方法
         Object invoke = method.invoke(target, args);
         System.out.println("饭后洗碗。。");
+        System.out.println(invoke);
+
         return invoke;
     }
 }
