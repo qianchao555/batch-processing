@@ -1,5 +1,7 @@
 package collection.list;
 
+import java.util.Vector;
+
 /**
  * @description:
  * @author:xiaoyige
@@ -7,4 +9,9 @@ package collection.list;
  * @version:1.0
  */
 public class Demo {
+
+    public static void main(String[] args) {
+    Vector vector=new Vector(5);
+        vector.add("1");
+    }
 }
