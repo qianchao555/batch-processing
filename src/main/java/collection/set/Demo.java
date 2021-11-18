@@ -21,6 +21,12 @@ public class Demo {
             Object next =  iterator.next();
 
         }
+        String s = new String("a");
+        String s1 = new String("a");
+        String s2="a";
+        System.out.println(s.equals(s1));
+        System.out.println(s==s2);
+        System.out.println(s1==s2);
 
 
     }
