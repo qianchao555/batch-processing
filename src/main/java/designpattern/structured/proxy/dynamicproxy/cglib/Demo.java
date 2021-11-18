@@ -11,7 +11,9 @@ import designpattern.structured.proxy.staticproxy.BuyHouseImpl;
  **/
 public class Demo {
     public static void main(String[] args) {
+        //被代理对象
         BuyHouse buyHouse=new BuyHouseImpl();
+        //代理对象
         CglibProxy cglibProxy=new CglibProxy();
         BuyHouseImpl buyHouseCglibProxy= (BuyHouseImpl) cglibProxy.getInstance(buyHouse);
         buyHouseCglibProxy.buyHouse();
