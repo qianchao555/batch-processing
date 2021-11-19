@@ -12,12 +12,20 @@ import java.util.Map;
 public class Demo {
     public static void main(String[] args) {
         Map map = new HashMap<>();
-        map.put("qc", "钱超");
-        map.put("qc2", "钱超");
-        System.out.println(map);
-        int n = 15;
-        n |= n >>> 1;
-        System.out.println(n);
+        map.put("qc1", "钱超1");
+        map.put("qc2", "钱超2");
+        map.put("qc3", "钱超3");
+        map.put("qc4", "钱超4");
+        map.put("qc5", "钱超5");
+        map.put("qc6", "钱超6");
+        map.put("qc7", "钱超7");
+        map.put("qc8", "钱超8");
+        map.put("qc9", "钱超9");
+        map.put("qc10", "钱超10");
+        map.put("qc11", "钱超11");
+        map.put("qc12", "钱超12");
+        map.put("qc13", "钱超13");
+
 
     }
 }
