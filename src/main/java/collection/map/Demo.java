@@ -1,5 +1,6 @@
 package collection.map;
 
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +25,9 @@ public class Demo {
         map.put("qc10", "钱超10");
         map.put("qc11", "钱超11");
         map.put("qc12", "钱超12");
+        //触发第二次扩容机制
         map.put("qc13", "钱超13");
+
 
 
     }

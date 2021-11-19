@@ -27,6 +27,7 @@ public class Demo {
         System.out.println(s.equals(s1));
         System.out.println(s==s2);
         System.out.println(s1==s2);
+        System.out.println("a".equals(null));
 
 
     }
