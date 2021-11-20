@@ -10,7 +10,7 @@ package collection.map;
 public class SimulationBitMap {
     //    一亿个整数的数据量去重
     public static void main(String[] args) {
-        int n = 100;
+        int n = 100000;
         new SimulationBitMap().create(n);
 
 
