@@ -1,6 +1,5 @@
-package collection.map;
+package collection.map.hashmap;
 
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 
