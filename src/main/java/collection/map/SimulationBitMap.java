@@ -3,14 +3,16 @@ package collection.map;
 /**
  * 一亿个整数的数据量去重
  *
+ * bit-map来实现
+ *
  * @Author qianchao
  * @Date 2021/11/19
  * @Version OPRA V1.0
  **/
 public class SimulationBitMap {
-    //    一亿个整数的数据量去重
+
     public static void main(String[] args) {
-        int n = 100000;
+        int n = 16;
         new SimulationBitMap().create(n);
 
 
@@ -26,7 +28,7 @@ public class SimulationBitMap {
             add(bits, i);
         }
 
-        System.out.println(contains(bits, 11));
+        System.out.println(contains(bits, 16));
 
         int index = 1;
         for(byte bit : bits){
@@ -66,7 +68,8 @@ public class SimulationBitMap {
      * @param num
      */
     public void add(byte[] bits, int num) {
-        bits[getIndex(num)] |= 1 << getPosition(num);
+        bits[getIndex(num)]= (byte) (bits[getIndex(num)] | 1 << getPosition(num));
+//        bits[getIndex(num)] |= 1 << getPosition(num);
     }
 
     /**
