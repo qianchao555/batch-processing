@@ -54,7 +54,7 @@ public class ArrayQueueDemo {
                 case 'e':
                     //退出
                     scanner.close();
-                    loop=false;
+                    loop = false;
                 default:
                     break;
             }
@@ -79,10 +79,10 @@ class ArrayQueue {
     public ArrayQueue(int maxSize) {
         this.maxSize = maxSize;
         arr = new int[maxSize];
-        //队头指向队列头的前一个位置，并不是指向数据
-        front = -1;
-        //指向队尾，指向队列的数据
-        rear = -1;
+        //队头指向队列头的第一个位置
+        front = 0;
+        //指向队尾的前一个数据,队尾位置为null
+        rear = 0;
     }
 
     /**
@@ -91,7 +91,7 @@ class ArrayQueue {
      * @return
      */
     public boolean isFull() {
-        return rear == maxSize - 1;
+        return front == (rear + 1) % maxSize;
     }
 
     /**
@@ -114,8 +114,10 @@ class ArrayQueue {
             System.out.println("已经满了！！");
             return;
         }
-        rear++;
+        //
         arr[rear] = n;
+        //将rear后移，需要取模
+        rear = (rear + 1) % maxSize;
     }
 
     /**
@@ -128,8 +130,13 @@ class ArrayQueue {
         if (isEmpty()) {
             throw new RuntimeException("队列为空！！");
         }
-        front++;
-        return arr[front];
+        //front是指向队列头的
+        int tempFront = front;
+        //front后移
+        front = (front + 1) % maxSize;
+        //返回
+        return tempFront;
+
     }
 
     /**
@@ -140,13 +147,14 @@ class ArrayQueue {
     public void showQueue() {
         //判断队列是否满了
         if (isEmpty()) {
-            if (isEmpty()) {
-                System.out.println("队列空的！");
-                return;
-            }
+            System.out.println("队列空的！");
+            return;
         }
-        for (int i = 0; i < arr.length; i++) {
-            System.out.println(arr[i]);
+        //从front开始遍历，遍历多少个元素
+        //当前队列有效个数
+        int size = (rear + maxSize - front) % maxSize;
+        for (int i = front; i < size; i++) {
+            System.out.println(arr[i % maxSize]);
         }
     }
 
@@ -158,10 +166,8 @@ class ArrayQueue {
     public int peek() {
         //判断队列是否满了
         if (isEmpty()) {
-            if (isEmpty()) {
-                throw new RuntimeException("队列为空！！");
-            }
+            throw new RuntimeException("队列为空！！");
         }
-        return arr[front + 1];
+        return arr[front];
     }
 }
