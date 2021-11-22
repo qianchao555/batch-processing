@@ -24,9 +24,10 @@ public class SimulationBitMap {
     public byte[] create(int n){
         byte[] bits = new byte[getIndex(n) + 1];
 
-        for(int i = 0; i < n; i++){
-            add(bits, i);
-        }
+//        for(int i = 0; i < n; i++){
+//            add(bits, i);
+//        }
+        add(bits,10);
 
         System.out.println(contains(bits, 16));
 
@@ -58,17 +59,22 @@ public class SimulationBitMap {
      * @return
      */
     public int getPosition(int num) {
-        return num & 0x07;
+//        return num & 0x07;
+        return num%8;
     }
 
     /**
      * 将所在位置从0变成1，其它位置不变
      *
+     * 这里相当于就去重了  因为每个数字的位置是被确定了的   有重复数据进来 还是原来的值
      * @param bits
      * @param num
      */
     public void add(byte[] bits, int num) {
-        bits[getIndex(num)]= (byte) (bits[getIndex(num)] | 1 << getPosition(num));
+//        bits[getIndex(num)]= (byte) (bits[getIndex(num)] | 1 << getPosition(num));
+        showByte(bits[getIndex(num)]);
+        System.out.println(bits[getIndex(num)] |= 1 << getPosition(num));
+        //00001000
 //        bits[getIndex(num)] |= 1 << getPosition(num);
     }
 
