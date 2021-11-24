@@ -1,4 +1,4 @@
-package datastructure.link;
+package datastructure.link.singlelinktable;
 
 /**
  * 单链表
