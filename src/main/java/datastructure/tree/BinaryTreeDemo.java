@@ -29,15 +29,25 @@ public class BinaryTreeDemo {
 //        System.out.println("后序：");
 //        root.postOrder();
 
-        System.out.print("前序查找No=2：");
-        HeroNode searchNode1 = root.preOrderSearch(3);
-        System.out.println(searchNode1);
-        System.out.print("中序查找No=2：");
-        HeroNode searchNode2 = root.infixOrderSearch(3);
-        System.out.println(searchNode2);
-        System.out.print("后序查找No=2：");
-        HeroNode searchNode3 = root.postOrderSearch(3);
-        System.out.println(searchNode3);
+//        System.out.print("前序查找No=2：");
+//        HeroNode searchNode1 = root.preOrderSearch(3);
+//        System.out.println(searchNode1);
+//        System.out.print("中序查找No=2：");
+//        HeroNode searchNode2 = root.infixOrderSearch(3);
+//        System.out.println(searchNode2);
+//        System.out.print("后序查找No=2：");
+//        HeroNode searchNode3 = root.postOrderSearch(3);
+//        System.out.println(searchNode3);
+
+        //删除节点
+        System.out.println("删除前");
+        System.out.println("前序遍历");
+        root.preOrder();
+        System.out.println("删除后：");
+        System.out.println("前序遍历");
+        root.del(2);
+        root.preOrder();
+
     }
 
 }

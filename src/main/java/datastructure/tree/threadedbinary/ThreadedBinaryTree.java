@@ -1,21 +1,56 @@
-package datastructure.tree;
+package datastructure.tree.threadedbinary;
 
 /**
- * @description:
+ * 线索化 二叉树
+ *
  * @author:xiaoyige
  * @createTime:2021/11/26 21:13
  * @version:1.0
  */
-public class BinaryTree {
+public class ThreadedBinaryTree {
     private HeroNode root;
+    //为了实现线索化，需要创建指向当前节点的前驱节点
+    private HeroNode pre;
+    private HeroNode next;
 
     /**
      * 构造器 给根节点赋值
      *
      * @param root
      */
-    public BinaryTree(HeroNode root) {
+    public ThreadedBinaryTree(HeroNode root) {
         this.root = root;
+    }
+
+    /**
+     * 中序线索化
+     */
+    public void threadedNodes(HeroNode heroNode) {
+        //不能线索化
+        if (heroNode == null) {
+            return;
+        }
+        //线索化左子树
+        threadedNodes(heroNode.getLeft());
+        //线索化当前节点
+        //处理当前节点的前驱节点
+        if (heroNode.getLeft() == null) {
+            //当前节点的左指针指向前驱节点
+            heroNode.setLeft(pre);
+            //修改当前节点的左指针类型，指向前驱节点
+            heroNode.setLeftType(1);
+        }
+        //处理后继节点
+        if (pre!=null && pre.getRight() == null ) {
+            //前驱节点的右指针指向当前节点
+            pre.setRight(heroNode);
+            pre.setRightType(1);
+        }
+        //每处理一个节点后，让当前节点是下一个节点的前驱节点
+        pre=heroNode;
+
+        //线索化右子树
+        threadedNodes(heroNode.getRight());
     }
 
     //前序

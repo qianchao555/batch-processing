@@ -1,4 +1,4 @@
-package datastructure.tree;
+package datastructure.tree.threadedbinary;
 
 public class HeroNode {
     private int no;
@@ -6,8 +6,30 @@ public class HeroNode {
 
     //左子树
     private HeroNode left;
+
+    //leftType==0 指向左子树，==1  指向前驱节点
+    private int leftType;
+
+    //rightType==0 指向右边子树，==1  指向后继节点
+    private int rightType;
     //右子树
     private HeroNode right;
+
+    public int getLeftType() {
+        return leftType;
+    }
+
+    public void setLeftType(int leftType) {
+        this.leftType = leftType;
+    }
+
+    public int getRightType() {
+        return rightType;
+    }
+
+    public void setRightType(int rightType) {
+        this.rightType = rightType;
+    }
 
     public HeroNode(int no, String name) {
         this.no = no;
