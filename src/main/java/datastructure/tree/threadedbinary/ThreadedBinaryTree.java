@@ -41,13 +41,13 @@ public class ThreadedBinaryTree {
             heroNode.setLeftType(1);
         }
         //处理后继节点
-        if (pre!=null && pre.getRight() == null ) {
+        if (pre != null && pre.getRight() == null) {
             //前驱节点的右指针指向当前节点
             pre.setRight(heroNode);
             pre.setRightType(1);
         }
         //每处理一个节点后，让当前节点是下一个节点的前驱节点
-        pre=heroNode;
+        pre = heroNode;
 
         //线索化右子树
         threadedNodes(heroNode.getRight());
@@ -119,6 +119,28 @@ public class ThreadedBinaryTree {
             }
         } else {
             System.out.println("空树！");
+        }
+    }
+
+    //遍历线索化二叉树  按照什么顺序线索化的 那么就按照什么顺序遍历
+    public void threadedList() {
+        //从root开始遍历
+        HeroNode node = root;
+        while (node != null) {
+            //找到leftType==1的节点
+            //后面随着遍历而变化，当leftType==1,说明该节点是按照线索化处理后的有效节点
+            while (node.getLeftType() == 0) {
+                node = node.getLeft();
+            }
+            System.out.println(node);
+            //如果当前节点的右指针指向的是后继节点，就一直输出
+            while (node.getRightType() == 1) {
+                //获取当前节点的后继节点
+                node = node.getRight();
+                System.out.println(node);
+            }
+            //替换遍历的节点
+            node = node.getRight();
         }
     }
 }

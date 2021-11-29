@@ -30,5 +30,9 @@ public class ThreadedBinaryDemo {
         HeroNode right = heroNode5.getRight();
         System.out.println("10号后继："+right);
 
+        //使用线索化方式遍历二叉树
+        System.out.println("使用线索化方式遍历二叉树");
+        threadedBinaryTree.threadedList();
+
     }
 }
