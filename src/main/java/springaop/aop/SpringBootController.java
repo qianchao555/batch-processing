@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
  * @ClassName SpringBootController
  * @Author qianchao
  * @Date 2021/11/15
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 @Controller
 public class SpringBootController {

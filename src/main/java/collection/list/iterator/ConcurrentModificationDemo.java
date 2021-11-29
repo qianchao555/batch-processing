@@ -8,7 +8,7 @@ import java.util.List;
  * @ClassName ConcurrentModificationDemo
  * @Author qianchao
  * @Date 2021/11/18
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class ConcurrentModificationDemo {
     public static void main(String[] args) {

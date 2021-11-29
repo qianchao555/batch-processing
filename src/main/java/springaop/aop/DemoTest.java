@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @ClassName DemoTest
  * @Author qianchao
  * @Date 2021/11/15
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 @SpringBootApplication
 public class DemoTest {

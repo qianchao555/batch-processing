@@ -4,7 +4,7 @@ package designpattern.structured.adapter.demo3;
  * @ClassName macAdapter
  * @Author qianchao
  * @Date 2021/11/16
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class MacAdapter extends DefaultAdapter{
     private AC ac;

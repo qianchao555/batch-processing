@@ -4,7 +4,7 @@ package designpattern.structured.adapter.demo2;
  * @ClassName WildTurkey
  * @Author qianchao
  * @Date 2021/11/16
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class WildTurkey implements Turkey {
 

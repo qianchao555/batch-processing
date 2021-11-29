@@ -6,7 +6,7 @@ import java.lang.reflect.Proxy;
  * @ClassName DemoJdkTest
  * @Author qianchao
  * @Date 2021/11/15
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class DemoJdkTest {
     public static void main(String[] args) {

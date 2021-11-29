@@ -7,7 +7,7 @@ import designpattern.structured.proxy.staticproxy.BuyHouseImpl;
  * @ClassName Demo
  * @Author qianchao
  * @Date 2021/11/17
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class Demo {
     public static void main(String[] args) {

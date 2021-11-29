@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
  * 动态处理器
  * @Author qianchao
  * @Date 2021/11/17
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class DynamicProxyHandler implements InvocationHandler {
     //需要代理的目标对象

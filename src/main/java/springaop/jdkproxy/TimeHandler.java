@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
  * @Author qianchao
  * JDK动态代理类
  * @Date 2021/11/15
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class TimeHandler implements InvocationHandler {
     private Object target;

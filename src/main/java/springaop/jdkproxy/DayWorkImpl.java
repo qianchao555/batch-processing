@@ -4,7 +4,7 @@ package springaop.jdkproxy;
  * DayWorkImpl ：目标类，必须实现接口，才能使用JDK动态代理
  * @Author qianchao
  * @Date 2021/11/15
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class DayWorkImpl implements IDayWork{
 

@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
  * @ClassName CglibProxy
  * @Author qianchao
  * @Date 2021/11/17
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class CglibProxy implements MethodInterceptor {
     //目标对象

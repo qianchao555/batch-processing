@@ -4,7 +4,7 @@ package designpattern.structured.adapter.demo2;
  * @ClassName TurkeyAdapter   对象的适配器模式
  * @Author qianchao
  * @Date 2021/11/16
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class TurkeyAdapter implements Duck {
     //将火鸡包装进适配器  适配者对象

@@ -4,7 +4,7 @@ package datastructure.link.singlecircularlink;
  * @ClassName MyJosephuCicle
  * @Author qianchao
  * @Date 2021/11/25
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class MyJosephuCicle {
     private Boy first;

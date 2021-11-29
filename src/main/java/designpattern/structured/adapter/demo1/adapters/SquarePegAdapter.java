@@ -13,7 +13,7 @@ import designpattern.structured.adapter.demo1.square.SquarePeg;
  * 适配器允许将方钉安装到圆孔中
  * @Author qianchao
  * @Date 2021/11/16
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class SquarePegAdapter extends RoundPeg {
     private SquarePeg squarePeg;

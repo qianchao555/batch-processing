@@ -9,7 +9,7 @@ import designpattern.structured.adapter.demo1.square.SquarePeg;
  * @ClassName DemoTest
  * @Author qianchao
  * @Date 2021/11/16
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class DemoTest {
     public static void main(String[] args) {

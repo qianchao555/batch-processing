@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
  * @ClassName Landlord
  * @Author qianchao
  * @Date 2021/11/15
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 @Component
 public class Landlord {

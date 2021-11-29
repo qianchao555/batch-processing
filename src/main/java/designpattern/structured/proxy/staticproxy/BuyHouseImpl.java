@@ -4,7 +4,7 @@ package designpattern.structured.proxy.staticproxy;
  * @ClassName BuyHouseImpl
  * @Author qianchao
  * @Date 2021/11/17
- * @Version OPRA V1.0
+ * @Version designpattern V1.0
  **/
 public class BuyHouseImpl implements BuyHouse{
     @Override
