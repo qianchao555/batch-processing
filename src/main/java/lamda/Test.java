@@ -8,7 +8,7 @@ public class Test {
      * @ClassName Test
      * @Author qianchao
      * @Date 2021/11/1
-     * @Version OPRA V1.0
+     * @Version java8 V1.0
      **/
     public static void main(String[] args) {
         TestStream<String> stream=new TestStream<>();

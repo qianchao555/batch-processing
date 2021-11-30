@@ -6,7 +6,7 @@ import java.util.Observable;
  * 被观察者 实现Java自带的观察者
  * @Author qianchao
  * @Date 2021/11/29
- * @Version OPRA V1.0
+ * @Version java8 V1.0
  **/
 public class MyObservable extends Observable {
     public static void main(String[] args) {

@@ -1,14 +1,12 @@
 package lamda.example;
 
-import lombok.Data;
 
-@Data
 public class Employee {
     /**
      * @ClassName Employee
      * @Author qianchao
      * @Date 2021/11/2
-     * @Version OPRA V1.0
+     * @Version java8 V1.0
      **/
     private String name;
 

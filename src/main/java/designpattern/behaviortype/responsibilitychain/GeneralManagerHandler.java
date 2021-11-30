@@ -4,7 +4,7 @@ package designpattern.behaviortype.responsibilitychain;
  * @ClassName GeneralManagerHandler
  * @Author qianchao
  * @Date 2021/11/29
- * @Version OPRA V1.0
+ * @Version java8 V1.0
  **/
 public class GeneralManagerHandler extends AbstractHandler{
 

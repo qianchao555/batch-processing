@@ -5,7 +5,7 @@ public class Java8Tester {
      * @ClassName Java8Tester
      * @Author qianchao
      * @Date 2021/11/2
-     * @Version OPRA V1.0
+     * @Version java8 V1.0
      **/
     public static void main(String[] args) {
         Java8Tester java8Tester=new Java8Tester();
