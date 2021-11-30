@@ -1,8 +1,6 @@
 package lamda.predicate;
 
-import lombok.Data;
 
-@Data
 public class Employee {
 /**
  * @ClassName Employee
