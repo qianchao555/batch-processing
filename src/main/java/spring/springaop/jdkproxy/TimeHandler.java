@@ -1,4 +1,4 @@
-package springaop.jdkproxy;
+package spring.springaop.jdkproxy;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;

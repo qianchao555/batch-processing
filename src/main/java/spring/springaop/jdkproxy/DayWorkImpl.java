@@ -1,4 +1,4 @@
-package springaop.jdkproxy;
+package spring.springaop.jdkproxy;
 
 /**
  * DayWorkImpl ：目标类，必须实现接口，才能使用JDK动态代理

@@ -1,4 +1,4 @@
-package springaop.cglibproxy;
+package spring.springaop.cglibproxy;
 
 import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.cglib.proxy.MethodInterceptor;

@@ -1,4 +1,4 @@
-package springaop.cglibproxy;
+package spring.springaop.cglibproxy;
 
 import org.springframework.aop.framework.ProxyFactoryBean;
 

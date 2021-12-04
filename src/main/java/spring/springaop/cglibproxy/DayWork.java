@@ -1,4 +1,4 @@
-package springaop.cglibproxy;
+package spring.springaop.cglibproxy;
 
 /**
  * @ClassName DayWork

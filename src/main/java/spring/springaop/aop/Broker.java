@@ -1,8 +1,7 @@
-package springaop.aop;
+package spring.springaop.aop;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Aspect
 public class Broker {
     //切入点
-    @Pointcut("execution (* springaop.aop.Landlord.service())")
+    @Pointcut("execution (* spring.springaop.aop.Landlord.service())")
     public void aspectPoint(){}
 //    @Before("execution (* springaop.Landlord.service())")
 //    public void before(){
