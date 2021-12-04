@@ -29,6 +29,69 @@ Spring Aop是方法级别的Aop框架
 7. Proxy
    - 生成的代理对象
 
+---
+
+#### 面试题
+
+##### spring aop 常用注解
+
+1. 那几个通知 before、after 、around、 
+2. spring4和spring5对这几个注解有啥区别
+3. spring4 正常情况下：环绕之前、**before**、环绕之后、**after**、*afterreturn*ing
+4. spring4异常：环绕之前、**before**、**after**、**afterThrowing**
+5. spring5正常：环绕之前、before、afterRetruing、after、环绕之后
+6. spring5异常：环绕之前、before、afterThrowing、after
+
+##### spring的三级缓存  
+
+循环依赖下面给出解释
+
+##### spring循环依赖
+
+1. 什么是循环依赖
+
+   1. ~~~java
+      //多个Bean之间相互依赖，形成一个闭环
+      //案例：循环依赖
+      class A {
+          @Autowired
+          private B b;
+      }
+      class B {
+          @Autowired
+          private C c;
+      }
+      class C {
+          @Autowired
+          private A a;
+      }
+      //获取Bean时，会报错
+      //报错BeanCurrentlyInCreationException 循环依赖问题
+      ~~~
+
+2. 两种注入方式对循环依赖的影响
+
+   - 官网解释
+   - 构造方法依赖注入可能造成循环依赖
+   - **setter方式注入比较好**
+   - 结论：ABC循环依赖问题 只要注入方式是setter且是Singleton就不会有循环依赖问题
+
+3. **spring内部解决方式**：三级缓存解决
+
+   - spring三级缓存DefaultSingletonBeanRegistry
+   - 也就是三个Map
+   - 一级缓存ConcurrentHashMap  singletonObjects
+     1. （单例池）存放已经经历了完整生命周期的Bean对象。=>成品Bean
+   - 三级缓存 HashMap  singletonFactories
+     1. 三级缓存：存放可以生成Bean的工厂=》准备构建Bean的
+
+   - 二级缓存HashMap earlySingletonObjects
+     1. 二级缓存：存放早期暴露出来的Bean对象，Bean的生命周期未结束（属性还未填充完成）=》半成品Bean
+
+4. 结论：只有单例的Bean，会通过三级缓存提前暴露来解决循环依赖的问题。并非单例的Bean，每次从容器中获取的都是一个新的对象，都会重新创建，所以，非单例的Bean是没有缓存的，不会将其放到三级缓存中
+
+---
+
 #### 实现原理
 
 ##### 动态代理
