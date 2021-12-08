@@ -1,13 +1,12 @@
-package lamda.example;
+package java8.lamda.demo1;
 
-
+/**
+ * @description:
+ * @author:xiaoyige
+ * @createTime:2021/12/8 21:51
+ * @version:1.0
+ */
 public class Employee {
-    /**
-     * @ClassName Employee
-     * @Author qianchao
-     * @Date 2021/11/2
-     * @Version java8 V1.0
-     **/
     private String name;
 
     public String getName() {
@@ -18,20 +17,8 @@ public class Employee {
         this.name = name;
     }
 
-    public Double getSalary() {
-        return salary;
-    }
-
-    public void setSalary(Double salary) {
-        this.salary = salary;
-    }
-
     public int getAge() {
         return age;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
     }
 
     private Double salary;
@@ -41,5 +28,14 @@ public class Employee {
         this.name = name;
         this.salary = salary;
         this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "Employee{" +
+                "name='" + name + '\'' +
+                ", salary=" + salary +
+                ", age=" + age +
+                '}';
     }
 }
