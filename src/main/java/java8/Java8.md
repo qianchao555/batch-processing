@@ -17,6 +17,42 @@
    - (x,y)-> x+y;
 5. 参数列表数据类型可以不用写，JVM编译器能通过上下文推断出
 
+##### 四大核心函数式接口
+
+1. 消费型接口
+
+   - ~~~java
+     Consumer<T> 
+     	void accept(T t);
+     ~~~
+
+2. 供给型接口
+
+   - ~~~java
+     Supplier(T) 
+         T get();
+     ~~~
+
+3. 函数接口
+
+   - ~~~java
+     Function<T,R>
+     	R apply(T t);
+     ~~~
+
+4. 判断型接口/断言型
+
+   - ~~~java
+     Predicate<T>
+     	boolean test(T t);
+     ~~~
+
+---
+
+#### 方法引用
+
+
+
 ---
 
 

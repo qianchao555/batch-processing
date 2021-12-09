@@ -1,4 +1,4 @@
-package lamda.predicate;
+package java8.lamda.innerinterface.predicate;
 
 
 public class Employee {
@@ -40,5 +40,14 @@ private int age;
         this.name = name;
         this.salary = salary;
         this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "Employee{" +
+                "name='" + name + '\'' +
+                ", salary=" + salary +
+                ", age=" + age +
+                '}';
     }
 }

@@ -1,4 +1,4 @@
-package lamda.function;
+package java8.lamda.innerinterface.function;
 
 import java.util.function.Function;
 
@@ -11,8 +11,11 @@ import java.util.function.Function;
 public class FunctionTest {
     public static void main(String[] args) {
         String s="abcde";
-        String s1=strHandler(s,(x)->x.toUpperCase());
+        String s1= strHandler(s,(x->x.toUpperCase()));
+        String s2= strHandler(s,(x->x.substring(1,2)));
+
         System.out.println(s1);
+        System.out.println(s2);
     }
 
     /**
