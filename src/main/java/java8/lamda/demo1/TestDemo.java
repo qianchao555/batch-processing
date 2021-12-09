@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * @description:
@@ -31,6 +34,46 @@ public class TestDemo {
         return emps;
     }
 
+    /**
+     * 对应Test5
+     *
+     * @param list
+     * @param predicate
+     * @return List<Employee>
+     */
+    public List<Employee> filterEmp2(List<Employee> list, Predicate<Employee> predicate) {
+        //stream流会产生类似循环的效果去遍历List
+        return list.stream()
+                .filter(predicate)
+                .collect(Collectors.toList());
+    }
+    @Test
+    public void test5() {
+        List<Employee> employees = filterEmp2(employeeList, employee -> employee.getAge()>80);
+        employees.forEach(System.out::println);
+    }
+
+    /**
+     * 对应Test6
+     *
+     * @param list
+     * @param function
+     * @return List<Employee>
+     */
+    public List<String> filterEmp3(List<Employee> list, Function<Employee, String> function) {
+        //stream流会产生类似循环的效果去遍历List
+        return list.stream()
+                .map(function)
+                .collect(Collectors.toList());
+    }
+
+    @Test
+    public void test6() {
+        List<String> employees = filterEmp3(employeeList, employee -> employee.getName());
+        employees.forEach(System.out::println);
+    }
+
+
     //匿名内部类
     @Test
     public void test1() {
@@ -53,8 +96,6 @@ public class TestDemo {
         });
         employees.forEach(System.out::println);
     }
-
-
 
     //Stream API
     @Test
