@@ -132,6 +132,31 @@ http:www.reids.cn/commans.html
 
 ---
 
+### Redis6新数据类型
+
+#### BitMaps
+
+---
+
+#### HyperLogLog
+
+1. 解决基数问题
+2. 基数：{1，3，5，7，5，7，8}  基数为5、7  ==》{1，3，5，7，8}
+3. 会帮助去重
+4. 每个HyperLogLog只需要12KB内存，就可以计算接近2的64次方个不同元素的基数
+
+---
+
+#### Geographic
+
+1. Geographic地理信息的缩写
+2. 该类型就是元素的2维坐标，在地图上就是经纬度
+3. redis基于该类型，提供了经纬度设置、查询、等操作
+
+---
+
+
+
 ### 配置文件
 
 已经实现拷贝了一份了    /etc/redis.conf
@@ -251,7 +276,44 @@ hello
 
 ~~~
 
+### Jedis
 
+1. 使用jedis连接远程Redis
+
+2. 注意事项：
+
+   - redis修改bind
+
+   - redis关闭保护模式 protedcted-mode no
+
+   - 开启防火墙firewalld、iptables
+
+   - ~~~shell
+     iptables -L -n
+     
+     iptables -I INPUT 1 -p tcp -m state --state NEW -m tcp --dport 6379 -j ACCEPT
+     
+     service iptables save
+     
+     ----------------------
+     firewall-cmd --state
+     firewall-cmd --permanent --add-port=6379/tcp
+     firewall-cmd --permanent --query-port=6379/tcp
+     firewall-cmd --permanent --list-ports
+     firewall-cmd --reloads
+     
+     ~~~
+
+   - 腾讯云防火墙添加6379端口
+
+---
+
+### 例子
+
+1. 输入手机号，点击发送随机生成6位数字码，2分钟有效
+2. 输入验证码，验证，返回成功或失败
+3. 每个手机号每天只能输入三次
+4. 解答：jedis.randomauthcode文件代码
 
 
 
