@@ -33,8 +33,8 @@ public class PhoneCode {
     //每个手机每天只能发送三次，验证码过期时间2分钟
     public static void verifyCode(String phoneNo) {
         //创建jedis对象
-        Jedis jedis = new Jedis("101.35.51.33", 6379);
-        jedis.auth("919550ab@123");
+        Jedis jedis = new Jedis("主机ip", 6379);
+        jedis.auth("密码");
         //手机发送次数的key
         String countKey = "VerifyCode" + phoneNo + ":count";
         String count = jedis.get(countKey);
@@ -59,8 +59,8 @@ public class PhoneCode {
 
     //校验验证码,从redis获取验证码
     public static void getRedisCode(String phoneNo, String code) {
-        Jedis jedis = new Jedis("101.35.51.33", 6379);
-        jedis.auth("919550ab@123");
+        Jedis jedis = new Jedis("主机ip", 6379);
+        jedis.auth("密码");
         String codeKey = "VerifyCode" + phoneNo + ":code";
         String redisCode = jedis.get(codeKey);
         if (redisCode.equals(code)) {
