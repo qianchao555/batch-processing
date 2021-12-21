@@ -6,7 +6,7 @@ package ideadebug;
  *
  * @Author qianchao
  * @Date 2021/12/10
- * @Version OPRA V1.0
+ * @Version  V1.0 V1.0
  **/
 public class Demo {
     public static void main(String[] args) {

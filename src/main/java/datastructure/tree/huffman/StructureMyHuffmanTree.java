@@ -7,7 +7,7 @@ import java.util.Collections;
  * @ClassName MyHuffmanTreeStrcute
  * @Author qianchao
  * @Date 2021/12/1
- * @Version OPRA V1.0
+ * @Version  V1.0 V1.0
  **/
 public class StructureMyHuffmanTree {
     public static Node createHuffman(int[] arr) {
