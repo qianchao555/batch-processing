@@ -13,11 +13,10 @@
 1. Sun Classic/Exact VM
 
 2. **HotSpot VM**
-
    - 武林盟主
-
+   
    - oracleJdk、openJdk中默认使用的虚拟机
-
+   
 3. Mobile/Embedded VM
 
 4. BEA JRockit/IBM J9 VM
@@ -638,64 +637,135 @@ GC分类
 1. 解析阶段是Java虚拟机将常量池内的符号引用替换为直接引用的过程
 2. 符号引用：用一组符号来描述所引用的目标，符号可以是任何形式的字面量，只要使用时能无歧义地定位到目标即可
 3. 直接引用：可以直接指向目标的指针、相对偏移量或者能间接定位到目标的句柄
+4. 解析动作主要针对类或接口、字段、类方法、接口方法、方法类型、方法句柄和调用点限定符这7类符号引用进行，分别对应于常量池的CONSTANT_Class_info、CON-STANT_Fieldref_info、 CONSTANT_Methodref_info、CONSTANT_InterfaceMethodref_info、 CONSTANT_MethodType_info、CONSTANT_MethodHandle_info、CONSTANT_Dyna-mic_info和 CONSTANT_InvokeDynamic_info 8种常量类型
 
 ##### 初始化
 
-#### 类加载器
+1. 类的初始化是类加载过程的最后一个步骤
+
+2. 类加载的前四个几个动作里（加载、验证、准备、解析），除了在加载阶段用户应用程序可以通过自定义类加载器的方式局部参与外，其余动作都完全由Java虚拟机来主导控制
+
+3. 直到初始化阶段，Java虚拟机才真正开始执行类中编写的Java程序代码，将主导权移交给应用程序
+
+4. 初始化阶段就是执行类构造器<clinit>()方法的过程，<clinit>()并不是程序员在Java代码中直接编写的方法，它是Javac编译器的自动生成物
+
+5. ~~~java
+   ·<clinit>()方法是由编译器自动收集类中的所有类变量的赋值动作和静态语句块（static{}块）中的 语句合并产生的，编译器收集的顺序是由语句在源文件中出现的顺序决定的，静态语句块中只能访问 到定义在静态语句块之前的变量，定义在它之后的变量，在前面的静态语句块可以赋值，但是不能访 问
+   public class Test { 
+       static { 
+           i = 0; // 给变量复制可以正常编译通过
+           System.out.print(i); // 这句编译器会提示“非法向前引用” 
+       }
+       static int i = 1; 
+   }
+   ~~~
+
+6. <clinit>()方法与类的构造函数（虚拟机视角中的实例构造器<init>()方法）不同，它不需要显式地调用父类构造器，Java虚拟机会保证在子类的<clinit>()方法执行前，父类的<clinit>()方法已经执行完毕。因此在Java虚拟机中第一个被执行的<clinit>()方法的类型肯定java.lang.Object
+
+7. 类的初始化和类的实例化区别
+
+   - 初始化是类加载过程中的初始化阶段对类变量按照程序员的意图进行赋值的过程 例如：private static int value=123  =>准备阶段value=0，初始化阶段赋值为123
+   - 类完全加载到内存中创建对象的过程
+
+---
+
+#### 类加载器 Class Loader
+
+1. 类加载阶段通过一个类的全限定名来获取描述该类的二进制字节流的动作，这个动作可以放到Java虚拟机外部去实现，从而让应用程序自己决定如何去获取所需的类。实现这个动作的代码称为类加载器
+2. 类加载器用于实现类的加载动作
 
 ##### 类与类加载器
 
+1. **对于任意一个类**，都必须由加载它的类加载器和这个类本身一起共同确立其在Java虚拟机中的唯一性，每一个类加载器都拥有一个独立的类名称空间
+2. 也就是：比较两个类是否相等，只有在这两个类是同一个类加载器加载的前提下才有意义。否则，即使这两个类来源同一个Class文件，被同一个Java虚拟机加载，只要加载他们的类加载器不同，那这两个类肯定不相等
+
 ##### 双亲委派模型
+
+1. 从Java虚拟机角度看，只存在两种不同的类加载器
+
+   - 启动器类加载器
+     - C++实现，虚拟机自身的一部分
+   - 其他所有的类加载器
+     - 这些类加载器由Java实现，独立于JVM外部，并且全都继承自抽象类java.lang.ClassLoader
+
+2. JDK8及之前都是采用三层类加载器、双亲委派的类加载架构。对于这个时期的Java应用，绝大多数Java程序都会使用到以下3个系统提供的类加载器来进行加载：3、4、5
+
+3. 启动类加载器：Bootstrap Class Loader
+
+   - 这个类负责加载存放在<JAVA_HOME>\lib目录或者被-Xbootlasspath参数所指定的路径中存放的，而且是Java虚拟机能够识别的（按照文件名识别，例如：rt.jar、tools.jar，名字不符合的类库即使放在lib目录也不会被加载）类库加载到虚拟机内存中
+
+   - 启动类加载器无法被Java程序直接引用，用户在编写自定义类加载器时，如果需要把加载请求委派给引导类加载器去处理，那直接使用null代替即可
+
+   - ~~~java
+     //java.lang.ClassLoader.getClassLoader()方法的代码片段
+     /** Returns the class loader for the class. Some implementations may use null to represent the bootstrap class loader. This method will return null in such implementations if this class was loaded by the bootstrap class loader. */
+     public ClassLoader getClassLoader() { 
+         ClassLoader cl = getClassLoader0(); 
+         if (cl == null) return null; 
+         SecurityManager sm = System.getSecurityManager(); 
+         if (sm != null) { 
+             ClassLoader ccl = ClassLoader.getCallerClassLoader(); 
+             if (ccl != null && ccl != cl && !cl.isAncestor(ccl)) { 					sm.checkPermission(SecurityConstants.GET_CLASSLOADER_PERMISSION);
+             } 
+         }
+         return cl; 
+     }
+     ~~~
+
+4. 扩展类加载器 Extension Class Loader
+
+   - 这个类加载器是在类sun.misc.Launcher$ExtClassLoader中以Java代码的形式实现的。它负责加载<JAVA_HOME>\lib\ext目录中，或者被java.ext.dirs系统变量所 指定的路径中所有的类库
+   - 这是一种Java系统类库的扩展机制，JDK的开发团队允许用户将具有通用性的类库放置在ext目录里以扩展Java SE的功能，在JDK9之后，这种扩展机制被模块化带来的天然的扩展能力所取代
+   - 由于扩展类加载器是由Java代码实现的，开发者可以直接在程序中使用扩展类加载器来加载Class文件
+
+5. 应用程序类加载器 Application Class Loader
+
+   - 这个类加载器由sun.misc.Launcher$AppClassLoader来实现
+   - 由于应用程序类加载器是ClassLoader类中的getSystem-ClassLoader()方法的返回值，所以有些场合中也称它为“系统类加载器”
+   - 它负责加载用户类路径（ClassPath）上所有的类库，开发者同样可以直接在代码中使用这个类加载器
+   - **如果应用程序中没有自定义过自己的类加载器，一般情况下这个就是程序中默认的类加载器**
+
+6. 双亲委派模型
+
+   - 各种类加载器之间的层次关系被称为：类加载器的双亲委派模型
+
+   - JDK 9之前的Java应用都是由这三种类加载器互相配合来完成加载的，如果用户认为有必要，还可 
+
+     以加入自定义的类加载器来进行拓展，典型的如增加除了磁盘位置之外的Class文件来源，或者通过类 
+
+     加载器实现类的隔离、重载等功能。这些类加载器之间的协作关系“通常”会如图7-2所示
+
+     ![image-20211222152459906](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211222152459906.png)
+
+   - 双亲委派模型要求：除了顶层的启动类加载器外，其余的类加载器都应有自己的父类加载器，不过类加载器之间的父子关系一般不是以继承的关系来实现的，而是通常使用组合关系来复用父加载器的代码
+
+   - 双亲委派模型工作过程：如果一个类加载器收到了类加载的请求，它首先不会自己去尝试加载这个类，而是把这个请求委派给父类加载器去完成，每一个层次的类加载器都是如此，因此所有的加载请求最终都应该传送到最顶层的启动类加载器中，只有当父加载器反馈自己无法完成这个加载请求（它的搜索范围中没有找到所需的类）时，子加载器才会尝试自己去完成加载
+
+   - 使用双亲委派模型来组织类加载器之间的关系，一个显而易见的好处就是Java中的类随着它的类加载器一起具备了一种带有优先级的层次关系。
+
+     
 
 ##### 破坏双亲委派模型
 
+1. 过双亲委派模型并不是一个具有强制性约束的模型，而是Java设计者推荐给开发者们的类加载器实现方式
+
+2. JDBC、JNDI、SPI、Spring等等采用线程上下文类加载器来加载，并没有走双亲委派模型
+
+3. 后期还需加强这块的理解
+
+   
+
 #### Java模块化系统
+
+1. Java9引入的Java模块化系统(Java Platform Module System JPMS)
+2. 为了能够实现模块化的关键目标--可配置的封装隔离机制，Java虚拟机对类加载器架构做出了相应的变动调整，才使得模块化系统能顺利地运作
+3. 后期还需加强这块的理解
 
 ##### 模块的兼容性
 
 ##### 模块化下的类加载器
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+---
 
 ### 虚拟机字节码执行引擎
 
