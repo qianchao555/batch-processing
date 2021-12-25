@@ -473,6 +473,14 @@ Multi、Exec、Discard
 
 一主多从
 
+1. 创建/myredis文件夹
+2. 复制配置文件 /etc/redis.conf  到文件夹中 redis6379.conf、  redis6380.conf 、redis6381.conf
+3. 在三个配置文件中分别配置
+4. info replication查看主机信息
+5. 配置从机
+   - slaveof  主机ip  主机端口
+6. 
+
 一主多从
 
 
