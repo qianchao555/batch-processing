@@ -31,6 +31,13 @@ public class BeansUtil {
         if (ObjectUtils.isEmpty(source)) {
             return returnTargetList;
         }
+        /**
+         * List<T>:表示List中所有元素为T类型，可以进行读写操作add、remove等
+         * List<?>：表示List中所有元素为任意类型，只读类型不能进行添加、修改操作但是可以remove操作（因为上次动作于泛型无关）
+         *          List<?>读出的元素都为Object类型、一般作为参数来接收外部集合
+         * List<Object>：表示List中所有元素为Object类型
+         *
+         */
         //判断souce源是否属于List
         if (source instanceof List) {
             //转换为List
@@ -40,7 +47,7 @@ public class BeansUtil {
                 T t = null;
                 try {
                     t = target.newInstance();
-                } catch (InstantiationException e) {
+                } catch (InstantiationException e) {//多个异常采用 |  管道符
                     log.error("BeanUtils Error ！" + e);
                 } catch (IllegalAccessException e) {
                     log.error("BeanUtils Error ！" + e);
@@ -54,5 +61,8 @@ public class BeansUtil {
         }
         return returnTargetList;
     }
+
+
+
 }
 
