@@ -1,9 +1,10 @@
 package util.beansutildemo;
 
+import com.alibaba.fastjson.JSON;
+import org.junit.jupiter.api.Test;
 import util.BeansUtil;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @ClassName Demo
@@ -26,4 +27,16 @@ public class Demo {
         System.out.println(list2.toString());
 
     }
+    @Test
+    public void testBeanToMap(){
+        Student studentBean=new Student();
+        studentBean.setAge(12);
+        studentBean.setName("qc");
+        Map<String, Object> stringObjectMap = BeansUtil.beanToMap(studentBean);
+        String s = JSON.toJSONString(studentBean);
+        System.out.println(s);
+        System.out.println(studentBean);
+        System.out.println(stringObjectMap);
+    }
+
 }

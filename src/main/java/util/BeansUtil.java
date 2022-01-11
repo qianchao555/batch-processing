@@ -1,11 +1,16 @@
 package util;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @ClassName BeansUtil
@@ -62,7 +67,32 @@ public class BeansUtil {
         return returnTargetList;
     }
 
+    /**
+     * 对象转Map
+     * @param bean
+     * @param <T>
+     * @return
+     */
+    public static <T>  Map<String,T> beanToMap(Object bean){
+        return JSON.parseObject(JSON.toJSONString(bean), new TypeReference<Map<String, T>>(){});
+    }
 
+
+    /**
+     * 对象列表转map列表.
+     *
+     * @param beans 对象列表
+     * @param <T>   对象类型
+     * @param <P>   对象类型
+     * @return map列表
+     */
+    public static <T, P> List<Map<String, T>> beansToMaps(List<P> beans) {
+        if (CollectionUtils.isEmpty(beans)) {
+            return Collections.emptyList();
+        }
+        return JSON.parseObject(JSON.toJSONString(beans), new TypeReference<List<Map<String, T>>>() {
+        });
+    }
 
 }
 
