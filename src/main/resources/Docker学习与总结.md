@@ -296,11 +296,30 @@ COPY hom?.txt /mydir/
 
 ##### ADD更高级的复制文件
 
+ADD指令和COPY的格式和性质基本一致，但是在copy基础上增加了一些功能。
+
+尽可能的使用COPY，使用ADD的场合为自动解压等
+
 ##### CMD容器启动命令
+
+CMD指令的格式和RUN相似
+
+1. shell格式：cmd <命令>
+2. exec格式：cmd ["可执行文件"，"参数1"，"参数2".。]
+3. 参数列表格式：cmd["参数1"，"参数2"...]。在指定了ENTRYPOINT指令后，用cmd指定具体的参数
+
+CMD指令就是用于指定默认的容器主进程的启动命令
 
 ##### ENTRYPOINT入口点
 
+目的和CMD一样，都是在指定容器启动程序及参数，指定了entrypoint后，cmd的含义就发生了改变，不再是直接的运行其命令，而是将CMD的内容作为参数传给entrypoint指令。
+
 ##### ENV设置环境变量
+
+格式：
+
+1. ENV<key> <value>     中间有一个空格
+2. ENV<key1>=<value1>  <key2>=<value2>
 
 ##### ARG构建参数
 
@@ -308,7 +327,19 @@ COPY hom?.txt /mydir/
 
 ##### EXPOSE暴露端口
 
+EXPOSE<端口1> [<端口2>...]
+
+expose指令是声明容器运行时提供服务的端口，这只是一个声明，在容器运行时并不会因为这个声明应用就会开启这个端口的服务。Expose仅仅是声明打算使用什么端口，并不会自动在宿主进行端口映射。
+
+docker run -p 这里会自动映射Expose的端口
+
+docker run -p <宿主端口>:<容器端口>  这个是映射宿主端口和容器端口，这里指定了端口，则不会映射Expose的端口
+
 ##### WORKDIR指定工作目录
+
+WORKDIR <工作目录路径>
+
+
 
 ##### USER指定当前用户
 
@@ -728,6 +759,211 @@ root@2affd44b4667:/# history
 
 
 -------------第二部分完结------------第三部分-----------------------
+
+----------第四部分为镜像dockerfile----------------------
+
+---以下为第五部分----
+
+### 使用网络
+
+Docker允许通过外部访问容器或容器互联的方式来提供网络服务。
+
+#### 外部访问容器
+
+容器中可以运行一些网络应用，要让外部也可以访问这些应用，可以通过-p或者-P参数来指定端口映射
+
+使用-P标记时，Docker会随机映射一个端口到内部容器开发的网络端口
+
+~~~shell
+$ docker run -d -P nginx:alpine
+
+$ docker container ls -l
+CONTAINER ID IMAGE COMMAND  CREATED  STATUS  PORTS NAMES
+fae320d08268    nginx:alpine   "/docker-entrypoint.…"   24 seconds ago      Up 20 seconds       0.0.0.0:32768->80/tcp   bold_mcnulty
+
+
+#可以看出32768映射到了容器的80端口，此时访问本机的32768端口即可访问容器内Nginx的默认界面
+~~~
+
+使用-p时，可以指定要映射的端口，并且在一个指定端口上只可以绑定一个容器
+
+格式：ip:hostPort:containerPort 、ip::containerPort 、hostPort:containerPort
+
+##### 映射所有接口地址
+
+~~~shell
+$ docker run -d -p 80:80 nginx:alpine
+
+#hostPort:containerPort格式
+#本地的80端口映射到容器的80端口，此时默认会绑定本地所有接口上的所有地址
+~~~
+
+##### 映射到指定地址的指定端口
+
+~~~shell
+$ docker run -d -p 127.0.0.1:80:80 nginx:alpine
+
+#ip:hostPort:continerPort格式
+#指定映射使用一个特定地址，例如localhost
+~~~
+
+##### 映射到指定地址的任意端口
+
+~~~shell
+$ docker run -d -p 127.0.0.1::80 nginx:alpine
+
+#ip::containerPort
+#绑定localhost的任意端口到容器的80端口
+
+
+$ docker run -d -p 127.0.0.1:80:80/udp nginx:alpine
+#使用udp标记来指定udp端口
+~~~
+
+#### 容器互联
+
+建议将容器加入自定义的Docker网络来连接多个容器，而不是采用--link参数
+
+##### 新建网络
+
+~~~shell
+$ docker network create -d bridge my-net
+
+#-d参数指定Docker网络类型，有brige、overlay
+#overlay使用swarm 模式 ，后续swarm集群介绍
+~~~
+
+##### 连接容器
+
+~~~shell
+$ docker run -it --rm --name busybox1 --network my-net busybox sh
+
+#运行一个容器并连接到新建的my-net网络
+~~~
+
+~~~shell
+$ docker run -it --rm --name busybox2 --network my-net busybox sh
+
+#运行一个容器并连接到新建的my-net网络
+~~~
+
+~~~shell
+$ docker container ls
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+b47060aca56b        busybox             "sh"                11 minutes ago      Up 11 minutes                           busybox2
+8720575823ec        busybox             "sh"                16 minutes ago      Up 16 minutes                           busybox1
+
+#打开新的终端并查看容器信息
+
+
+#busybox1容器中输入ping命令
+/ # ping busybox2
+PING busybox2 (172.19.0.3): 56 data bytes
+64 bytes from 172.19.0.3: seq=0 ttl=64 time=0.072 ms
+64 bytes from 172.19.0.3: seq=1 ttl=64 time=0.118 ms
+
+#此时可以看出，busybox1和2以及建立了互联关系
+~~~
+
+##### Docker Compose
+
+后续单独章节介绍
+
+#### 配置DNS
+
+Docker采用虚拟文件来挂载容器的3个相关配置文件
+
+在容器中使用mount命令可以看到挂载信息：
+
+~~~shell
+$ mount
+/dev/disk/by-uuid/1fec...ebdf on /etc/hostname type ext4 ...
+/dev/disk/by-uuid/1fec...ebdf on /etc/hosts type ext4 ...
+tmpfs on /etc/resolv.conf type tmpfs ...
+~~~
+
+这种机制可以让宿主主机DNS信息发生更新后，所有Docker容器的DNS配置通过/ect/resolv.conf文件立刻得到更新
+
+配置全部容器的DNS可以在/etc/docker/daemon.json文件中设置
+
+~~~shell
+{
+  "dns" : [
+    "114.114.114.114",
+    "8.8.8.8"
+  ]
+}
+~~~
+
+### 高级网络配置
+
+后续深入理解后添加上
+
+### Docker Compose
+
+Docker Compose是Docker官方编排项目之一，负责快速的部署分布式应用，实现对Docker容器集群的快速编排
+
+Compose定位是：定义和运行对个Docker容器的应用
+
+它允许用户通过一个单独的docker-compose.yml文件来定义一组相关联的应用容器作为一个项目
+
+两个重要概念
+
+1. 服务：一个应用的容器，实际上可以包含若干运行相同镜像的容器实例
+2. 项目：由一个关联的应用容器组成的一个完整业务单元，在docker-compose.yml文件中定义
+
+Compose默认管理的对象是项目，通过子命令对项目中的一组容器进行便捷的生命周期管理
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
