@@ -277,6 +277,23 @@ $ docker build http://server/context.tar.gz
 
 ##### COPY复制文件
 
+格式：
+
+COPY [--chown=<user>:<group>] <源路径>....<目标路径>
+
+COPY[--chown=<user>:<group>] ["<源路径>",..."<目标路径>"]
+
+~~~shell
+COPY package.json /usr/src/app/
+#COPY指令将从上下文目录中<源路径>的文件或目录复制到新的一层镜像内的<目标路径>位置
+
+#源路径可以包含多个，甚至可以是通配符
+COPY hom* /mydir/
+COPY hom?.txt /mydir/
+~~~
+
+<目标路径>可以是容器内的绝对路径，也可以是相对于工作目录的相对路径(工作目录可以通过WORKDIR指令指定)，目标路径不需要事先创建，如果目录不存在会在复制文件前先行创建缺失的目录
+
 ##### ADD更高级的复制文件
 
 ##### CMD容器启动命令
