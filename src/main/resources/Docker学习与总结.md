@@ -900,7 +900,7 @@ tmpfs on /etc/resolv.conf type tmpfs ...
 
 后续深入理解后添加上
 
-### Docker Compose
+### Docker  Compose
 
 Docker Compose是Docker官方编排项目之一，负责快速的部署分布式应用，实现对Docker容器集群的快速编排
 
@@ -914,6 +914,237 @@ Compose定位是：定义和运行对个Docker容器的应用
 2. 项目：由一个关联的应用容器组成的一个完整业务单元，在docker-compose.yml文件中定义
 
 Compose默认管理的对象是项目，通过子命令对项目中的一组容器进行便捷的生命周期管理
+
+#### 安装
+
+##### 二进制包
+
+从官方下载[Git hub Release](https://github.com/docker/compose/releases)编译好的二进制文件即可
+
+~~~shell
+$ sudo curl -L https://github.com/docker/compose/releases/download/1.27.4/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+
+# 国内用户可以使用以下方式加快下载
+$ sudo curl -L https://download.fastgit.org/docker/compose/releases/download/1.27.4/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+
+$ sudo chmod +x /usr/local/bin/docker-compose
+~~~
+
+#### 卸载
+
+~~~shell
+$ sudo rm /usr/local/bin/docker-compose
+
+#删除二进制文件即可
+~~~
+
+#### 使用
+
+##### 术语
+
+1. 服务：一个应用容器，实际上可以运行多个相同镜像的实例
+2. 项目：由一组关联的应用容器组成的一个完整业务单元
+
+一个项目可以由多个服务(容器)关联而成，Compose面向项目进行管理
+
+#### 命令
+
+docker-compose [command] --help
+
+1. 基本格式
+   docker-compose [-f=<arg>...]  [options]   [Command] [Args...]
+
+2. 命令选项
+   -f，--file File 指定使用的Compose模板文件，默认为docker-compose.yml。可以指定多次
+   -p，--project-name Name  指定项目名称，默认将使用所在目录名称作为项目名
+   --verbose输出更多调试信息
+   -v,--version 打印版本并退出
+
+3. 命令使用说明
+
+   build：docker-compose build [options] [Service...]
+
+   构建(重新构建)项目中的服务容器
+
+   服务容器一旦构建后，会带上一个标记名
+
+   可以随时在项目目录下运行docker-compose build 来重新构建服务
+
+   选项包括：
+
+   - --force-rm 删除构建过程中的临时容器
+   - --no-cache 构建镜像过程中不使用cache
+   - --pull 始终尝试通过pull来获取更新版本的镜像
+
+   comfig：验证Compose文件格式是否正确
+
+   down：停止up命令所启动的容器，并移除网络
+
+   exec：进入指定的容器
+
+   help：获取帮助
+
+   images：列出Compose文件中包含的镜像
+
+   kill：格式docker-compose kill [options] [Service...]
+
+   - 通过发送SigKill信号来强制停止服务容器
+
+   - 支持通过-s参数来指定发送的信号
+
+   - ~~~shell
+     $ docker-compose kill -s SIGINT
+     ~~~
+
+   logs：格式 docker-compose logs [options] [Service...]
+
+   - 查看服务容器的输出
+
+   pause：docker-compose [options] [Service...]
+
+   - 暂停一个服务容器
+
+   port：docker-compose port [options] Service Private_Port
+
+   - 打印某个容器端口所映射的公共端口
+   - --protocol=proto 指定端口协议，tcp(默认)或udp
+   - --index=index 如果同一服务存在多个容器，指定命令对象容器的序号(默认为1)
+
+   ps：docker-compose ps [options] [Service]
+
+   - 列出项目中目前的所以容器
+   - -q 只打印容器的ID信息
+
+   push：推送服务依赖的镜像到Docker镜像仓库
+
+   restart：docker-compose restart [options] [Service...]
+
+   - 重启项目中的服务
+   - -t /--timeout Timeout 指定重启前停止容器的超时(默认为10s)
+
+   rm：docker-compose rm [options] [Service...]
+
+   - 删除所有(停止状态的)服务容器，推荐使用docker-compose stop 命令来停止容器
+   - -f，--force 强制直接删除，包括非停止状态的容器，尽量不要使用该选项
+   - -v 删除容器所挂载的数据卷
+
+   run：docker-compose run [options] [-p Port ...] [-e Key=Value ...] Service [Command] [Args...]
+
+   - 在指定服务上执行一个命令
+
+   - ~~~shell
+     $ docker-compose run ubuntu ping docker.com
+     #将会启动一个ubuntu服务容器，并执行ping命令
+     
+     #默认情况下，如果存在关联，则所有关联的服务将会自动被启动，除非这些服务已经在运行中，如果不希望自动启动关联的容器，可以使用--no-deps选项
+     $ docker-compose run --no-deps ubuntu ping docker.com
+     ~~~
+
+   - 选项：
+
+   - -d：后台运行容器
+
+   - --name Name ：为容器指定一个名字
+
+   - --entrypoint Cmd 覆盖默认的容器启动指令
+
+   - `-e KEY=VAL` 设置环境变量值，可多次使用选项来设置多个环境变量。
+
+   - -u, --user=""` 指定运行容器的用户名或者 uid。` 
+
+   - --no-deps` 不自动启动关联的服务容器。` 
+
+   - `--rm` 运行命令后自动删除容器，`d` 模式下将忽略。
+
+   - -p, --publish=[] 映射容器端口到本地主机。
+
+   - --service-ports 配置服务端口并映射到本地主机。
+
+   - -T 不分配伪 tty，意味着依赖 tty 的指令将无法运行
+
+   scale：docker-compose scale [options] [Service=num...]
+
+   - 设置指定服务运行的容器个数
+
+   - ~~~shell
+     $ docker-compose scale web=3 db=2
+     #将启动3个容器运行web服务，2个容器运行db服务
+     ~~~
+
+   start：docker-compose start [Service...]  启动已经存在的服务容器
+
+   stop：docker-compose start [Service...]  
+
+   - 停止已经处于运行状态的容器，但不删除它。通过 `docker-compose start` 可以再次启动这些容器。
+
+   选项：
+
+   - -t, --timeout TIMEOUT  停止容器时候的超时（默认为 10 秒）。
+
+   up：docker-compose up [options] [Service...]
+
+   - 该功能十分强大，它将尝试自动完成包括：构建镜像、(重新)创建服务、启动服务并关联服务相关容器的一系列操作
+   - 大部分时候都可以通过该命令来启动一个项目
+   - 默认docker-compose up启动的容器都在前台，Ctrl-c 停止命令时，所有容器都将会停止
+   - docker-compose up -d 将会在后台启动并运行所有容器，生产环境推荐使用
+
+
+
+#### Compose模板文件
+
+模板文件是compose的核心，默认模板文件名为docker-compose.yml
+
+~~~shell
+version: "3"
+
+services:
+  webapp:
+    image: examples/web
+    ports:
+      - "80:80"
+    volumes:
+      - "/data"
+     
+#每个服务都必须通过image指令或build指令(需要dockerfile)等来自动构建生成镜像
+
+#如果使用 build 指令，在 Dockerfile 中设置的选项(例如：CMD, EXPOSE, VOLUME, ENV 等) 将会自动被获取，无需在 docker-compose.yml 中重复设置
+~~~
+
+1. build：指定Dockerfile所在文件夹的路径，compose将会利用它自动构建这个镜像，然后使用镜像
+
+   ~~~shell
+   version: '3'
+   services:
+     webapp:
+       build: ./dir
+   ~~~
+
+   也可以使用context指令指定Dockerfile所在文件夹的路径，dockerfile指令指定Dockerfile文件名，arg指令指定构建镜像时的变量
+
+   ~~~shell
+   version: '3'
+   services:
+     webapp:
+       build:
+         context: ./dir
+         dockerfile: Dockerfile-alternate
+         args:
+           buildno: 1
+   ~~~
+
+2. 更多命令参加[官方网站](https://docs.docker.com/compose/compose-file/)
+
+
+
+### Swarm mode
+
+swarm mode内置K-V存储功能，提供了众多新特性，比如：具有容错能力的去中心化设计、内置服务发现、负载均衡、路由网格、动态伸缩、滚动更新、安全传输等。使得 Docker 原生的 `Swarm` 集群具备与 Mesos、Kubernetes 竞争的实力
+
+swarm是使用swarmKit构建的Docker引擎内置的集群管理和编排工具
+
+--后续内容将继续更新
+
+
 
 
 
