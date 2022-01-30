@@ -1136,31 +1136,309 @@ services:
 
 
 
+-------------------------------------------------------单独提取出来6节-----------------------------------------------------------------------
+
+
+
 ### Swarm mode
 
 swarm mode内置K-V存储功能，提供了众多新特性，比如：具有容错能力的去中心化设计、内置服务发现、负载均衡、路由网格、动态伸缩、滚动更新、安全传输等。使得 Docker 原生的 `Swarm` 集群具备与 Mesos、Kubernetes 竞争的实力
 
 swarm是使用swarmKit构建的Docker引擎内置的集群管理和编排工具
 
---后续内容将继续更新
+#### 节点
+
+运行Docker的主机可以主动初始化一个Swarm集器或者加入一个已存在的swarm集群，这样这个运行Docker的主机就成为一个swarm集群的节点。
+
+节点分为管理节点和工作节点
+
+1. 管理节点：用于swarm集群的管理，docker swarm命令基本只能在管理节点执行(节点退出集群命令 docker swarm leave 可以在工作节点执行)。一个swarm集群可以有多个管理节点，但只有一个管理节点可以成为leader，leader通过raft协议实现
+
+2. 工作节点：任务执行节点，管理节点将服务下发至工作节点执行，管理节点默认也可以作为工作节点，也可以通过配置让服务只运行在管理节点
+
+3. 集群中管理节点于工作节点的关系
+
+   ![image-20220130092459196](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20220130092459196.png)
+
+#### 服务和任务
+
+任务(Task)是swarm中最小的调度单位，目前来说就是一个单一的容器
+
+服务(Services)指一组任务的集合，服务定义了任务的属性，服务有两种模式
+
+1. replicated Services：按照一定规则在各个工作节点上运行指定个数的任务
+2. global Services：每个工作节点上运行一个任务
+3. 这两种模式通过docker swarm create --mode参数指定
+
+容器、任务、服务的关系
+
+![image-20220130092903098](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20220130092903098.png)
 
 
 
+#### 创建Swarm集群
+
+例子：创建一个管理节点，两个工作节点的swram集群
+
+##### 初始化集群
+
+~~~shell
+#在已经安装好 Docker 的主机上执行如下命令
+$ docker swarm init --advertise-addr 192.168.99.100
+Swarm initialized: current node (dxn1zf6l61qsb1josjja83ngz) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join \
+    --token SWMTKN-1-49nj1cmql0jkz5s954yi3oex3nedyz0fb0xx14ie39trti4wxv-8vxv8rssmk743ojnwacrr2e7c \
+    192.168.99.100:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+
+#docker swarm init命令的节点自动成为管理节点
+#如果你的 Docker 主机有多个网卡，拥有多个 IP，必须使用 --advertise-addr 指定 IP
+~~~
+
+##### 增加工作节点
+
+~~~shell
+#在其他两个 Docker 主机中分别执行如下命令，创建工作节点并加入到集群中
+$ docker swarm join \
+    --token SWMTKN-1-49nj1cmql0jkz5s954yi3oex3nedyz0fb0xx14ie39trti4wxv-8vxv8rssmk743ojnwacrr2e7c \
+    192.168.99.100:2377
+
+This node joined a swarm as a worker.
+~~~
+
+##### 查看集群
+
+此时已经创建好了一个用于一个管理节点两个工作节点的swarm集群
+
+~~~shell
+$ docker node ls
+ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
+03g1y59jwfg7cf99w4lt0f662    worker2   Ready   Active
+9j68exjopxe7wfl6yuxml7a7j    worker1   Ready   Active
+dxn1zf6l61qsb1josjja83ngz *  manager   Ready   Active        Leader
+~~~
 
 
 
+#### 部署服务
+
+使用docker service命令来管理swarm集群中的服务，该命令只能在管理节点运行
+
+##### 新建服务
+
+~~~shell
+#在swarm集群中运行一个名为nginx的服务
+$ docker service create --replicas 3 -p 80:80 --name nginx nginx:1.13.7-alpine
+
+#使用浏览器，输入任意节点 IP ，即可看到 nginx 默认页面
+~~~
+
+##### 查看服务
+
+~~~shell
+#docker service ls 查看当前集群运行的服务
+$ docker service ls
+ID               NAME       MODE        REPLICAS         IMAGE                 PORTS
+kc57xffvhul5     nginx    replicated      3/3        nginx:1.13.7-alpine      *:80->80/tcp
+
+#docker service ps查看某个服务的详情
+$ docker service ps nginx 
+
+#查看某个服务的日志 
+$ docker service logs nginx 
+~~~
 
 
 
+##### 服务伸缩
+
+~~~shell
+#docker service scale 对一个服务运行的容器数量进行伸缩，当业务处于高峰期时，需要扩展服务运行的容器数量
+$ docker service scale nginx=5
+
+#业务平稳时，需要减少服务运行的容器数量
+$docker service scale nginx=2
+~~~
+
+##### 删除服务
+
+~~~shell
+$ docker service rm nginx
+~~~
 
 
 
+#### 使用compose文件
+
+swarm集群中也可以使用compose文件来配置、启动多个服务
+
+docker service create 一次只能部署一个服务，使用docker-compose.yml文件可以一次启动多个关联的服务
+
+~~~shell
+#swarm集群中部署wordpress
+version: "3"
+
+services:
+  wordpress:
+    image: wordpress
+    ports:
+      - 80:80
+    networks:
+      - overlay
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    deploy:
+      mode: replicated
+      replicas: 3
+
+  db:
+    image: mysql
+    networks:
+       - overlay
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: somewordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+#visualizer提供一个可视化页面
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - "8080:8080"
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+volumes:
+  db-data:
+networks:
+  overlay:
+~~~
+
+##### 部署服务
+
+在swram中使用docker-compose.yml文件可以使用docker stack命令
+
+~~~shell
+#部署服务使用 docker stack deploy，其中 -c 参数指定 compose 文件名
+$ docker stack deploy -c docker-compose.yml wordpress
+~~~
+
+##### 查看服务
+
+~~~shell
+$ docker stack ls
+NAME                SERVICES
+wordpress           3
+~~~
+
+##### 移除服务
+
+~~~shell
+$ docker stack down wordpress
+Removing service wordpress_db
+Removing service wordpress_visualizer
+Removing service wordpress_wordpress
+Removing network wordpress_overlay
+Removing network wordpress_default
+
+
+#该命令不会移除服务所使用的 数据卷，如果你想移除数据卷请使用 docker volume rm
+~~~
 
 
 
+#### 管理配置信息
+
+在动态的、大规模的分布式集群上，管理和分发配置文件也是很重要的工作。传统的配置文件分发方式（如配置文件放入镜像中，设置环境变量，volume 动态挂载等）都降低了镜像的通用性。
+
+Docker 新增了 `docker config` 子命令来管理集群中的配置信息，以后你无需将配置文件放入镜像或挂载到容器中就可实现对服务的配置。
+
+注意：`config` 仅能在 Swarm 集群中使用。
+
+以在 Swarm 集群中部署 `redis` 服务为例
+
+##### 创建Config
+
+~~~shell
+#新建redis.cof文件
+port 6380
+~~~
+
+~~~shell
+#使用docker config create 命令创建config
+$docker config create redis.conf redis.conf
+~~~
+
+##### 查看config
+
+~~~shell
+$ docker config ls
+
+ID                          NAME                CREATED             UPDATED
+yod8fx8iiqtoo84jgwadp86yk   redis.conf          4 seconds ago       4 seconds ago
+~~~
 
 
 
+##### 创建redis服务
+
+~~~shell
+$ docker service create \
+     --name redis \
+     # --config source=redis.conf,target=/etc/redis.conf \
+     --config redis.conf \
+     -p 6379:6380 \
+     redis:latest \
+     redis-server /redis.conf
+~~~
+
+
+
+#### 滚动升级
+
+docker service update命令，使用 `nginx:1.13.7-alpine` 镜像部署了一个名为 `nginx` 的服务。现在我们想要将 `NGINX` 版本升级到 `1.13.12`
+
+~~~shell
+$ docker service update \
+    --image nginx:1.13.12-alpine \
+    nginx
+    
+#一样的 上面\是到末尾的换行符而已，使用--image 选项更新了服务的镜像
+$ docker service update --image nginx:1.13.12-alpine  nginx
+~~~
+
+#### 服务回退
+
+假设我们发现 nginx 服务的镜像升级到 `nginx:1.13.12-alpine` 出现了一些问题，我们可以使用命令一键回退
+
+~~~shell
+$ docker service rollback nginx
+~~~
+
+~~~shell
+$ docker service ps nginx
+#结果的输出详细记录了服务的部署、滚动升级、回退的过程
+ID   NAME   IMAGE   NODE    DESIRED STATE    CURRENT STATE                         ERROR      PORTS
+rt677gop9d4x  nginx.1  nginx:1.13.7-alpine   VM-20-83-debian     Running   Running about a minute ago
+d9pw13v59d00  \_ nginx.1  nginx:1.13.12-alpine  VM-20-83-debian   Shutdown   Shutdown 2 minutes ago
+i7ynkbg6ybq5  \_ nginx.1  nginx:1.13.7-alpine   VM-20-83-debian    Shutdown  Shutdown 2 minutes ago
+~~~
 
 
 
