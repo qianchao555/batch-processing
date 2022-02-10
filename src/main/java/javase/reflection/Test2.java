@@ -1,4 +1,4 @@
-package com.example.batchprocessing.javase.reflection;
+package javase.reflection;
 
 /**
  * @description:

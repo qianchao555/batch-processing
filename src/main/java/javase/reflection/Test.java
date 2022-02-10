@@ -1,4 +1,4 @@
-package com.example.batchprocessing.javase.reflection;
+package javase.reflection;
 
 /**
  * @description:
@@ -10,12 +10,12 @@ package com.example.batchprocessing.javase.reflection;
 public class Test {
     public static void main(String[] args) throws ClassNotFoundException {
         //通过反射获取类信息
-        Class<?> user = Class.forName("com.example.batchprocessing.javase.reflection.User");
+        Class<?> user = Class.forName("javase.reflection.User");
         System.out.println(user);
-        Class<?> user2 = Class.forName("com.example.batchprocessing.javase.reflection.User");
+        Class<?> user2 = Class.forName("javase.reflection.User");
 
-        Class<?> user3 = Class.forName("com.example.batchprocessing.javase.reflection.User");
-        Class<?> user4 = Class.forName("com.example.batchprocessing.javase.reflection.User");
+        Class<?> user3 = Class.forName("javase.reflection.User");
+        Class<?> user4 = Class.forName("javase.reflection.User");
         //一个类在
         System.out.println(user2.hashCode());
         System.out.println(user3.hashCode());

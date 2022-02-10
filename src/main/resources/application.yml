@@ -4,30 +4,36 @@ server:
 spring:
   application:
     name: redis
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
-    username: root
-    password:       #密码950
-  batch:
-    job:
-      enabled: false #任务自动执行 关闭
-  #      names: parentJob   #父Job名字
-  main:
-    allow-bean-definition-overriding: true
+#  datasource:
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
+#    username: root
+#    password: 919550ab      #密码950
 
 
 #--------------------------------------redis配置--------------------------
-#  redis:
-#    host:                     #远程主机IP
-#    port: 6379
-#    database: 0
-#    connect-timeout: 1800000  #连接超时时间 毫秒
-#    jedis:
-#      pool:
-#        max-active: 8 #连接池最大连接数
-#        max-wait: -1  #最大阻塞等待时间  负数表示没有限制
-#        max-idle: 5   #连接池最大空闲连接
-#        min-idle: 0   #最小空闲连接
-#    password:   #密码
+  redis:
+    host:    101.35.51.33                 #远程主机IP
+    port: 6380
+    database: 0
+    connect-timeout: 1800000  #连接超时时间 毫秒
+    jedis:
+      pool:
+        max-active: 8 #连接池最大连接数
+        max-wait: -1  #最大阻塞等待时间  负数表示没有限制
+        max-idle: 5   #连接池最大空闲连接
+        min-idle: 0   #最小空闲连接
+    password: 919550ab@123 #密码
 
+#--------------------------------------redisson配置--------------------------
+
+redis:
+  redisson:
+    redis:
+      config: |
+        singleServerConfig:
+          password: 919550ab@123
+          address: "redis://101.35.51.33:6380"
+          database: 0
+        threads: 0
+        nettyThreads: 0
