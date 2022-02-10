@@ -1,4 +1,4 @@
-package stream.shizhan;
+package java8.stream.shizhan;
 
 /**
  * @ClassName Trader

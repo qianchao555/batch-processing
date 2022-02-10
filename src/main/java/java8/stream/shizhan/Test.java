@@ -1,4 +1,4 @@
-package stream.shizhan;
+package java8.stream.shizhan;
 
 import java.util.Arrays;
 import java.util.Comparator;
