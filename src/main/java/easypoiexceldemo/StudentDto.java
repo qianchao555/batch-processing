@@ -34,7 +34,7 @@ public class StudentDto implements Serializable {
     /**
      * B语文
      */
-    private int Bwuwen;
+    private int Byuwen;
     /**
      * B数学
      */
