@@ -1,5 +1,7 @@
 package collection.list.linkedlist;
 
+import java.util.LinkedList;
+
 /**
  * @description:
  * @author:xiaoyige
@@ -8,6 +10,8 @@ package collection.list.linkedlist;
  */
 public class LinkedListDemo {
     public static void main(String[] args) {
+        LinkedList linkedList=new LinkedList();
+        linkedList.add(1);
         //模拟双向链表
         Node jack = new Node("jack");
         Node tom = new Node("Tom");

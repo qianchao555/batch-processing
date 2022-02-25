@@ -52,4 +52,30 @@ public class Demo2 {
            return x+y;
         });
     }
+
+    /**
+     * 拆分string abcDefGhiJklCsv
+     * abc_Def_Ghi_Jkl_Csv
+     */
+    @Test
+    public void hhh(){
+        String sss="uplReportSabCsv";
+        String s = sss.replaceAll("[A-Z]", "_$0");
+        System.out.println("S:"+s);
+        String[] s1 = s.split("_");
+        for (String s2 :s1) {
+            System.out.print(s2+" ");
+        }
+
+        System.out.println(s1.length);
+            if(s1[(s1.length-1)].contains("Csv")){
+                System.out.println(s1[(s1.length-1)]);
+        }
+    }
+    @Test
+    public void hhh2(){
+        String s = "00000123";
+        String s1 = String.format("%07d", Integer.valueOf(s));
+        System.out.println(s1);
+    }
 }
