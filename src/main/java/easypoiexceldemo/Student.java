@@ -4,8 +4,6 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
-import java.util.Date;
-
 /**
  * @ClassName Student
  * @Author qianchao
@@ -20,9 +18,6 @@ public class Student {
     private String createdById;
 
 
-    //学生出生日期
-    @TableField("Student_Birth_Date")
-    private Date studentBirthDate;
 
     //A:语文
     @TableField("Ayuwen")
@@ -34,8 +29,8 @@ public class Student {
 
 
     //B:语文
-    @TableField("Bwuwen")
-    private Integer Bwuwen;
+    @TableField("Byuwen")
+    private Integer Byuwen;
 
     //B:数学
     @TableField("Bshuxue")

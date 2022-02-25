@@ -27,9 +27,9 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 public class MyExcelDownService {
     //学生名字
-    private static final String CREATED_BY_ID = "createdByID";
+    private static final String CREATED_BY_ID = "createdById";
     //模板路径url
-    private static final String TEMPLATES_URL = "templates/myExcelTemplate.xls";
+    private static final String TEMPLATES_URL = "templates/myExcelTemplate.xlsx";
     //临时目录路径
     private static final String TEMP_PATH = "tempMyExcelDownLoad";
     //临时文件路径
@@ -77,7 +77,15 @@ public class MyExcelDownService {
         Student student = new Student();
         student.setCreatedById("qqq");
         student.setAshuxue(80);
+        student.setByuwen(100);
+        student.setBshuxue(80);
+        Student student2 = new Student();
+        student2.setCreatedById("qqcc");
+        student2.setAshuxue(10);
+        student2.setByuwen(100);
+        student2.setBshuxue(180);
         list.add(student);
+        list.add(student2);
         //通过学生分组
         return list.stream().collect(Collectors.groupingBy(Student::getCreatedById));
     }
@@ -155,10 +163,9 @@ public class MyExcelDownService {
      */
     private StudentDto listTables2Dto(Student row) {
         StudentDto dto = new StudentDto();
-        dto.setStudentBirthDate(row.getStudentBirthDate());
         dto.setAyuwen(row.getAyuwen() == null ? 0 : row.getAyuwen());
         dto.setAshuxue(row.getAshuxue() == null ? 0 : row.getAshuxue());
-        dto.setBwuwen(row.getBwuwen() == null ? 0 : row.getBwuwen());
+        dto.setByuwen(row.getByuwen() == null ? 0 : row.getByuwen());
         dto.setBshuxue(row.getBshuxue() == null ? 0 : row.getBshuxue());
         return dto;
     }
