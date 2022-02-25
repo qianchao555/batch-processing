@@ -9,6 +9,7 @@ import java.util.LinkedList;
  * @version:1.0
  */
 public class LinkedListDemo {
+    Object o=new Object();
     public static void main(String[] args) {
         LinkedList linkedList=new LinkedList();
         linkedList.add(1);
