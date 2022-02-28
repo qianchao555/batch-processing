@@ -1,3 +1,105 @@
+### MySQL体系结构
+
+![MySQL体系结构图](http://c.biancheng.net/uploads/allimg/200622/5-200622094009461.png)
+
+上图为MySQL基础架构图
+
+MySQL由连接池、SQL接口、解析器、优化器、缓存、存储引擎等组成。可以分为三层：MySQL Server层、存储引擎层、文件系统层。MySQL Server层又包括连接层和SQL层
+
+Connectors不属于以上任何一层，可以将Connectors理解为各种客户端、应用服务，主要是指不同语言与MySQL的交互
+
+#### MySQL Server
+
+##### 连接层
+
+1. 应用程序通过接口(JDBC、ODBC等等)来连接MySQL，最先处理的是连接层。连接层包括通信协议、线程处理、用户密码认证3部分
+   - 通信协议负责检测客户端版本是否兼容 MySQL 服务端
+   - 线程处理是指每一个连接请求都会分配一个对应的线程，相当于一条 SQL 对应一个线程，一个线程对应一个逻辑 CPU，在多个逻辑 CPU 之间进行切换
+   - 密码认证用来验证用户创建的账号、密码，以及 host 主机授权是否可以连接到 MySQL 服务器
+2. 连接池（Connection Pool）属于连接层。由于每次建立连接都需要消耗很多时间，连接池的作用就是将用户连接、用户名、密码、权限校验、线程处理等需要缓存的需求缓存下来，下次可以直接用已经建立好的连接，提升服务器性能
+
+##### SQL层
+
+SQL层是MySQL的核心，核心服务都在这一层实现。主要包括权限判断、查询缓存、解析器、预处理、查询优化器、缓存、执行计划
+
+1. 权限判断可以审核用户有没有访问某个库、某个表，或者表里某行数据的权限
+2. 查询缓存通过 Query Cache 进行操作，如果数据在 Query Cache 中，则直接返回结果给客户端，不必再进行查询解析、优化和执行等过程
+3. 查询解析器针对 SQL 语句进行解析，判断语法是否正确
+4. 预处理器对解析器无法解析的语义进行处理
+5. 查询优化器对 SQL 进行改写和相应的优化，并生成最优的执行计划，就可以调用程序的 API 接口，通过存储引擎层访问数据
+
+Management Services & Utilities、SQL Interface、Parser、Optimizer 和 Caches & Buffers 属于 SQL 层，详细说明如下表所示。
+
+| 名称                            | 说明                                                         |
+| ------------------------------- | ------------------------------------------------------------ |
+| Management Services & Utilities | MySQL 的系统管理和控制工具，包括备份恢复、MySQL 复制、集群等。 |
+| SQL Interface（SQL 接口）       | 用来接收用户的 SQL 命令，返回用户需要查询的结果。例如 SELECT FROM 就是调用 SQL Interface。 |
+| Parser（查询解析器）            | 在 SQL 命令传递到解析器的时候会被解析器验证和解析，以便 MySQL 优化器可以识别的数据结构或返回 SQL 语句的错误。 |
+| Optimizer（查询优化器）         | SQL 语句在查询之前会使用查询优化器对查询进行优化，同时验证用户是否有权限进行查询，缓存中是否有可用的最新数据。它使用“选取-投影-连接”策略进行查询。例如 `SELECT id, name FROM student WHERE gender = "女";`语句中，SELECT 查询先根据 WHERE 语句进行选取，而不是将表全部查询出来以后再进行 gender 过滤。SELECT 查询先根据 id 和 name 进行属性投影，而不是将属性全部取出以后再进行过滤，将这两个查询条件连接起来生成最终查询结果。 |
+| Caches & Buffers（查询缓存）    | 如果查询缓存有命中的查询结果，查询语句就可以直接去查询缓存中取数据。这个缓存机制是由一系列小缓存组成的，比如表缓存、记录缓存、key 缓存、权限缓存等。 |
+
+
+
+#### 存储引擎层
+
+1. 存储引擎层是 MySQL 数据库区别于其他数据库最核心的一点，也是 MySQL 最具特色的一个地方。主要负责 MySQL 中数据的存储和提取
+2. 因为在关系数据库中，数据的存储是以表的形式存储的，所以存储引擎也可以称为表类型（即存储和操作此表的类型）
+
+#### 文件系统层
+
+1. 文件系统层主要是将数据库的数据存储在操作系统的文件系统之上，并完成与存储引擎的交互
+
+-------------------------------------------------------------------------------------
+
+### mysql数据类型
+
+MySQL数据类型大致分为5类，整数类型、浮点数类型和定点数类型、日期和时间类型、字符串类型、二进制类型
+
+#### 整数类型
+
+| 类型名称  | 说明           | 存储需求 |
+| --------- | -------------- | -------- |
+| tinyInt   | 很小的整数     | 1个字节  |
+| smallInt  | 小的整数       | 2个字节  |
+| MediumInt | 中等大小的整数 | 3个字节  |
+| Int       | 普通大小的整数 | 4个字节  |
+| bigInt    | 大整数         | 8个字节  |
+
+#### 浮点数类型\定点数
+
+| 类型名称          | 说明               | 存储需求   |
+| ----------------- | ------------------ | ---------- |
+| float             | 单精度浮点数       | 4 个字节   |
+| double            | 双精度浮点数       | 8个字节    |
+| decimal(M,D)，dec | 压缩的“严格”定点数 | M+2 个字节 |
+
+1. double 实际上是以字符串的形式存放的，decimal 可能的最大取值范围与 DOUBLE 相同，但是有效的取值范围由 M 和 D 决定。如果改变 M 而固定 D，则取值范围将随 M 的变大而变大。
+2. 从上表中可以看到，DECIMAL 的存储空间并不是固定的，而由精度值 M 决定，占用 M+2 个字节。  
+
+#### 日期/时间类型
+
+| 类型名称  | 日期格式            | 日期范围                                          | 存储需求 |
+| --------- | ------------------- | ------------------------------------------------- | -------- |
+| year      | YYYY                | 1901 ~ 2155                                       | 1 个字节 |
+| time      | HH:MM:SS            | -838:59:59 ~ 838:59:59                            | 3 个字节 |
+| date      | YYYY-MM-DD          | 1000-01-01 ~ 9999-12-3                            | 3 个字节 |
+| dateTime  | YYYY-MM-DD HH:MM:SS | 1000-01-01 00:00:00 ~ 9999-12-31 23:59:59         | 8 个字节 |
+| timeStamp | YYYY-MM-DD HH:MM:SS | 1980-01-01 00:00:01 UTC ~ 2040-01-19 03:14:07 UTC | 4 个字节 |
+
+
+
+#### 字符串类型
+
+char、varchar、tinyText、text、mediumText、longText、enmu、set
+
+#### 二进制类型
+
+bit、binary、varBinary、tinyBlob、blob、mediumBlob、longBlob
+
+---
+
+
+
 ### MySQL分库分表
 
 #### 水平切分
@@ -17,6 +119,99 @@
 1. 哈希取模：hash(key)%Num_Db
 2. 范围:可以是ID范围，也可以是时间范围
 3. 映射表：使用单独的一个数据库来存储映射关系
+
+---
+
+
+
+### MySQL分区
+
+参考：
+
+https://www.cnblogs.com/helios-fz/p/13671682.html
+
+https://juejin.cn/post/6844903991944413191
+
+#### 概念
+
+1. 将同一表中，不同行的记录分配到不同的物理文件中，几个分区就有几个.ibd文件(InnoDB引擎)。（MyISAM引擎生成.myd 和.myi文件）
+2. 分区是将一个表或索引分解成多个更小、更可管理的部分。每个分区都是独立的，可以独立处理，亦可以作为一个更大对象的一部分进行处理
+3. MySQL数据库的分区是局部分区索引，一个分区中既存了数据，又放了索引，也就是说，每个区的聚集索引和非聚集索引都放在各自区的(不同的物理文件)。目前MySQL不支持全局分区
+
+#### 分区类型
+
+以下几种：无论哪种类型的分区，如果表中存在主键或唯一索引时，分区列必须是唯一索引的一个组成部分
+
+查看执行计划，和普通的执行计划比较多了partitions、filtered字段，partitions标识走了哪几个分区
+
+explain partitions select 语句；
+
+##### Range分区
+
+1. 是实战中最为常用的一种分区类型，行数据基于属于一个给定的连续区间的列值被放入分区。但是，当插入的数据不再一个分区中定义的值的时候，会抛异常
+
+2. ~~~mysql
+   CREATE TABLE `m_test_db`.`Order` (
+       `id` INT NOT NULL AUTO_INCREMENT,
+       `partition_key` INT NOT NULL,
+       `amt` DECIMAL(5) NULL,
+       PRIMARY KEY (`id` , `partition_key`)
+   ) PARTITION BY RANGE (partition_key) PARTITIONS 5 (
+   PARTITION part0 VALUES LESS THAN (201901) , 
+   PARTITION part1 VALUES LESS THAN (201902) , 
+   PARTITION part2 VALUES LESS THAN (201903) , 
+   PARTITION part3 VALUES LESS THAN (201904) , 
+   PARTITION part4 VALUES LESS THAN (201905));
+   #插入数据
+   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('1', '201901', '1000');
+   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('2', '201902', '800');
+   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('3', '201903', '1200');
+   
+   ~~~
+
+   - ~~~mysql
+     explain partitions select * from order where partition_key ='201902'
+     #可以看出，SQL优化器只搜索对应的part2分区
+     ~~~
+
+   - |      |             |       |            |       |               |      |         |      |      |          |       |
+     | ---- | ----------- | ----- | ---------- | ----- | ------------- | ---- | ------- | ---- | ---- | -------- | ----- |
+     | id   | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra |
+     | 1    | Simple      | order | part2      | index |               |      |         |      |      |          |       |
+
+注意事项：
+
+1. MySQL分区表如果有主键，那么必须包含分区字段，所以创建语句是一个复合主键，否则会报SQL创建表错误
+2. 对于原生分区，分区对象返回的只能是整数值
+3. 分区字段不能为null
+
+以下几种分区不常用：
+
+##### List分区
+
+LIST分区和RANGE分区很相似，只是分区列的值是离散的，不是连续的。LIST分区使用VALUES IN，因为每个分区的值是离散的，因此只能定义值
+
+##### Hash分区
+
+将数据均匀的分布到预先定义的各个分区中，以保证每个分区的熟练大致相同
+
+##### Key分区
+
+KEY分区和HASH分区相似，不同之处在于HASH分区使用用户定义的函数进行分区，KEY分区使用数据库提供的函数进行分区
+
+##### 子分区
+
+##### MySQL分区处理Null值的方式
+
+#### 分区管理
+
+#### 分区和性能
+
+分区主要用于数据库高可用性的管理
+
+---
+
+
 
 ### MySQL一条SQL的执行过程详解
 
@@ -73,6 +268,165 @@ select studentName from students where id=1;
 #### 存储引擎
 
 查询优化器会调用存储引擎的接口，去执行 SQL，也就是说真正执行 SQL 的动作是在存储引擎中完成的。数据是被存放在内存或者是磁盘中的（存储引擎是一个非常重要的组件，后面会详细介绍
+
+#### 初识存储引擎
+
+~~~mysql
+#以更新sql举例
+update students set studentName='小强' where id=1；
+~~~
+
+1. 当Java系统发出这样的查询交给MySQL时，它会按照上面的一系列流程最终通过执行器调用存储引擎去执行
+2. 执行这个sql时候，sql对应的数据要么在内存中、要么在磁盘上，如果直接在磁盘中操作，那么随机IO的读写速度肯定是很慢的，所以每次执行SQL的时候，都会将数据加载到内存中，这块内存就是InnoDB中一个非常重要的组件：缓存池（Buffer Pool）
+
+##### Buffer Pool
+
+1. 顾名思义，缓冲池其实就是类似  Redis  一样的作用，起到一个缓存的作用，因为我们都知道 MySQL 的数据最终是存储在磁盘中的，如果没有这个 Buffer Pool  那么我们每次的数据库请求都会磁盘中查找，这样必然会存在 IO 操作，这肯定是无法接受的
+2. 有了 Buffer Pool 就是我们第一次在查询的时候会将查询的结果存到  Buffer Pool 中，这样后面再有请求的时候就会先从缓冲池中去查询，如果没有再去磁盘中查找，然后在放到  Buffer Pool 中，如下：
+3. ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/db/mysql/db-mysql-sql-9.png)
+4. 此条SQL执行步骤大致如下：
+   - innodb 存储引擎会在缓冲池中查找 id=1 的这条数据是否存在
+   - 发现不存在，那么就会去磁盘中加载，并将其存放在缓冲池中
+   - 该条记录会被加上一个独占锁（总不能你在修改的时候别人也在修改吧，这个机制本篇文章不重点介绍，以后会专门写文章来详细讲解）
+
+##### undo日志文件：记录数据被修改前的样子
+
+undo log 就是没有发生事情的一些日志
+
+1. 在将SQL查询到的数据加载到Buffer Pool时，同时会往undo日志文件插入一条日志，也就是将id=1这条记录的原来的值记录下来
+2. 这样做的目的？
+3. Innodb 存储引擎的最大特点就是支持事务，如果本次更新失败，也就是事务提交失败，那么该事务中的所有的操作都必须回滚到执行前的样子，也就是说当事务失败的时候，也不会对原始数据有影响
+4. ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/db/mysql/db-mysql-sql-10.png)
+5. 到这一步，我们的执行的 SQL 语句已经被加载到 Buffer Pool 中了，然后开始更新这条语句，更新的操作实际是在Buffer Pool中执行的，此时就会造成Buffer Pool和数据库中的数据不一致问题
+
+##### redo日志文件：记录数据被修改后的样子
+
+1. 除了从磁盘中加载文件和将操作前的记录保存到 undo 日志文件中，其他的操作是在内存中完成的，内存中的数据的特点就是：断电丢失。如果此时 MySQL 所在的服务器宕机了，那么 Buffer Pool 中的数据会全部丢失的。这个时候 redo 日志文件就需要来大显神通了
+2. redo日志文件是InnoDB特有的，它是存储引擎级别的，不是MySQL级别的
+3. redo 记录的是数据修改之后的值，不管事务是否提交都会记录下来。例如，此时将要做的是update students set stuName='小强' where id=1; 那么这条操作就会被记录到 redo log buffer 中，啥？怎么又出来一个 redo log buffer ,很简单，MySQL 为了提高效率，所以将这些操作都先放在内存中去完成，然后会在某个时机将其持久化到磁盘中。
+4. ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/db/mysql/db-mysql-sql-11.png)
+5. MySQL执行器调用存储引擎是怎么将SQL加载到缓冲池和记录哪些日志文件的流程如下：
+   - 准备更新一条SQL语句
+   - MySQL(InnoDB)会先去缓冲池中查找这条数据，没找到就会去磁盘中查找，如果查找到就会将这条数据加载到缓冲池（BufferPool）中
+   - 在加载到 Buffer Pool 的同时，会将这条数据的原始记录保存到 undo 日志文件中
+   - innodb 会在 Buffer Pool 中执行更新操作
+   - 更新后的数据会记录在 redo log buffer 中
+6. 此时SQL语句已经更新完成，需要将更新的值提交，也就是需要提交本次的事务了。因为只要事务成功提交了，才会将最后的变更保存到数据库中，在提交事务前仍然会进行相关的操作
+7. 将  redo Log Buffer 中的数据持久化到磁盘中。就是将 redo log buffer 中的数据写入到 redo log 磁盘文件中，一般情况下，redo log Buffer 数据写入磁盘的策略是立即刷入磁盘，如下：
+8. ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/db/mysql/db-mysql-sql-12.png)
+9. 到此为止，**从执行器开始调用存储引擎接口做了哪些事情呢**？
+   - 准备更新一条 SQL 语句
+   - MySQL（innodb）会先去缓冲池（BufferPool）中去查找这条数据，没找到就会去磁盘中查找，如果查找到就会将这条数据加载到缓冲池（BufferPool）中
+   - 在加载到 Buffer Pool 的同时，会将这条数据的原始记录保存到 undo 日志文件中
+   - innodb 会在 Buffer Pool 中执行更新操作
+   - 更新后的数据会记录在 redo log buffer 中
+   - MySQL 提交事务的时候，会将 redo log buffer 中的数据写入到 redo 日志文件中。刷磁盘可以通过 innodb_flush_log_at_trx_commit 参数来设置 
+     - 值为 0 表示不刷入磁盘
+     - 值为 1 表示立即刷入磁盘
+     - 值为 2 表示先刷到 os cache
+   - myslq 重启的时候会将 redo 日志恢复到缓冲池中
+
+##### bin log：记录整个操作过程
+
+1. redo log记录的东西是偏向于物理性质的，如：“对什么数据，做了什么修改”。 InnoDB 存储引擎特有的日志文件
+2. bin log是偏向于逻辑性质的，类似于：“对 students 表中的 id 为 1 的记录做了更新操作”。是 MySQL 级别的日志
+3. 两者的特点总结：
+
+| 性  质   | REdo log                                                     | bin log                                                      |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 文件大小 | redo log 的大小是固定的（配置中也可以设置，一般默认的就足够了） | bin log 可通过配置参数max_bin log_size设置每个bin log文件的大小（但是一般不建议修改）。 |
+| 实现方式 | 是InnoDB引擎层实现的                                         | 是 MySQL 层实现的，所有引擎都可以使用 bin log日志            |
+| 记录方式 | 采用循环写的方式记录，当写到结尾时，会回到开头循环写日志     | 通过追加的方式记录，当文件大小大于给定值后，后续的日志会记录到新的文件上 |
+| 使用场景 | 适用于崩溃恢复(crash-safe)（这一点其实非常类似与 Redis 的持久化特征） | 适用于主从复制和数据恢复                                     |
+
+##### bin log文件是如何刷入磁盘的
+
+bin log在什么时候记录数据？
+
+1. MySQL 在提交事务的时候，不仅仅会将 redo log buffer  中的数据写入到redo log 文件中，同时也会将本次修改的数据记录到 bin log文件中，同时会将本次修改的bin log文件名和修改的内容在bin log中的位置记录到redo log中，最后还会在redo log最后写入 commit 标记，这样就表示本次事务被成功的提交了
+2. ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/db/mysql/db-mysql-sql-13.png)
+
+MySQL有一个后台线程，它会在某个时刻将Buffer Pool中的脏数据刷到MySQL数据库中，这样内存和数据库的数据就保持一致了
+
+![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/db/mysql/db-mysql-sql-14.png)
+
+
+
+### MySQL查询 执行计划 Explain 
+
+#### explain
+
+MySQL中可以使用Explain、Describe获取MySQL执行Select语句的信息，来分析查询语句，不过通常使用Explain；Describe多用于查看表结构信息
+
+~~~mysql
+Explain Select 语句；
+~~~
+
+|      |             |       |      |               |      |         |      |      |       |
+| ---- | ----------- | ----- | ---- | ------------- | ---- | ------- | ---- | ---- | ----- |
+| id   | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra |
+|      |             |       |      |               |      |         |      |      |       |
+
+1. id：select语句的编号，有几个select就有几个id，并且id的顺序是按照select出现的顺序增长的。如果在语句中没子查询或关联查询，只有唯一的 SELECT，每行都将显示 1。否则，内层的 SELECT 语句一般会顺序编号，对应于其在原始语句中的位置
+2. select_type：表示对应行是简单还是复杂的查询
+   - simple:简单查询
+   - primary:复杂查询中最外层的select
+   - subquery:包含在select中的子查询（不是在from子句中）
+   - derived:包含在from子句中的子查询
+   - union:在union中的第二个和随后的select
+   - union result:从union临时表检索结果的select
+3. table:当前行正在访问的表，当 from 子句中有子查询时，table列是 <derivenN> 格式，表示当前查询依赖 id=N 的查询，于是先执行 id=N 的查询。当有 union 时，UNION RESULT 的 table 列的值为 <union1,2>，1和2表示参与 union 的 select 行id
+4. type：表示关联类型或访问类型，即MySQL决定如歌查找表中的行
+   - 最优到最差为：
+   - system:系统表，少量数据，往往不需要进行磁盘IO
+   - const:常量连接，对查询的某部分进行优化并将其转化为一个常量
+   - eq_ref：primary key或unique key索引等值扫描，最多只会返回一条符合条件的记录
+   - ref：非主键、非唯一索引等值扫描
+   - range：范围扫描。通常出现在in、between、>、<、>=等操作，使用一个索引来检索给定范围的行
+   - index：索引树扫描。和ALL一样，不同就是mysql只需要扫描索引树，比All快一些
+   - all：全表扫描
+5. possible_keys：这一列显示查询可能使用哪些索引来查找
+6. key：这一列显示mysql实际采用哪个索引来优化对该表的访问
+7. key_len：这一列显示了mysql在索引里使用的字节数，通过这个值可以算出具体使用了索引中的哪些列
+8. ref：这一列显示了在key列记录的索引中，表查找值所用到的列或常量，常见的有：const（常量），NULL，字段名（例：film.id）
+9. rows：这一列是mysql估计要读取并检测的行数，注意这个不是结果集里的行数
+10. Extra：额外信息
+    - distinct： 一旦mysql找到了与行相联合匹配的行，就不再搜索了
+    - Using index：这发生在对表的请求列都是同一索引的部分的时候，返回的列数据只使用了索引中的信息，而没有再去访问表中的行记录。是性能高的表现
+    - Using where：mysql服务器将在存储引擎检索行后再进行过滤。就是先读取整行数据，再按 where 条件进行检查，符合就留下，不符合就丢弃
+    - Using temporary：mysql需要创建一张临时表来处理查询。出现这种情况一般是要进行优化的，首先是想到用索引来优化
+    - Using filesort：mysql 会对结果使用一个外部索引排序，而不是按索引次序从表里读取行。此时mysql会根据联接类型浏览所有符合条件的记录，并保存排序关键字和行指针，然后排序关键字并按顺序检索行信息。这种情况下一般也是要考虑使用索引来优化的。
+
+#### explain扩展
+
+1. Explain extended：会在 explain  的基础上额外提供一些查询优化的信息。紧随其后通过 show warnings 命令可以 得到优化后的查询语句，从而看出优化器优化了什么。额外还有 filtered 列，是一个半分比的值，rows * filtered/100 可以估算出将要和 explain 中前一个表进行连接的行数（前一个表指 explain 中的id值比当前表id值小的表）
+
+|      |             |       |      |               |      |         |      |      |          |       |
+| ---- | ----------- | ----- | ---- | ------------- | ---- | ------- | ---- | ---- | -------- | ----- |
+| id   | select_type | table | type | possible_keys | key  | key_len | ref  | rows | filtered | Extra |
+|      |             |       |      |               |      |         |      |      |          |       |
+
+2. Explain partitions：相比 explain 多了个 partitions 字段，如果查询是基于分区表的话，会显示查询将访问的分区
+
+   
+
+
+
+## 面试
+
+### 数据库范式
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
