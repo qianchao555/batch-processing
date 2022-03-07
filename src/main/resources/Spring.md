@@ -193,11 +193,19 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 如果仅仅是解决循环依赖问题，使用二级缓存就可以了，但是如果对象实现了AOP，那么注入到其他bean的时候，并不是最终的代理对象，而是原始的。这时就需要通过三级缓存的ObjectFactory才能提前产生最终的需要代理的对象
 
+##### 解决构造函数相互注入造成的循环依赖：
+
+1. 前面说Spring可以自动解决单例模式下通过setter()方法进行依赖注入产生的循环依赖问题。而对于通过构造方法进行依赖注入时产生的循环依赖问题没办法自动解决，那针对这种情况，我们可以使用@Lazy注解来解决。
+2. 也就是说，对于类A和类B都是通过构造器注入的情况，可以在A或者B的构造函数的形参上加个@Lazy注解实现延迟加载。@Lazy实现原理是，当实例化对象时，如果发现参数或者属性有@Lazy注解修饰，那么就不直接创建所依赖的对象了，而是使用动态代理创建一个代理类。
+3. 比如，类A的创建：A a=new A(B)，需要依赖对象B，发现构造函数的形参上有@Lazy注解，那么就不直接创建B了，而是使用动态代理创建了一个代理类B1，此时A跟B就不是相互依赖了，变成了A依赖一个代理类B1，B依赖A。但因为在注入依赖时，类A并没有完全的初始化完，实际上注入的是一个代理对象，只有当他首次被使用的时候才会被完全的初始化。
+
 ---
 
 
 
 #### Spring bean生命周期
+
+https://blog.csdn.net/knknknkn8023/article/details/107130806/
 
 1. 普通Java对象
    - 实例化对象
@@ -206,7 +214,24 @@ https://blog.csdn.net/a745233700/article/details/110914620
    - 实例化bean
    - 属性赋值
    - 初始化
+   - bean的使用
    - 容器关闭时 销毁
+
+![Spring 生命周期流程](http://c.biancheng.net/uploads/allimg/220119/1F32KG1-0.png)
+
+##### Bean 生命周期的整个执行过程描述如下。
+
+1. Spring 启动，查找并加载需要被 Spring 管理的 Bean，对 Bean 进行实例化。
+2. 对 Bean 进行属性注入。
+3. 如果 Bean 实现了 BeanNameAware 接口，则 Spring 调用 Bean 的 setBeanName() 方法传入当前 Bean 的 id 值。
+4. 如果 Bean 实现了 BeanFactoryAware 接口，则 Spring 调用 setBeanFactory() 方法传入当前工厂实例的引用。
+5. 如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。
+6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。
+7. 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。
+8. 如果在配置文件中通过 init-method 属性指定了初始化方法，则调用该初始化方法。
+9. 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的初始化方法 postProcessAfterInitialization()。此时，Bean 已经可以被应用系统使用了。
+10. 如果在 <bean> 中指定了该 Bean 的作用域为 singleton，则将该 Bean 放入 Spring IoC 的缓存池中，触发 Spring 对该 Bean 的生命周期管理；如果在 <bean> 中指定了该 Bean 的作用域为 prototype，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
+11. 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法销毁 Bean；如果在配置文件中通过 destory-method 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁。
 
 #### Bean装配
 
@@ -258,12 +283,12 @@ spring支持编程式事务管理和声明式事务管理
 ###### 声明式事务管理
 
 1. 声明式事务管理建立在Aop之上。本质是通过Aop功能，对方法前、后进行拦截，将事务处理的功能编织到拦截的方法中，也就是在目标方法开始之前启动一个事务，在执行目标方法之后根据执行情况提交或回滚事务
-2. 什么是事务最大的优点：不需要在业务代码中参杂事务管理的代码，只需要在配置文件中做相关的事务规则声明或通过@Transaction注解的方式，便可以将事务规则应用到业务逻辑中，减少业务代码的污染。
+2. 声明式事务最大的优点：不需要在业务代码中参杂事务管理的代码，只需要在配置文件中做相关的事务规则声明或通过@Transaction注解的方式，便可以将事务规则应用到业务逻辑中，减少业务代码的污染。
 3. 不足：最细粒度只能作用到方法级别，无法做到像编程式事务那样可以作用到代码块级别
 
 ##### Spring的事务传播机制
 
-Spring事务的传播机制说的是，当多个事务同时存在的是，spring如何处理这些事务的行为。
+Spring事务的传播机制说的是，当多个事务同时存在时，spring如何处理这些事务的行为。
 
 事务传播机制采用ThreadLocal实现的，所以如果调用的方法是在新线程调用的，那么，事务传播实际上是会失效的
 

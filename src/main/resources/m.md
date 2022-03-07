@@ -544,11 +544,9 @@ Explain Select 语句；
 
 2. Explain partitions：相比 explain 多了个 partitions 字段，如果查询是基于分区表的话，会显示查询将访问的分区
 
-   
+---
 
 
-
-## 面试
 
 ### SQL查询语句执行先后顺序
 
@@ -562,6 +560,8 @@ select * from student where age='zhangsan' group by age having age>10 order by a
 4. having：对已经分组的数据进行过滤条件
 5. select：需要的字段
 6. order by：对结果集进行排序
+
+---
 
 
 
