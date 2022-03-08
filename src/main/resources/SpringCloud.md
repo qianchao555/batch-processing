@@ -58,6 +58,13 @@ Spring Cloud Config：分布式统一配置管理中心
 1. 作为springcloud的服务注册服务器，它是服务注册中心，系统中的其他服务使用Eureka的客户端将其注册到Eureka Service中，并且保持心跳
 2. 可以通过Eureka Service来监控各个微服务是否运行正常
 
+#### Eureka两大组件
+
+Eureka采用C/S架构。
+
+1. Eureka Server:服务注册中心，主要用于提供服务注册功能。当微服务启动时，会将自己的服务注册到Eureka Server。Server维护一个可以服务列表，存储了所有注册到Eureka Server的可以服务的信息，这些服务可以在Server管理界面直观看到
+2. Eureka Client:客户端，通常指的是微服务系统中各个微服务，主要用于和Server进行交互。微服务应用启动后，Client会向Server发送心跳（默认周期30s）。若Server在多个心态周期内没有收到某个Client的心跳，Server会将它从可用服务列表中移除（默认90s）
+
 #### 服务注册和发现是什么
 
 所有服务都在Eureka服务器上注册并通过调用Eureka服务器完成服务查找
@@ -68,7 +75,7 @@ Spring Cloud Config：分布式统一配置管理中心
 
 #### Eureka自我保护
 
-1. 默认情况下，如果Eureka服务器在一定时间内没有收到某个微服务的心跳，Eureka会进入自我保护模式
+1. 默认情况下，如果Eureka服务器在一定时间内(默认90s)没有收到某个微服务的心跳，Eureka会进入自我保护模式
 2. 自我保护模式下，Eureka Service会保护服务注册表中的信息，不在删除注册表中的数据，当网络故障恢复后，Eureka Service节点会自动退出自我保护模式
 
 
@@ -88,16 +95,34 @@ Spring Cloud Config：分布式统一配置管理中心
 #### Ribbon是什么
 
 1. ribbon是Netflix发布的开源项目
-2. 主要功能是提供客户端软件的负载均衡算法
+2. 主要功能是提供客户端软件的负载均衡算法和服务调用
 3. Ribbon客户端组件提供了一系列完善的配置项，根据配置信息，Ribbon会自动基于某种规则去连接不同的机器
 
 #### 负载均衡的意义？
 
 #### Ribbon实现原理
 
-使用discoverClient从注册中心读取目标服务信息，对同一接口请求进行计数，使用取余算法获取目标服务集群索引，返回获取到的目标服务信息
+使用discoverClient从注册中心读取目标服务信息，对同一接口请求进行计数，使用取余算法获取目标服务集群索引，返回获取到的目标服务信息，
 
-#### Nginx与Ribbon区别
+#### Ribbon实现负载均衡
+
+Ribbon 是一个客户端的负载均衡器，它可以与 Eureka 配合使用轻松地实现客户端的负载均衡。Ribbon 会先从 Eureka Server（服务注册中心）去获取服务端列表，然后通过负载均衡策略将请求分摊给多个服务端，从而达到负载均衡的目的
+
+SpringCloud Ribbon 提供了一个IRule接口，该接口主要用来定义负载均衡策略，他有7个默认实现类，每一个实现类都是一个负载均衡策略
+
+| 序号 | 实现类                    | 负载均衡策略                                                 |
+| ---- | ------------------------- | ------------------------------------------------------------ |
+| 1    | RoundRobinRule            | 按照线性轮询策略，即按照一定的顺序依次选取服务实例           |
+| 2    | RandomRule                | 随机选取一个服务实例                                         |
+| 3    | RetryRule                 | 按照 RoundRobinRule（轮询）的策略来获取服务，如果获取的服务实例为 null 或已经失效，则在指定的时间之内不断地进行重试（重试时获取服务的策略还是 RoundRobinRule 中定义的策略），如果超过指定时间依然没获取到服务实例则返回 null 。 |
+| 4    | WeightedResponseTimeRule  | WeightedResponseTimeRule 是 RoundRobinRule 的一个子类，它对 RoundRobinRule 的功能进行了扩展。  根据平均响应时间，来计算所有服务实例的权重，响应时间越短的服务实例权重越高，被选中的概率越大。刚启动时，如果统计信息不足，则使用线性轮询策略，等信息足够时，再切换到 WeightedResponseTimeRule。 |
+| 5    | BestAvailableRule         | 继承自 ClientConfigEnabledRoundRobinRule。先过滤点故障或失效的服务实例，然后再选择并发量最小的服务实例。 |
+| 6    | AvailabilityFilteringRule | 先过滤掉故障或失效的服务实例，然后再选择并发量较小的服务实例。 |
+| 7    | ZoneAvoidanceRule         | 默认的负载均衡策略，综合判断服务所在区域（zone）的性能和服务（server）的可用性，来选择服务实例。在没有区域的环境下，该策略与轮询（RandomRule）策略类似。 |
+
+Spring Cloud Ribbon默认使用轮询策略选取服务实例，我们也可以根据自身的需求切换负载均衡策略
+
+
 
 ---
 
@@ -111,14 +136,16 @@ Spring Cloud Config：分布式统一配置管理中心
 
 #### SpringCloud调用接口的方式
 
-##### Feign
+Feign(集成了ribbon)
 
-##### RestTemplate
+RestTemplate+ribbon
 
-#### Ribbon和Feing调用服务的区别
+
+
+#### RestTemplate和Feing调用服务的区别
 
 1. 调用方式不同
-   - ribbon需要我们自己构建http请求，模拟http请求然后通过RestTemplate发给其他服务，步骤繁琐
+   - RestTemplate需要我们自己构建http请求，模拟http请求然后发给其他服务，步骤繁琐
    - Feign在Ribbon基础上进行了一次封装，采用接口的方式，将需要调用的服务方法定义成抽象方法保存在本地就可以了，不需要自己构建http请求，直接调用接口就可以了。不过需要调用方法要和本地抽象方法的签名完全一致
 
 ---
@@ -227,10 +254,24 @@ Hystrix为隔离的服务开启一个独立的线程池，这样在高并发的�
 3. Spring Cloud Config 分为Config Server和Client两部分
 4. Server也被称为分布式配置中心，它是一个独立运行的微服务应用，用来连接配置仓库并为客户端提供获取配置信息、加密信息、解密等信息的访问接口
 5. Client指的是微服务架构中的各个微服务，他们通过Config Server对配置进行管理，并从Config Server中获取和加载配置信息
+6. Spring Cloud Config默认使用Git存储配置信息
 
 #### 分布式配置中心的作用
 
 动态变更项目配置信息，其不必重新部署项目
+
+#### Spring Cloud Config工作原理
+
+![img](http://c.biancheng.net/uploads/allimg/211210/1019425240-0.png)
+
+工作流程：
+
+1. 开发或运维人员提交配置文件到远程的Git仓库
+2. Config服务端(Server)负责连接配置仓库git，并对config客户端暴露获取配置的接口
+3. config客户端通过config服务端暴露出来的接口，拉取配置仓库中的配置
+4. config客户端拉取获取到的配置信息，以支持服务的运行
+
+
 
 #### Spring Cloud Config可以实现实时刷吗
 
@@ -240,11 +281,34 @@ SpringCloud Config实时刷新采用SpringCloud Bus消息总线实现
 
 ### Spring Cloud Bus
 
+又称消息总线，它能够通过轻量级的消息代理(例如：RabbitMq、kafka等)将微服务架构中的各个服务连接起来，实现广播状态更改、事件推送等功能，还可以实现微服务间的通信功能
+
+目前SpringCloud Bus支持的消息代理：RabbitMq、Kafka
+
 #### 什么是SpringCloud Bus
 
 1. bus就像是一个分布式执行器，用于扩展SpringBoot应用程序的配置文件，也可以用作应用程序直接的通信通道
 2. 不能单独通信，需要配合MQ的支持
 3. 一般与SpringCloud Config配合做配置中心
+
+#### SpringCloud Bus基本原理
+
+SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的消息主题(Topic)，这个Topic中的消息会被所有服务实例监听和消费。当其中的一个服务刷新数据时，SpringCloud Bus会把信息保存到Topic中，这样监听这个Topic的服务就收到消息并自动消费
+
+#### SpringCloud Bus动态属性配置的原理
+
+1. 当Git仓库中的配置发生了改变，我们只需要向某一个服务(既可以是Config服务端，也可以是Config客户端)发送一个post请求，SringCloud Bus就可以通过消息代理通知其他服务重新拉取最新配置，以实现配置的动态刷新
+2. ![bus+config 动态刷新配置](http://c.biancheng.net/uploads/allimg/211210/101942GY-11.png)
+3. 动态刷新步骤：
+   - 当 Git 仓库中的配置发生改变后，运维人员向 Config 服务端发送一个 POST 请求，请求路径为“/actuator/refresh”。
+   - Config 服务端接收到请求后，会将该请求转发给服务总线 Spring Cloud Bus。
+   - Spring Cloud Bus 接到消息后，会通知给所有 Config 客户端。
+   - Config 客户端接收到通知，请求 Config 服务端拉取最新配置。
+   - 所有 Config 客户端都获取到最新的配置。
+
+
+
+动态刷新配置可以全局通知，也可以定点通知
 
 ---
 
@@ -322,15 +386,135 @@ lb://service-name
 
 
 
+## SpringCloud Alibaba
+
+Spring Cloud Alibaba 是阿里巴巴结合自身丰富的微服务实践而推出的微服务开发的一站式解决方案，是 Spring Cloud 第二代实现的主要组成部分
+
+Spring Cloud Alibaba 吸收了 Spring Cloud Netflix 的核心架构思想，并进行了高性能改进。自 Spring Cloud Netflix 进入停更维护后，Spring Cloud Alibaba 逐渐代替它成为主流的微服务框架
+
+
+
+### SpringCloud Alibaba组件
+
+Nacos
+
+Sentinel
+
+Dubbo
+
+Seata
+
+Alibaba Cloud OSS
+
+Alibaba Cloud Schedulerx
+
+
+
+### Spring Cloud 两代实现组件对比
+
+| Spring Cloud 第一代实现（Netflix） | 状态                                             | Spring Cloud 第二代实现（Alibaba） | 状态                                                 |
+| ---------------------------------- | ------------------------------------------------ | ---------------------------------- | ---------------------------------------------------- |
+| Ereka                              | 2.0 孵化失败                                     | Nacos Discovery                    | 性能更好，感知力更强                                 |
+| Ribbon                             | 停更进维                                         | Spring Cloud Loadbalancer          | Spring Cloud 原生组件，用于代替 Ribbon               |
+| Hystrix                            | 停更进维                                         | Sentinel                           | 可视化配置，上手简单                                 |
+| Zuul                               | 停更进维                                         | Spring Cloud Gateway               | 性能为 Zuul 的 1.6 倍                                |
+| Spring Cloud Config                | 搭建过程复杂，约定过多，无可视化界面，上手难点大 | Nacos Config                       | 搭建过程简单，有可视化界面，配置管理更简单，容易上手 |
+
+
+
+### Spring Cloud Alibaba 服务注册与配置中心(Nacos)
+
+Nacos：Dynamic Naming and Configuration Service，由阿里巴巴团队使用Java语言开发的开源项目。
+
+Nacos是一个更易于帮助云原生应用的动态服务发现、配置和服务管理平台
+
+| 组成部分 | 全称              | 描述                                                         |
+| -------- | ----------------- | ------------------------------------------------------------ |
+| Na       | naming/nameServer | 即服务注册中心，与 Spring Cloud Eureka 的功能类似。          |
+| co       | configuration     | 即配置中心，与 Spring Cloud Config+Spring Cloud Bus 的功能类似。 |
+| s        | service           | 即服务，表示 Nacos 实现的服务注册中心和配置中心都是以服务为核心的。 |
+
+
+
+#### Nacos特性
+
+##### 服务发现
+
+Nacos支持基于DNS和RPC的服务发现，当服务提供者向Nacos注册服务后，服务消费者可以在Nacos上通过DNS TODO或Http&API 查找、发现服务
+
+##### 服务健康监测
+
+Nacos提供对服务的实时健康检查，能够阻止请求发送到不健康主机或服务实例上。Nacos提供了一个健康检查仪表盘，帮助我们根据健康状态管理服务的可用性以及流量
+
+##### 动态配置服务
+
+动态配置服务可以让我们以中心化、外部化、动态化的方式，管理所有环境的应用配置和服务配置
+
+##### 动态DNS服务
+
+Nacos提供动态DNS服务，能够让我们更容易地实现负载均衡、流量控制以及数据中心内网的简单DNS解析服务
+
+---
+
+
+
+#### Nacos两大组件
+
+与Eureka类似，Nacos也采用C/S架构
+
+| 组件                                                         | 描述                                                         | 功能                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Nacos Server                                                 | Nacos 服务端，与 Eureka Server 不同，Nacos Server 由阿里巴巴团队使用 Java 语言编写并将 Nacos Server 的下载地址给用户，用户只需要直接下载并运行即可。 | Nacos Server 可以作为服务注册中心，帮助 Nacos Client 实现服务的注册与发现。 |
+| Nacos Server 可以作为配置中心，帮助 Nacos Client 在不重启的情况下，实现配置的动态刷新。 |                                                              |                                                              |
+| Nacos Client                                                 | Nacos 客户端，通常指的是微服务架构中的各个服务，由用户自己搭建，可以使用多种语言编写。 | Nacos Client 通过添加依赖 spring-cloud-starter-alibaba-nacos-discovery，在服务注册中心（Nacos Server）中实现服务的注册与发现。 |
+| Nacos Client 通过添加依赖 spring-cloud-starter-alibaba-nacos-config，在配置中心（Nacos Server）中实现配置的动态刷新。 |                                                              |                                                              |
+
+#### Nacos服务注册中心
+
+Nacos 作为服务注册中心可以实现服务的注册与发现，流程如下图。
+
+
+
+![Nacos 服务注册与发现](http://c.biancheng.net/uploads/allimg/211210/1022563360-0.png)
+图1：Nacos 服务注册与发现
+
+
+在图 1 中共涉及到以下 3 个角色：
+
+- 服务注册中心（Register Service）：它是一个 Nacos Server，可以为服务提供者和服务消费者提供服务注册和发现功能。
+- 服务提供者（Provider Service）：它是一个 Nacos Client，用于对外服务。它将自己提供的服务注册到服务注册中心，以供服务消费者发现和调用。
+- 服务消费者（Consumer Service）：它是一个 Nacos Client，用于消费服务。它可以从服务注册中心获取服务列表，调用所需的服务。
+
+
+Nacos 实现服务注册与发现的流程如下：
+
+1. 从 Nacos 官方提供的下载页面中，下载 Nacos Server 并运行。
+2. 服务提供者 Nacos Client 启动时，会把服务以服务名（spring.application.name）的方式注册到服务注册中心（Nacos Server）；
+3. 服务消费者 Nacos Client 启动时，也会将自己的服务注册到服务注册中心；
+4. 服务消费者在注册服务的同时，它还会从服务注册中心获取一份服务注册列表信息，该列表中包含了所有注册到服务注册中心上的服务的信息（包括服务提供者和自身的信息）；
+5. 在获取了服务提供者的信息后，服务消费者通过 HTTP 或消息中间件远程调用服务提供者提供的服务
+
+#### Nacos配置中心
+
+Nacos Server 还可以作为配置中心，对 Spring Cloud 应用的外部配置进行统一地集中化管理。而我们只需要在应用的 POM 文件中引入 spring-cloud-starter-alibaba-nacos-config 即可实现配置的获取与动态刷新。
+
+从配置管理的角度看，Nacos 可以说是 Spring Cloud Config 的替代方案，但相比后者 Nacos 的使用更简单，操作步骤也更少
+
+#### Nacos Server集群化部署（后期深入）
 
 
 
 
 
+---
 
+### Spring Cloud Alibaba Sentinel
 
+是一种面向分布式微服务架构的轻量级高可用流量控制组件
 
+Sentinel 主要以流量为切入点，从流量控制、熔断降级、系统负载保护等多个维度帮助用户保护服务的稳定性
 
+功能上来说，Sentinel 与 Spring Cloud Netfilx Hystrix 类似，但 Sentinel 要比 Hystrix 更加强大，例如 Sentinel 提供了流量控制功能、比 Hystrix 更加完善的实时监控功能等等
 
 
 
