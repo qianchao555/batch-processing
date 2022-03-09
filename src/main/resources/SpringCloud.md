@@ -1,3 +1,77 @@
+## RPC
+
+### RPC是什么
+
+1. 远程过程调用协议（Remote Procedure Call），是一种通过网络从远程计算机上请求服务，而不需要了解底层网络技术的协议，是分布式系统常见的一种通信方法。
+2. 过程是什么：过程就是业务处理、计算任务，更直白说就是程序，就是像调用本地方法一样调用远程的过程
+3. ![img](https://pica.zhimg.com/80/45366c44f775abfd0ac3b43bccc1abc3_1440w.jpg?source=1940ef5c)
+
+### RPC和本地调用区别
+
+远程调用需要通过网络，所有响应比本地调用要慢几个数量级，也不那么可靠
+
+### RPC模式
+
+RPC采用客户端/服务端的模式，通过request-response消息模式实现
+
+
+
+### RPC三个过程
+
+1. 通讯协议：
+2. 寻址
+3. 数据序列化
+
+### 为什么要是使用RPC
+
+1. 服务化/微服务
+2. 分布式系统架构
+3. 服务可重用
+4. 系统间交互调用
+
+### RPC和其他协议的区别
+
+1. RMI远程方法调用是RPC的一种具体实现，webService、RESTfull都是RPC，只是消息的组织形式、消息协议不同
+
+### RPC的流程
+
+1. 客户端处理过程中调用client sub，就像调用本地方法一样，传入参数
+2. client sub将参数编组为消息，然后通过系统调用像服务端发送消息
+3. 客户端本地的操作系统将消息从客户端发送到服务端
+4. 服务端接收的数据包传递给server sub
+5. server sub将接收到的数据解组为参数
+6. server sub再调用服务端的过程，过程执行的结果以反方向的相同步骤响应给客户端
+
+sub(存根)：分布式计算中存根是一段代码，它转换在远程过程调用期间client和server之间传递的参数
+
+### RPC核心概念术语
+
+
+
+### RPC协议
+
+RPC调用过程中需要将消息进行编组然后发送，接收方需要解组消息为参数，过程处理结果也需要经过编组、解组；消息由哪些部分构成以及消息的表示 形式就构成了消息协议。
+
+RPC协议规定请求消息、响应消息的格式，在TCP之上我们可以选用或自定义消息协议来实现RPC的交互
+
+### RPC框架
+
+封装好了参数编组、消息解组、底层网络通信的RPC程序开发框架，可以直接在此基础上编写。常见的RPC框架：Dubbo、SpringCloud、apache Thrift、GRPC等等
+
+### 服务暴露
+
+### 远程代理对象
+
+### 通信
+
+### 序列化
+
+传输方式和序列化会之间影响RPC的性能
+
+-----
+
+
+
 ## SpringCloud
 
 ### 什么是微服务架构
@@ -132,13 +206,17 @@ Spring Cloud Ribbon默认使用轮询策略选取服务实例，我们也可以�
 
 #### 什么是Feign
 
-声明式服务调用组件，它在RestTemplate基础上做了进一步封装，我们只需要声明一个接口并通过注解进行简单的配置（类似与Dao接口上面的Mapper注解一样）即可实现对http接口的绑定
+声明式服务调用组件，我们只需要声明一个接口并通过注解进行简单的配置（类似与Dao接口上面的Mapper注解一样）即可实现对http接口的绑定
 
 #### SpringCloud调用接口的方式
 
 Feign(集成了ribbon)
 
 RestTemplate+ribbon
+
+- RestTemplate是Spring提供的用于访问Rest服务的客户端
+- 它在Http客户端库(例如：HttpURLConnection、HttpComponents、okHttp等)的基础上，封装了简单易用的模板方法API
+- restTemplate处理异常：ResponseErrorHandler、DefaultResponseErrorHandler等几个类
 
 
 
