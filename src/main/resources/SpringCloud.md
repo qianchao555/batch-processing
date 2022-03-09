@@ -588,27 +588,123 @@ Nacos Server 还可以作为配置中心，对 Spring Cloud 应用的外部配�
 
 ### Spring Cloud Alibaba Sentinel
 
+[参考文章](http://c.biancheng.net/springcloud/sentinel.html)
+
 是一种面向分布式微服务架构的轻量级高可用流量控制组件
 
 Sentinel 主要以流量为切入点，从流量控制、熔断降级、系统负载保护等多个维度帮助用户保护服务的稳定性
 
 功能上来说，Sentinel 与 Spring Cloud Netfilx Hystrix 类似，但 Sentinel 要比 Hystrix 更加强大，例如 Sentinel 提供了流量控制功能、比 Hystrix 更加完善的实时监控功能等等
 
+#### Sentinel的组成
+
+1. Sentinel核心库：Sentinel的核心库不依赖任何框架或库，能够运行与Java8及以上的版本的运行时环境，同时对Spring Cloud、Dubbo等微服务框架提供了很好的支持
+2. Sentinel控制台(Dashboard)：Sentinel提供了一个轻量级的开源控制台，它为用户提供了机器自发现、簇点链路自发现、监控、规则配置等功能
+
+Sentinel核心库不依赖Sentinel Dashboard，但两者结合使用可以有效的提高效率，让Sentinel发挥它最大的作用
+
+#### Sentinel基本概念
 
 
 
+---
+
+### Spring Cloud Alibaba Seata
+
+[参考文章](http://c.biancheng.net/springcloud/seata.html)
+
+Seata是一个分布式事务处理框架，阿里巴巴和蚂蚁金服共同开源的分布式事务解决方案，能够在微服务架构下提供高性能且简单易用的分布式事务服务
+
+#### 分布式事务相关概念
+
+**事务**：由一组操作构成的可靠、独立的工作单元，事务具备ACID特性，即：原子性、一致性、隔离性、持久性
+
+**本地事务**：本地事务由本地资源管理器(通常指：数据库管理系统，例如MySQL、Oracle等等)管理，严格地支持ACID特性，高效可靠。本地事务不具备分布式事务的处理能力，隔离的最小单位受限于资源管理器，即本地事务只能对自己数据库的操作进行控制，对于其他数据库的操作则无能为力
+
+**分支事务**：分布式事务中，就是一个个受全局事务管辖和协调的本地事务
+
+**全局事务**：指的是一次性操作多个资源管理器完成的事务，由一组分支事务组成
+
+分布式事务可以理解为：一个包含了若干个分支事务的全局事务。全局事务的职责是协调其管辖的各个分支事务达成一致，要么一起成功提交，要么一起失败回滚。通常，分支事务本身就是一个满足ACID特性的本地事务
 
 
 
+#### Seata整体工作流程
+
+Seata对分布式事务的协调和控制主要通过XID和3个核心组件实现
+
+##### XID
+
+XID是全局事务的唯一标识，它可以在服务的调用链路中传递，绑定到服务的事务上下文中
+
+##### 核心组件
+
+- TC（Transaction Coordinator）:事务协调器，它是事务的协调者，主要负责维护全局事务和分支事务的状态，驱动全局事务提交或回滚
+- TM（Transaction Manager)：事务管理器，它是事务的发起者，负责定义全局事务的范围，并根据TC维护的全局事务和分支事务状态，做出开始事务、提交事务、回滚事务的决议
+- RM（Resource Manager)：资源管理器，它是资源的管理者（可以理解为各服务使用的数据库）。它负责管理分支事务上的资源，向TC注册分支事务，汇报分支事务状态，驱动分支事务的提交或回滚
 
 
 
+以上三个组件相互协作，TC 以 Seata 服务器（Server）形式独立部署，TM 和 RM 则是以 Seata Client 的形式集成在微服务中运行，其整体工作流程如下图。
+
+![img](http://c.biancheng.net/uploads/allimg/211210/102A115W-0.png)
+
+ 
+
+Seata 的整体工作流程如下：
+
+1. TM 向 TC 申请开启一个全局事务，全局事务创建成功后，TC 会针对这个全局事务生成一个全局唯一的 XID；
+2. XID 通过服务的调用链传递到其他服务;
+3. RM 向 TC 注册一个分支事务，并将其纳入 XID 对应全局事务的管辖；
+4. TM 根据 TC 收集的各个分支事务的执行结果，向 TC 发起全局事务提交或回滚决议；
+5. TC 调度 XID 下管辖的所有分支事务完成提交或回滚操作。
 
 
 
+#### Seata AT模式
+
+Seata提供了AT、TCC、SAGA、XA四种事务模式，可以快速有效地对分布式事务进行控制，四种模式中，使用最多、最方便的就是AT模式。与其他事务模式相比，AT模式可以应对大多数的业务场景，且基本可以做到无业务入侵，开发人员有更多的精力关注于业务逻辑开发
+
+##### AT模式的前提
+
+任何应用想要使用Seata的AT模式对分布式事务进行控制，必须满足以下2个前提：
+
+1. 必须使用支持本地ACID事务特性的关系型数据库
+2. 应用程序必须是使用JDBC对数据库进行访问的Java应用
+
+此外，我们还需要针对业务中涉及的各个数据库表，分别创建一个 UNDO_LOG（回滚日志）表。不同数据库在创建 UNDO_LOG 表时会略有不同，以 MySQL 为例，其 UNDO_LOG 表的创表语句如下：
+
+```mysql
+CREATE TABLE `undo_log` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `branch_id` bigint(20) NOT NULL,
+  `xid` varchar(100) NOT NULL,
+  `context` varchar(128) NOT NULL,
+  `rollback_info` longblob NOT NULL,
+  `log_status` int(11) NOT NULL,
+  `log_created` datetime NOT NULL,
+  `log_modified` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ux_undo_log` (`xid`,`branch_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+```
+
+##### AT模式的工作机制
+
+大致分为两个阶段（后期深入）
 
 
 
+##### @GlobalTransactional注解
+
+分布式微服务中，Seata提供了@GlobalTransactional注解实现分布式事务的开启、管理和控制
+
+当调用这个注解标记的方法时，TM会先向TC注册全局事务，TC生成一个全局的XID，返回给TM
+
+该注解可以在类上使用，亦可以在方法上使用，该注解的使用位置决定了全局事务的范围
+
+- 在类中某个方法使用时，全局事务的范围就是该方法以及它所涉及的所有服务。
+- 在类上使用时，全局事务的范围就是这个类中的所有方法以及这些方法涉及的服务。
 
 
 
