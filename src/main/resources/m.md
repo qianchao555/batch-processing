@@ -1,6 +1,6 @@
 ### MySQL体系结构
 
-![MySQL体系结构图](http://c.biancheng.net/uploads/allimg/200622/5-200622094009461.png)
+![MySQL体系结构图](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/5-200622094009461.png)
 
 上图为MySQL基础架构图
 

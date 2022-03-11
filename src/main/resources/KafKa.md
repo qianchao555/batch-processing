@@ -14,7 +14,7 @@
 
 1. 消息的发送者叫Producer，消息的使用者/接收者是Consumer
 2. 生产者将数据保存到Kafka集群中，消费者从中获取消息进行业务的处理
-3. ![img](https://atts.w3cschool.cn/attachments/day_200916/202009161733109884.png)
+3. ![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202009161733109884.png)
 
 #### broker
 
@@ -86,11 +86,11 @@ partition：分区
 
 kafka总体数据流满足下图，下图基本上概括了整个kafka的基本原理
 
-![img](https://atts.w3cschool.cn/attachments/day_200916/202009161733104250.jpg)
+![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202009161733104250.jpg)
 
 ##### 数据生产过程
 
-![img](https://atts.w3cschool.cn/attachments/day_200916/202009161733117119.png)
+![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202009161733117119.png)
 
 1. 对于生产者要写入的一条记录，可以指定四个参数：分别是topic、partition、key、value，其中topic和value(要写入的数据)是必须指定的
 2. 对于一条记录，先对其进行序列化，然后按照topic和partition，放到对应的发送队列中。如果partition没有指定，那么情况会是这样的：
@@ -101,7 +101,7 @@ kafka总体数据流满足下图，下图基本上概括了整个kafka的基本�
 
 ##### 数据消费过程
 
-![img](https://atts.w3cschool.cn/attachments/day_200916/202009161733117671.png)
+![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202009161733117671.png)
 
 1. 对于消息者，不是以单独的形式存在的，每一个消费者属于一个consumer group，一个group包含多个消费者
 2. 注意：订阅topic是以一个消费组来订阅的，发送到topic的消息，只会被订阅此topic的每个group中的一个consumer消费

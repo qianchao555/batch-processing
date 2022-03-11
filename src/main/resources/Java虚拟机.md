@@ -60,7 +60,7 @@
    - 运行时常量池：JVM加载class文件，并为静态常量池分配内存空间，此时的常量池即为运行时常量池。除了编译后产生的常量，这个常量池在运行时，还会增加新的常量：String.intern()方法生成的新的字符串常量、由基本数据生成的包装类型
 6. 直接内存：并不是运行时数据区的一部分，这部分内存被频繁使用可能导致OOM，JDK 1.4中新加入了NIO类，引入了一种基于Channel与缓冲区Buffer的IO方式，它通过一个存储在Java堆中的DirectByteBuffer对象作为这块内存的引用操作，它因此更高效，它避免了Java堆和Native堆来回交换数据的时间
 
-- ![image-20211125140148249](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211125140148249.png)
+- ![image-20211125140148249](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211125140148249.png)
 
 #### HotSpot虚拟机对象探秘
 
@@ -209,7 +209,7 @@ GC分类
 3. 缺点
    - 执行效率不稳定，如果Java堆中有大量对象，而且大部分都是需要回收的，这时必须进行大量标记和清除动作，这个过程随着对象的增多效率降低
    - 内存空间碎片化问题，标记、清除会产生大量不连续的内存碎片，空间碎片太多，可能导致程序运行过程中需要分配较大对象时，无法找到足够连续的内存，而不得不提前触发一次垃圾收集动作
-4. ![image-20211217141244716](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211217141244716.png)
+4. ![image-20211217141244716](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217141244716.png)
 
 ##### 标记-复制算法 
 
@@ -228,7 +228,7 @@ GC分类
      - HotSpot VM 默认Eden和Survivor大小比例为8：1，即：每次新生代中**可用空间**为整个新生代容量的90%
      - 因为不能保证100%每次回收都只要不多于10%的对象存活，所以还得设计一个当Survivor空间不足以容纳一次Minor GC（针对新生代回收）之后存活的对象时，需要依赖其他内存区域（大多是老年代）进行分配担保
      - Survivor空间没有足够空间存放上一次新生代收集下来的存活对象，这些对象便将通过分配担保机制直接进入老年代
-7. ![image-20211217142110952](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211217142110952.png)
+7. ![image-20211217142110952](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217142110952.png)
 
 ##### 标记-整理算法
 
@@ -238,7 +238,7 @@ GC分类
 4. 与标记-清除算法区别
    - 清除算法是一种非移动式的回收算法
    - 整理是移动式的
-5. ![image-20211217150553381](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211217150553381.png)
+5. ![image-20211217150553381](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217150553381.png)
 
 #### HotSpot的算法细节实现
 
@@ -246,7 +246,7 @@ GC分类
 
 #### 经典垃圾收集器
 
-![image-20211217151616114](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211217151616114.png)
+![image-20211217151616114](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217151616114.png)
 
 1. Serial收集器   采用标记-复制算法
 
@@ -371,7 +371,7 @@ GC分类
 2. 实现语言无关性的基础是**虚拟机和字节码存储格式**
 3. Java虚拟机不与任何程序语言绑定，而只与"Class文件"这种特定的二进制文件格式关联
 4. Class文件中包含了JVM指令集、符号表以及其他若干辅助信息
-5. ![image-20211217173127295](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211217173127295.png)
+5. ![image-20211217173127295](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217173127295.png)
 
 #### Class类文件的结构
 
@@ -388,7 +388,7 @@ GC分类
      - 表用于描述有层次关系的复合结构的数据，整个Class文件本质上也可以视作是一张表
 4. Class文件的存储格式是严格限定的，各个数据项都有具体的含义
 5. 下图为Class文件格式：
-6. ![image-20211220103839235](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211220103839235.png)
+6. ![image-20211220103839235](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211220103839235.png)
 
 ##### 魔数与Class文件版本
 
@@ -735,7 +735,7 @@ GC分类
 
      加载器实现类的隔离、重载等功能。这些类加载器之间的协作关系“通常”会如图7-2所示
 
-     ![image-20211222152459906](C:/Users/2521573/AppData/Roaming/Typora/typora-user-images/image-20211222152459906.png)
+     ![image-20211222152459906](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211222152459906.png)
 
    - 双亲委派模型要求：除了顶层的启动类加载器外，其余的类加载器都应有自己的父类加载器，不过类加载器之间的父子关系一般不是以继承的关系来实现的，而是通常使用组合关系来复用父加载器的代码
 

@@ -85,13 +85,13 @@
 
    - 以主键作为B+树索引的键值所构成的B+树索引，叶子节点data域记录着完整的数据记录，这种索引方式被称为**聚簇索引**，因为无法把数据行存放在两个不同的地方（InnoDB的数据文件本身就是索引文件），所以一个表只有一个聚簇索引。图中：数字代表主键值
 
-   - ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/mysql/c28c6fbc-2bc1-47d9-9b2e-cf3d4034f877.jpg)
+   - ![](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/20220311150916.png))
 
      
 
 3. 辅助索引：叶子节点data域记录着主键的值，因此使用辅助索引进行查找时，需要先查到主键值，然后再到主索引中进行查找。单词代表非主键的列值
 
-   - ![img](https://pdai-1257820000.cos.ap-beijing.myqcloud.com/pdai.tech/public/_images/mysql/7ab8ca28-2a41-4adf-9502-cc0a21e63b51.jpg)
+   - ![](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/20220311151051.png)
 
 #### Hash索引
 

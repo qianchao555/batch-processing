@@ -4,7 +4,7 @@
 
 1. 远程过程调用协议（Remote Procedure Call），是一种通过网络从远程计算机上请求服务，而不需要了解底层网络技术的协议，是分布式系统常见的一种通信方法。
 2. 过程是什么：过程就是业务处理、计算任务，更直白说就是程序，就是像调用本地方法一样调用远程的过程
-3. ![img](https://pica.zhimg.com/80/45366c44f775abfd0ac3b43bccc1abc3_1440w.jpg?source=1940ef5c)
+3. ![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/45366c44f775abfd0ac3b43bccc1abc3_1440w.jpg)
 
 ### RPC和本地调用区别
 
@@ -289,7 +289,7 @@ Spring Cloud Hystrix是一款优秀的服务容错与保护组件，它提供了
    - 打开状态:一段时间内，达到一定的次数无法调用并且多次监测没有恢复的迹象，断路器完全打开，那么下次请求就不会请求该服务，而是快速返回失败响应
    - 半开状态：短时间内，又恢复迹象，断路器会将部分请求发给该服务，正常调用时，断路器关闭
    - 关闭状态：当服务一直处于正常状态，服务能正常调用
-2. ![熔断状态转换](http://c.biancheng.net/uploads/allimg/211210/10162355X-7.png)
+2. ![熔断状态转换](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/10162355X-7.png)
 3. SpringCloud中，熔断机制通过Hystrix实现。Hystrix会监控微服务间的调用情况，当失败调用到一定比例时，就会启动熔断机制
 4. Hystrix 实现服务熔断的步骤如下：
    1. 当服务的调用出错率达到或超过 Hystix 规定的比率（默认为 50%）后，熔断器进入熔断开启状态。
@@ -340,7 +340,7 @@ Hystrix为隔离的服务开启一个独立的线程池，这样在高并发的�
 
 #### Spring Cloud Config工作原理
 
-![img](http://c.biancheng.net/uploads/allimg/211210/1019425240-0.png)
+![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/1019425240-0.png)
 
 工作流程：
 
@@ -376,7 +376,7 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 #### SpringCloud Bus动态属性配置的原理
 
 1. 当Git仓库中的配置发生了改变，我们只需要向某一个服务(既可以是Config服务端，也可以是Config客户端)发送一个post请求，SringCloud Bus就可以通过消息代理通知其他服务重新拉取最新配置，以实现配置的动态刷新
-2. ![bus+config 动态刷新配置](http://c.biancheng.net/uploads/allimg/211210/101942GY-11.png)
+2. ![bus+config 动态刷新配置](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/101942GY-11.png)
 3. 动态刷新步骤：
    - 当 Git 仓库中的配置发生改变后，运维人员向 Config 服务端发送一个 POST 请求，请求路径为“/actuator/refresh”。
    - Config 服务端接收到请求后，会将该请求转发给服务总线 Spring Cloud Bus。
@@ -438,7 +438,7 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 
 #### SpringCloud Gateway工作流程
 
-![Spring Cloud Gateway 工作流程](http://c.biancheng.net/uploads/allimg/211210/101P45T2-1.png)
+![Spring Cloud Gateway 工作流程](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/101P45T2-1.png)
 
 1. 客户端将请求发送到SpringCloud Gateway上
 2. gateway通过Gateway Handler Mapping找到与请求相匹配的路由，将其发送给Gateway Web Hander
@@ -553,7 +553,7 @@ Nacos 作为服务注册中心可以实现服务的注册与发现，流程如�
 
 
 
-![Nacos 服务注册与发现](http://c.biancheng.net/uploads/allimg/211210/1022563360-0.png)
+![Nacos 服务注册与发现](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/1022563360-0.png)
 图1：Nacos 服务注册与发现
 
 
@@ -647,7 +647,7 @@ XID是全局事务的唯一标识，它可以在服务的调用链路中传递�
 
 以上三个组件相互协作，TC 以 Seata 服务器（Server）形式独立部署，TM 和 RM 则是以 Seata Client 的形式集成在微服务中运行，其整体工作流程如下图。
 
-![img](http://c.biancheng.net/uploads/allimg/211210/102A115W-0.png)
+![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/102A115W-0.png)
 
  
 

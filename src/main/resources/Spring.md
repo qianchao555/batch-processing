@@ -31,7 +31,7 @@ Spring的IoC实现原理为：工厂模式+反射机制，
 
 Spring Aop是方法级别的Aop框架
 
-![img](https://img-blog.csdnimg.cn/2020120700443256.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2E3NDUyMzM3MDA=,size_16,color_FFFFFF,t_70)
+![img](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/2020120700443256.png)
 
 1. 切点Pointcut（从这里进行拦截，然后进行增强）
    - 在哪些类、哪些方法上切入；也就是要对哪些连接点进行拦截
@@ -217,7 +217,7 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
    - bean的使用
    - 容器关闭时 销毁
 
-![Spring 生命周期流程](http://c.biancheng.net/uploads/allimg/220119/1F32KG1-0.png)
+![Spring 生命周期流程](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/1F32KG1-0.png)
 
 ##### Bean 生命周期的整个执行过程描述如下。
 
