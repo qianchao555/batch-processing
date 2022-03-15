@@ -320,7 +320,32 @@ Isolation_Serializable:所有事务逐个依次执行
 
 
 
+### @Transactional
 
+1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式进行管理
+
+2. 通过该注解就能让spring为我们管理事务，免去了重复的事务管理逻辑，减少对业务代码的侵入，使得开发人员能够专注于业务层面开发
+
+3. ![image-20220315212611513](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203152126724.png)
+
+   
+
+   
+
+   #### Transactional失效场景
+
+   结合：Spring事务的传播机制及原因分析
+
+   
+
+   1. Transactional注解标注在非public方法上时
+      - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
+   2. 在一个类中A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
+      - spring默认的传播机制：Propagation_Required，即：支持当前事务，如果当前没有事务，就新建一个事务。
+      - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
+      - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
+   3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
+   4. 事务方法内部捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
 
 
 
