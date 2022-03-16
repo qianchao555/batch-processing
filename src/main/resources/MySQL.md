@@ -672,3 +672,46 @@ Hash索引基于Hash表实现，对于每一行数据，存储引擎会对索引
 #### 区别
 
 1. 因为两者数据结构上的差异导致它们的使用场景也不同，哈希索引一般多用于精确的等值查找，B+索引则多用于除了精确的等值查找外的其他查找。在大多数情况下，会选择使用B+树索引
+
+
+
+[索引覆盖与下推](https://www.jianshu.com/p/d0d3de6832b9)
+
+### 索引覆盖
+
+1. 只需要在一颗索引树就能获取SQL所需的所有列数据，无需回表，速度更快
+2. explain的输出结果Extra字段为Using index时，能够触发索引覆盖
+
+#### 索引下推 ICP 优化
+
+Index Condition pushdown
+
+在使用非主键索引进行索引查询时，首先根据索引来查找记录，然后在根据where条件来过滤记录
+
+![image-20220316131642324](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316131642324.png)
+
+![image-20220316131658595](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316131658595.png)
+
+图 1 中，在 (name,age) 索引里面特意去掉了 age 的值，**这个过程 InnoDB 并不会去看 age 的值**，只是按顺序把“name 第一个字是’张’”的记录一条条取出来回表。因此，需要回表 4 次。
+
+图 2 跟图 1 的区别是，InnoDB 在 (name,age) 索引内部就判断了 age 是否等于 10，对于不等于 10 的记录，直接判断并跳过。在我们的这个例子中，只需要对 ID4、ID5 这两条记录回表取数据判断，就只需要回表 2 次
+
+
+
+### MySQL强制索引
+
+强制索引，即指定本次查询使用某个特定的索引，这样就可以避免MySQL优化器使用低效的索引
+
+~~~mysql 
+select * 
+from table 
+force index (index_list)
+where condition;
+~~~
+
+
+
+
+
+
+
