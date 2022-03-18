@@ -1,4 +1,9 @@
 import org.junit.jupiter.api.Test;
+import spring.circleexception.springinner.A;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * @description:
@@ -76,6 +81,52 @@ public class jvmTest {
 //        }
 //        System.out.println(count);
 
+
+    }
+    @Test
+    public void testString6() {
+       Integer i=Integer.MAX_VALUE;
+        System.out.println(i);
+       long a=(long)i+(long)i;
+        System.out.println(a);
+    }
+
+    @Test
+    public void testString5() {
+
+        String strNum1 = String.valueOf(Long.MAX_VALUE);
+        String strNum2 = String.valueOf(Long.MAX_VALUE);
+
+        bigNumAdd("", "34");
+    }
+
+    private static void bigNumAdd(String strNum1, String strNum2) {
+        int len1 = strNum1.length();
+        int len2 = strNum2.length();
+        int maxLen = Integer.max(len1, len2);
+        StringBuilder sb = new StringBuilder();
+        // 进位
+        int carry = 0;
+        for (int i = 0; i < maxLen; i++) {
+            int temp = carry;
+            carry = 0;
+
+            if (i < len1) {
+                temp += Integer.parseInt(String.valueOf(strNum1.charAt(len1 - 1 - i)));
+            }
+            if (i < len2) {
+                temp += Integer.parseInt(String.valueOf(strNum2.charAt(len2 - 1 - i)));
+            }
+            if (temp >= 10) {
+                temp -= 10;
+                carry = 1;
+            }
+            sb.append(temp);
+        }
+        if (carry > 0) {
+            sb.append(carry);
+        }
+        System.out.println(String.format("%s + %s = %s", strNum1, strNum2, sb.reverse().toString()));
 
     }
 }
