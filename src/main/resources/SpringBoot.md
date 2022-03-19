@@ -106,7 +106,33 @@
 
    - 总结：从classpath路径中搜索所有的META_INF/spring.factories文件，并且将其中的org.springframework.boot.autoconfigure.EnableutoConfiguration作为key所对应的值通过反射实例化为对应的标注了@Configuration的JavaConfig形式的Ioc容器配置类，然后汇总为一个并且加载到容器中。这些功能的配置类要生效的话，回去classpath中找是否有该类的依赖类，并且配置类里面注入了默认属性值类，功能类可以引用并赋默认值
 
+---
+
+### SpringBoot条件注解
+
+它的一个核心思想就是当满足某种条件的时候，某个 Bean 才会生效，而正是这一特性，支撑起了 Spring Boot 的自动化配置
+
+http://www.javaboy.org/2019/0802/springboot-conditional.html
+
+@Conditional
+
+Spring中常用的profile实际上就是条件注解的一个特殊化。
+
+条件注解还有一个进化版，那就是 @Profile。我们一般利用 Profile 来实现在开发环境和生产环境之间进行快速切换。其实 Profile 就是利用条件注解来实现的
+
+#### 定义
+
+Spring4 中提供了更加通用的条件注解，让我们可以在**满足不同条件时创建不同的 Bean**，这种配置方式在 Spring Boot 中得到了广泛的使用，大量的自动化配置都是通过条件注解来实现的
+
+---
+
 ### 如何理解SpringBoot配置的加载顺序
+
+
+
+---
+
+
 
 ### 运行SpringBoot有哪几种方式
 
@@ -199,6 +225,22 @@ SpringBoot推荐使用Java配置而非Xml配置，但是也可以使用xml配置
 1. SpringBoot提供监视器端点以监控各个微服务的度量
 2. 这些端点对于获取有关应用程序的信息以及它们的组件是否正常运行很有帮助
 3. 但是监视器一个主要的缺点是，我们必须单独打开应用程序以了解其状态或健康状况
+
+
+
+### SpringBoot如何解决跨域问题
+
+http://www.javaboy.org/2020/0611/cors-springsecurity.html
+
+#### @CrossOrigin
+
+#### SpringSecurity
+
+如果使用了 Spring Security，跨域配置会失效，因为请求被 Spring Security 拦截了。
+
+当引入了 Spring Security 的时候，我们有两种办法开启 Spring Security 对跨域的支持。
+
+#### OAuth2
 
 ---
 
