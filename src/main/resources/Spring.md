@@ -203,6 +203,50 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 
 
+#### FactoryBean
+
+创建bean的工厂
+
+FactoryBean接口在Spring框架中有着重要的地位，spring为此提供了很多种不同的实现类
+
+```java
+public interface FactoryBean<T> {
+ @Nullable
+ T getObject() throws Exception;
+    
+ @Nullable
+ Class<?> getObjectType();
+    
+ default boolean isSingleton() {
+  return true;
+ }
+}
+```
+
+- getObject：该方法返回 FactoryBean 所创建的实例，如果在 XML 配置文件中，我们提供的 class 是一个 FactoryBean 的话，那么当我们调用 getBean 方法去获取实例时，最终获取到的是 getObject 方法的返回值。
+- getObjectType：返回对象的类型。
+- isSingleton：getObject 方法所返回的对象是否单例。
+
+---
+
+#### BeanFactory
+
+Spring中的Ioc容器，大致分为两种：
+
+BeanFactory和ApplicationContext
+
+1. BeanFactory
+   - 是最最基础的Ioc容器，它提供了一个Ioc容器所需的基本功能。
+   - BeanFactory默认采用延迟初始化策略，即当容器启动时，未完成Bean的初始化，只有当调用该Bean的实例时，才会完成其初始化操作，并进行依赖注入
+2. ApplicationContext
+   - ApplicationContext 是在 BeanFactory 的基础上实现的，BeanFactory 的功能它都有，算是一种高级容器
+   - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
+   - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就以为着容器启动时间较长，并且对系统资源要求也较高
+
+---
+
+
+
 #### Spring bean生命周期
 
 https://blog.csdn.net/knknknkn8023/article/details/107130806/
