@@ -201,11 +201,32 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 ---
 
+#### BeanFactory
 
+BeanFactory是IOC最基本的容器，负责生产和管理bean，它为其他具体的IOC容器提供了最基本的规范
+
+XmlBeanFactory,ApplicationContext 等等具体的容器都是实现了BeanFactory，再在其基础之上附加了其他的功能
+
+Spring中的Ioc容器，大致分为两种：
+
+BeanFactory和ApplicationContext
+
+1. BeanFactory
+   - 是最最基础的Ioc容器，它提供了一个Ioc容器所需的基本功能。
+   - BeanFactory默认采用延迟初始化策略，即当容器启动时，未完成Bean的初始化，只有当调用该Bean的实例时，才会完成其初始化操作，并进行依赖注入
+2. ApplicationContext
+   - ApplicationContext 是在 BeanFactory 的基础上实现的，BeanFactory 的功能它都有，算是一种高级容器
+   - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
+   - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就以为着容器启动时间较长，并且对系统资源要求也较高
 
 #### FactoryBean
 
-创建bean的工厂
+ FactoryBean是一个接口，当在IOC容器中的Bean实现了FactoryBean后，通过getBean(String BeanName)获取到的Bean对象并不是FactoryBean的实现类对象，而是这个实现类中的getObject()方法返回的对象。要想获取FactoryBean的实现类，就要getBean(&BeanName)，在BeanName之前加上& 。
+
+当调用getBean("car")时，Spring通过反射机制发现CarFactoryBean实现了FactoryBean的接口，这时Spring容器就调用接口方法CarFactoryBean#getObject()方法返回。如果希望获取FactoryBean的实例，则需要在使用getBean(beanName)方法时在beanName前显示的加上"&"前缀：如getBean("&car")
+
+
+一般情况下，Spring通过反射机制利用<bean>的class属性指定实现类实例化Bean，在某些情况下，实例化Bean过程比较复杂，如果按照传统的方式，则需要在<bean>中提供大量的配置信息。配置方式的灵活性是受限的，这时采用编码的方式可能会得到一个简单的方案。Spring为此提供了一个org.springframework.bean.factory.FactoryBean的工厂类接口，用户可以通过实现该接口定制实例化Bean的逻辑
 
 FactoryBean接口在Spring框架中有着重要的地位，spring为此提供了很多种不同的实现类
 
@@ -229,19 +250,13 @@ public interface FactoryBean<T> {
 
 ---
 
-#### BeanFactory
 
-Spring中的Ioc容器，大致分为两种：
 
-BeanFactory和ApplicationContext
+FactoryBean与BeanFactory区别
 
-1. BeanFactory
-   - 是最最基础的Ioc容器，它提供了一个Ioc容器所需的基本功能。
-   - BeanFactory默认采用延迟初始化策略，即当容器启动时，未完成Bean的初始化，只有当调用该Bean的实例时，才会完成其初始化操作，并进行依赖注入
-2. ApplicationContext
-   - ApplicationContext 是在 BeanFactory 的基础上实现的，BeanFactory 的功能它都有，算是一种高级容器
-   - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
-   - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就以为着容器启动时间较长，并且对系统资源要求也较高
+1. 两者没有比较性，只是名称接近而已
+2. BeanFactory是Ioc容器、负责生产和管理bean，所有的Bean都是由BeanFactory来进行管理的，给具体的Ioc容器的所需提供了规范
+3. FactoryBean是一个bean，这个Bean不是简单的Bean，而是一个能生产或者修饰对象生成的工厂Bean。可以说是一个为Ioc容器中bean的实现提供了更加灵活的方式，FactoryBean在IOC容器的基础上给Bean的实现加上了一个简单工厂模式和装饰模式，我们可以在getObject()方法中灵活配置
 
 ---
 
