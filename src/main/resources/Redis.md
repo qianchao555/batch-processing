@@ -1335,11 +1335,7 @@ QUEUED
 
 ---
 
-### Lua脚本
 
-1. Lua脚本类似Redis事务，有一定的原子性，不会被其他命令插队，可以完成一些redis事务性的操作
-2. Redis 2.6以上的版本才能使用
-3. 利用lua脚本解决争抢问题，实际上是redis利用单线程的特性，用任务队列的方式解决多任务并发问题
 
 ### Redis持久化
 
@@ -1589,9 +1585,19 @@ redis某个key过期了，大量访问中使用这个key
 
 ---
 
-### 分布式锁
+### 基于Redis的分布式锁
+
+目前拆分四个微服务。前端请求进来时，会被转发到不同的微服务。假如前端接收了 10 W 个请求，每个微服务接收 2.5 W 个请求，假如缓存失效了，每个微服务在访问数据库时加锁，通过锁（`synchronzied` 或 `lock`）来锁住自己的线程资源，从而防止`缓存击穿`。
+
+![image-20220322142942618](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220322142942618.png)
+
+这是一种`本地加锁`的方式，在`分布式`情况下会带来数据不一致的问题：比如服务 A 获取数据后，更新缓存 key =100，服务 B 不受服务 A 的锁限制，并发去更新缓存 key = 99，最后的结果可能是 99 或 100，但这是一种未知的状态，**与期望结果不一致**
+
+基于本地锁的问题，我们需要一种支持**分布式集群环境**下的锁：查询 DB 时，只有一个线程能访问，其他线程都需要等待第一个线程释放锁资源后，才能继续执行
 
 上锁之后，对整个分布式系统中的机器都生效
+
+
 
 #### 分布式锁的实现方式
 
@@ -1601,21 +1607,253 @@ redis某个key过期了，大量访问中使用这个key
 4. 每一种分布式锁方案都有各自的优缺点：
    - 性能：redis最高
    - 可靠性：zookeeper最高
+5. Redisson
+
+
 
 #### 使用Redis实现分布式锁
 
-1. setnx key value实现分布式锁
+##### setnx key value
+
+1. set if not exist：当key不存在时，设置key的值，存在时什么都不做
+   - 命令：以下两个一样的
    - setnx key value
-   - expire key  20  设置一个过期时间，防止锁一直不能释放
-   - 上锁后出现异常，无法设置过期时间
-     - 上锁的同时，设置过期时间
-     - set key v nx ex 20
-     - nx分布式锁，ex过期时间 
-2. del key  释放锁了
+   - set key value nx   
+
+~~~java
+public void getTypeEntityListByRedisDistributedLock(){
+    // 1.先抢占锁
+    Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", "123");
+    if(lock) {
+      // 2.抢占成功，执行业务
+      List<TypeEntity> typeEntityListFromDb = getDataFromDB();
+      // 3.解锁
+      redisTemplate.delete("lock");
+      return typeEntityListFromDb;
+    } else {
+      // 4.休眠一段时间？为什么？  因为该程序存在递归调用，可能会导致栈空间溢出
+      sleep(100);
+      // 5.抢占失败，等待锁释放
+      return getTypeEntityListByRedisDistributedLock();
+    }
+}
+~~~
+
+- 缺陷：从技术的角度看，setnx 占锁成功，但是业务代码出现异常或者服务器宕机，没有执行删除锁的逻辑，就造成了 死锁
+- 如何规避：设置锁的  自动过期时间，过一段时间后，自动删除锁，这样其他线程就能获取到锁了
+
+
+
+当业务代码异常或服务宕机，上述可能出现死锁情况，所有加一个自动过期时间
+
+~~~java
+// 1.先抢占锁
+Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", "123");
+if(lock) {
+    // 2.在 10s 以后，自动清理 lock
+    redisTemplate.expire("lock", 10, TimeUnit.SECONDS);
+    // 3.抢占成功，执行业务
+    List<TypeEntity> typeEntityListFromDb = getDataFromDB();
+    // 4.解锁
+    redisTemplate.delete("lock");
+    return typeEntityListFromDb;
+}
+~~~
+
+
+
+但是占锁和设置过期时间是分两步执行的，在拿到lock之后，设置过期时间之前可能出现异常情况，那么也会导致锁永远不会过期，出现死锁情况
+
+解决方案：原子指令 ，将占锁+设置锁过期时间 放在一步中执行
+
+set key value PX <多少毫秒> NX  或者   set key value EX <多少秒> NX 
+
+setex key value ：是一个原子操作，将key和过期时间两个动作在同一时间完成
+
+set key value nx ex  过期时间秒：例如 set k1 v1 10    nx    =》k1这个键10秒后过期
+
+~~~java
+Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", "123", 10, TimeUnit.SECONDS);
+~~~
+
+
+
+存在缺陷：
+
+1. 用户A抢占锁，并且设置了这个锁10秒后自动开锁，锁的编号为123
+2. 10秒后，A还在执行任务，此时锁被自动打开了  (过期删除)
+3. 用户B抢占锁，锁的编号123，并设置锁的时间10秒  
+4. 但是同一时间只允许一个用户执行这个任务，所有用户A和用户B产生了冲突
+5. A用户在15秒后完成了任务，此时用户B还在执行任务。A主动打开了编号为123的锁？为什么打开(finaly 方法中unlock），因为锁的编号都叫做 `“123”`，用户 A 只认锁编号，看见编号为 `“123”`的锁就开，结果把用户 B 的锁打开了，此时用户 B 还未执行完任务
+6. 此时B还是在执行任务，但是锁已经被打开了。
+7. 用户C强制到锁，开始执行任务，此时BC冲突
+
+
+
+解决上述问题：给每个锁设置不同的编号
+
+~~~java
+// 1.生成唯一 id
+String uuid = UUID.randomUUID().toString();
+// 2. 抢占锁
+Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", uuid, 10, TimeUnit.SECONDS);
+if(lock) {
+    System.out.println("抢占成功：" + uuid);
+    // 3.抢占成功，执行业务
+    List<TypeEntity> typeEntityListFromDb = getDataFromDB();
+    // 4.获取当前锁的值
+    String lockValue = redisTemplate.opsForValue().get("lock");
+    // 5.如果锁的值和设置的值相等，则清理自己的锁
+    if(uuid.equals(lockValue)) {
+        System.out.println("清理锁：" + lockValue);
+        redisTemplate.delete("lock");
+    }
+    return typeEntityListFromDb;
+} else {
+    System.out.println("抢占失败，等待锁释放");
+    // 4.休眠一段时间
+    sleep(100);
+    // 5.抢占失败，等待锁释放
+    return getTypeEntityListByRedisDistributedLock();
+}
+~~~
+
+
+
+此方案的缺陷：第4步获取锁的值，和第5步比较不是原子性的。
+
+- 时刻：0s。线程 A 抢占到了锁。
+- 时刻：9.5s。线程 A 向 Redis 查询当前 key 的值。
+- 时刻：10s。锁自动过期。
+- 时刻：11s。线程 B 抢占到锁。
+- 时刻：12s。线程 A 在查询途中耗时长，终于拿多锁的值。
+- 时刻：13s。线程 A 还是拿自己设置的锁的值和返回的值进行比较，值是相等的，清理锁，但是这个锁其实是线程 B 抢占的锁
+
+线程 A 查询锁和删除锁的逻辑不是`原子性`的，所以将查询锁和删除锁这两步作为原子指令操作就可以了
+
+解决方案：Redis+Lua脚本
+
+
+
+###### Redis+Lua脚本
+
+我们先来看一下这段 Redis 专属脚本：
+
+```lua
+if redis.call("get",KEYS[1]) == ARGV[1]
+then
+    return redis.call("del",KEYS[1])
+else
+    return 0
+end
+```
+
+这段脚本和上面方案的获取key，删除key的方式很像。先获取 KEYS[1] 的 value，判断 KEYS[1] 的 value 是否和 ARGV[1] 的值相等，如果相等，则删除 KEYS[1]。
+
+那么这段脚本怎么在 Java 项目中执行呢？
+
+分两步：先定义脚本；用 redisTemplate.execute 方法执行脚本。
+
+```java
+// 脚本解锁
+String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
+redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList("lock"), uuid);
+```
+
+上面的代码中，KEYS[1] 对应`“lock”`，ARGV[1] 对应 `“uuid”`，含义就是如果 lock 的 value 等于 uuid 则删除 lock
+
+
+
+###### Lua脚本
+
+1. Lua脚本类似Redis事务，有一定的原子性，不会被其他命令插队，可以完成一些redis事务性的操作
+2. Redis 2.6以上的版本才能使用
+3. 利用lua脚本解决争抢问题，实际上是redis利用单线程的特性，用任务队列的方式解决多任务并发问题
+
+---
+
+
+
+#### Redisson
+
+Redisson是一个在Redis的基础上实现的Java驻内存数据网格(In-Memory Data Grid)。它不仅提供了一系列分布式的Java常用对象，还提供了许多分布式服务。
+
+Redisson提供了使用Redis的最简单和最便捷的方法。
+
+Redisson的宗旨是促进使用者对Redis的关注分离（Separation of Concern），从而让使用者能够将精力更集中地放在处理业务逻辑上
+
+
+
+##### Netty框架
+
+Redission采用了基于NIO的Netty框架，不仅能作为Redis底层驱动客户端，还具备提供对Redis各种组态形式的连接功能，对Redis命令能以同步发送、异步形式发送、异步流形式发送、管道形式发送的功能，Lua脚本执行处理，以及处理返回结构的功能
+
+
+
+##### Redisson锁续约 
+
+WatchDog 看门狗
+
+目的是为了某种场景下保证业务不影响，如任务执行超时但未结束，锁已经释放的问题
+
+当一个线程持有了一把锁，由于并未设置超时时间leaseTime，Redisson默认配置了30S，开启watchDog，每10S对该锁进行一次续约，维持30S的超时时间，直到任务完成再删除锁
 
 
 
 
+
+分布式锁和同步器
+
+https://github.com/redisson/redisson/wiki/8.-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81%E5%92%8C%E5%90%8C%E6%AD%A5%E5%99%A8#84-%E7%BA%A2%E9%94%81redlock
+
+##### 联锁(MultiLock)
+
+基于Redis的Redisson分布式联锁RedissonMultiLock对象，将多个Rlock对象关联为一个联锁，每个RLock对象实例可以来自于不同的Redisson实例
+
+~~~java
+RLock lock1 = redissonInstance1.getLock("lock1");
+RLock lock2 = redissonInstance2.getLock("lock2");
+RLock lock3 = redissonInstance3.getLock("lock3");
+
+RedissonMultiLock lock = new RedissonMultiLock(lock1, lock2, lock3);
+// 同时加锁：lock1 lock2 lock3
+// 所有的锁都上锁成功才算成功。
+lock.lock();
+...
+lock.unlock();
+
+
+//-----------------------------------------------
+//另外Redisson还通过加锁的方法提供了leaseTime的参数来指定加锁的时间。超过这个时间后锁便自动解开了。
+
+RedissonMultiLock lock = new RedissonMultiLock(lock1, lock2, lock3);
+// 给lock1，lock2，lock3加锁，如果没有手动解开的话，10秒钟后将会自动解开
+lock.lock(10, TimeUnit.SECONDS);
+
+// 为加锁等待100秒时间，并在加锁成功10秒钟后自动解开
+boolean res = lock.tryLock(100, 10, TimeUnit.SECONDS);
+...
+lock.unlock();
+~~~
+
+
+
+##### 红锁（RedLock)
+
+基于Redis的Redisson红锁RedissonRedLock对象实现了[Redlock](http://redis.cn/topics/distlock.html)加锁算法，该对象也可以用来将多个`RLock`对象关联为一个红锁，每个`RLock`对象实例可以来自于不同的Redisson实例
+
+~~~java
+RLock lock1 = redissonInstance1.getLock("lock1");
+RLock lock2 = redissonInstance2.getLock("lock2");
+RLock lock3 = redissonInstance3.getLock("lock3");
+
+RedissonRedLock lock = new RedissonRedLock(lock1, lock2, lock3);
+// 同时加锁：lock1 lock2 lock3
+// 红锁在大部分节点上加锁成功就算成功。
+lock.lock();
+...
+lock.unlock();
+~~~
 
 
 
