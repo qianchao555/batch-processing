@@ -1904,6 +1904,32 @@ https://github.com/redisson/redisson/wiki/8.-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%8
 
 
 
+#### Redisson里面锁的实现
+
+##### 分布式可重入锁(Reentrant Lock)
+
+基于Redis的Redisson分布式可重入锁[`RLock`](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RLock.html) Java对象实现了java.util.concurrent.locks.Lock接口。同时还提供了异步（Async）、反射式（Reactive）和RxJava2标准的接口
+
+~~~sql
+RLock lock = redisson.getLock("anyLock");
+// 最常见的使用方法
+lock.lock();
+~~~
+
+##### 公平锁(Fair Lock)
+
+它保证了当多个Redisson客户端线程同时请求加锁时，优先分配给先发出请求的线程。
+
+所有请求线程会在一个队列中排队，当某个线程出现宕机时，Redisson会等待5秒后继续下一个线程，也就是说如果前面有5个线程都处于等待状态，那么后面的线程会等待至少25秒
+
+~~~java
+RLock fairLock = redisson.getFairLock("anyLock");
+// 最常见的使用方法
+fairLock.lock();
+~~~
+
+
+
 ##### 联锁(MultiLock)
 
 基于Redis的Redisson分布式联锁RedissonMultiLock对象，将多个Rlock对象关联为一个联锁，每个RLock对象实例可以来自于不同的Redisson实例
@@ -1937,6 +1963,8 @@ lock.unlock();
 
 
 ##### 红锁（RedLock)
+
+RedissonRedLock 继承自RedissonMultiLock
 
 如果线程一在Redis的master节点上拿到了锁，但是加锁的key还没同步到slave节点。恰好这时，master节点发生故障，一个slave节点就会升级为master节点。线程二就可以获取同个key的锁啦，但线程一也已经拿到锁了，锁的安全性就没了
 
@@ -1982,11 +2010,79 @@ lock.unlock();
 
 
 
+##### 读写锁(ReadWriteLock)
+
+分布式可重入读写锁允许同时有多个读锁和一个写锁处于加锁状态
+
+写锁是一个拍他锁（互斥锁），读锁是一个共享锁。
+
+- 读锁 + 读锁：相当于没加锁，可以并发读。
+- 读锁 + 写锁：写锁需要等待读锁释放锁。
+- 写锁 + 写锁：互斥，需要等待对方的锁释放。
+- 写锁 + 读锁：读锁需要等待写锁释放
+
+~~~java
+RReadWriteLock rwlock = redisson.getReadWriteLock("anyRWLock");
+// 最常见的使用方法
+rwlock.readLock().lock();
+// 或
+rwlock.writeLock().lock();
+~~~
 
 
 
+##### 信号量(Semaphore)
+
+基于Redis的Redisson的分布式信号量（[Semaphore](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphore.html)）Java对象`RSemaphore`采用了与`java.util.concurrent.Semaphore`相似的接口和用法。同时还提供了[异步（Async）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphoreAsync.html)、[反射式（Reactive）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphoreReactive.html)和[RxJava2标准](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphoreRx.html)的接口
+
+~~~java
+RSemaphore semaphore = redisson.getSemaphore("semaphore");
+semaphore.acquire();
+//或
+semaphore.acquireAsync();
+semaphore.acquire(23);
+semaphore.tryAcquire();
+//或
+semaphore.tryAcquireAsync();
+semaphore.tryAcquire(23, TimeUnit.SECONDS);
+//或
+semaphore.tryAcquireAsync(23, TimeUnit.SECONDS);
+semaphore.release(10);
+semaphore.release();
+//或
+semaphore.releaseAsync();
+~~~
 
 
+
+##### 过期性信号量(PermitExpirableSemphore)
+
+基于Redis的Redisson可过期性信号量（[PermitExpirableSemaphore](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphore.html)）是在`RSemaphore`对象的基础上，为每个信号增加了一个过期时间。每个信号可以通过独立的ID来辨识，释放时只能通过提交这个ID才能释放。它提供了[异步（Async）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphoreAsync.html)、[反射式（Reactive）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphoreReactive.html)和[RxJava2标准](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphoreRx.html)的接口
+
+~~~java
+RPermitExpirableSemaphore semaphore = redisson.getPermitExpirableSemaphore("mySemaphore");
+String permitId = semaphore.acquire();
+// 获取一个信号，有效期只有2秒钟。
+String permitId = semaphore.acquire(2, TimeUnit.SECONDS);
+// ...
+semaphore.release(permitId);
+~~~
+
+
+
+##### 闭锁(CountDownLatch)
+
+基于Redisson的Redisson分布式闭锁（[CountDownLatch](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RCountDownLatch.html)）Java对象`RCountDownLatch`采用了与`java.util.concurrent.CountDownLatch`相似的接口和用法
+
+~~~java
+RCountDownLatch latch = redisson.getCountDownLatch("anyCountDownLatch");
+latch.trySetCount(1);
+latch.await();
+
+// 在其他线程或其他JVM里
+RCountDownLatch latch = redisson.getCountDownLatch("anyCountDownLatch");
+latch.countDown();
+~~~
 
 
 
