@@ -713,5 +713,161 @@ where condition;
 
 
 
+---
 
+### MySQL日志
+
+任何一种数据库中，都会有各种各样的日志，记录着数据库工作的各种操作。
+
+MySQL中有4种不同的日志：二进制日志、错误日志、查询日志、慢查询日志
+
+#### Binarylog
+
+https://zhuanlan.zhihu.com/p/227864607
+
+Mysql会把所有表结构变更，以及表数据修改的操作 记录到一个二进制日志文件，也即BinaryLog文件，简称binlog
+
+binlog日志是以事件的形式记录对MySQL的操作，还记录着各个操作消耗的时间
+
+恢复事件4 - 事件1234之间的数据操作：
+
+```mysql
+$ mysqlbinlog --start-position=4 --stop-position=1234 /usr/local/var/mysql/binlog.000001 | mysql -uroot -p
+```
+
+
+
+##### binlog工作原理
+
+binlog是MySQL用来记录数据库表结构变更以及表数据修改的二进制日志，它只会记录表的变更操作，但不会记录select和show这种查询操作
+
+###### binlog常用的场景
+
+1. 数据恢复
+   - 误删数据之后可以通过mysql binlog工具恢复数据
+2. 主从复制
+   - 主库将binlog传给从库，从库接收到之后读取内容写入从库，实现主从数据一致性
+3. 审计
+   - 通过二进制日志中的信息进行审计，判断是否对数据库进行注入攻击
+
+binlog文件包含两种类型：
+
+1. 索引文件(文件名后缀为.index)：用于记录哪些日志文件正在被使用
+2. 日志文件(文件名为.00000*)：记录数据库所有的DDL和DML语句事件
+
+
+
+
+
+binlog如何记录数据库操作的？
+
+###### binlog的3种记录模式
+
+1. ROW：记录的是每一行被修改的数据
+2. STATEMENT：记录的是执行的SQL语句
+3. MIXED：statement和row模式的混合
+
+| 记录模式  | 优点                                     | 缺点                                                         |
+| --------- | ---------------------------------------- | ------------------------------------------------------------ |
+| ROW       | 能清楚记录每一个行数据的修改细节         | 批量操作，会产生大量的日志，尤其是alter table会让日志文件大小暴涨 |
+| STATEMENT | 日志量小，减少磁盘IO，提升存储和恢复速度 | 在某些情况下会导致主从数据不一致，比如Sql语句中有last_insert_id()、now()等函数。 |
+| MIXED     | 准确性强，文件大小适中                   | 当binlog format 设置为mixed时，普通复制不会有问题，但是级联复制在特殊情况下会binlog丢失。 |
+
+
+
+###### Binlog文件结构
+
+binlog文件记录的是对数据库的各种修改操作，用来记录修改操作的数据结构的Log event。不同的修改操作对应着不同的log event
+
+常用的log event：Query event、Row event、Xid event等等
+
+binlog文件的内容就是各种log event的集合
+
+![image-20220323230705990](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203232307725.png)
+
+
+
+###### Binlog写入机制
+
+1. 根据设置的记录模式和操作生成相应的log event
+2. 事务执行过程中产生log event会先写入缓冲区，每个事务线程都有一个缓冲区，Log Event保存在一个binlog_cache_mngr数据结构中，在该结构中有两个缓冲区，一个是stmt_cache，用于存放不支持事务的信息；另一个是trx_cache用于存放支持事务的信息
+3. 事务在提交阶段会将产生的log event写入到外部binlog文件中。不同事务以串行方式将log event写入binlog文件中，所以一个事务包含的log event信息在binlog文件中是连续的，中间不会插入其他事务的log event
+
+
+
+###### 配置binlog参数  
+
+windows中 my.cnf文件，在mysqld节中修改配置信息
+
+~~~mysql
+[mysqld]
+#设置记录模式
+binlog_format = mixed
+
+# 设置日志路径，注意路经需要mysql用户有权限写
+log-bin = /data/mysql/logs/mysql-bin.log
+
+# 设置binlog清理时间
+expire_logs_days = 7
+
+# binlog每个日志文件大小
+max_binlog_size = 100m
+
+# binlog缓存大小
+binlog_cache_size = 4m
+
+# 最大binlog缓存大小
+max_binlog_cache_size = 512m
+~~~
+
+
+
+#### 错误日志
+
+记录mysqld启动和停止时、服务器运行过程中发生任何严重错误的相关信息。
+
+错误日志是默认开启的，默认存放目录var/lib/mysql  默认文件名为 主机.err
+
+![image-20220323233829559](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203232338770.png)
+
+
+
+#### 查询日志
+
+查询日志中记录了客户端所有操作语句，但是二进制日志不包含查询数据的日志
+
+默认情况下，查询日志是未开启的。可以设置开启：
+
+~~~mysql
+#该选项用来开启查询日志 ， 可选值 ： 0 或者 1 ； 0 代表关闭， 1 代表开启 
+general_log=1
+
+#设置日志的文件名 ， 如果没有指定， 默认的文件名为 host_name.log 
+general_log_file=file_name
+~~~
+
+
+
+#### 慢查询日志
+
+慢查询日志记录了所有执行事件超过参数long_query_time设置值并且扫描记录数不小于min_examined_row_limit的所有的sql语句的日志
+
+long_query_time默认为10s，最小为0，精度可以到微妙
+
+慢查询日志默认是关闭的。通过设置来控制慢查询日志：
+
+~~~sql
+# 该参数用来控制慢查询日志是否开启， 可取值： 1 和 0 ， 1 代表开启， 0 代表关闭
+slow_query_log=1 
+
+# 该参数用来指定慢查询日志的文件名
+slow_query_log_file=slow_query.log
+
+# 该选项用来配置查询的时间限制， 超过这个时间将认为值慢查询， 将需要进行日志记录， 默认10s
+long_query_time=10
+~~~
+
+![image-20220323234539004](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203232345184.png)
+
+https://blog.csdn.net/m_awdawdw/article/details/107665827
 
