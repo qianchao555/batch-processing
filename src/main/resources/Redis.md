@@ -1503,7 +1503,7 @@ QUEUED
 
 当想要查询数据时，使用缓存的流程如下
 
-![](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203222313989.png)
+![](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222313989.png)
 
 #### 本地缓存
 
@@ -1519,9 +1519,9 @@ QUEUED
 1. 占用本地内存，机器宕机、重启后缓存丢失
 2. 可能存在数据库数据和缓存数据不一致问题
 3. 同一个机器的多个微服务缓存的数据不一致
-   - ![image-20220322232320544](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203222323695.png)
+   - ![image-20220322232320544](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222323695.png)
 4. 集群环菌下存在缓存的数据不一致
-   - ![image-20220322232336902](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203222323056.png)
+   - ![image-20220322232336902](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222323056.png)
 
 基于本地缓存的问题，引入了分布式缓存Redis
 
@@ -1619,7 +1619,7 @@ QUEUED
 
 目前拆分四个微服务。前端请求进来时，会被转发到不同的微服务。假如前端接收了 10 W 个请求，每个微服务接收 2.5 W 个请求，假如缓存失效了，每个微服务在访问数据库时加锁，通过锁（`synchronzied` 或 `lock`）来锁住自己的线程资源，从而防止`缓存击穿`。
 
-![image-20220322142942618](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220322142942618.png)
+![image-20220322142942618](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220322142942618.png)
 
 这是一种`本地加锁`的方式，在`分布式`情况下会带来数据不一致的问题：比如服务 A 获取数据后，更新缓存 key =100，服务 B 不受服务 A 的锁限制，并发去更新缓存 key = 99，最后的结果可能是 99 或 100，但这是一种未知的状态，**与期望结果不一致**
 
@@ -1970,7 +1970,7 @@ RedissonRedLock 继承自RedissonMultiLock
 
 分布式锁算法RedLock可以解决：核心思想是 搞多个Redis master部署，以保证它们不会同时宕掉。并且这些master节点是完全相互独立的，相互之间不存在数据同步。同时，需要确保在这多个master实例上，是与在Redis单实例，使用相同方法来获取和释放锁。
 
-![image-20220322230000332](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203222300931.png)
+![image-20220322230000332](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222300931.png)
 
 
 

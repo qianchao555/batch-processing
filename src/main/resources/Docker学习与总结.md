@@ -1158,7 +1158,7 @@ swarm是使用swarmKit构建的Docker引擎内置的集群管理和编排工具
 
 3. 集群中管理节点于工作节点的关系
 
-   ![image-20220130092459196](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220130092459196.png)
+   ![image-20220130092459196](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220130092459196.png)
 
 #### 服务和任务
 
@@ -1172,7 +1172,7 @@ swarm是使用swarmKit构建的Docker引擎内置的集群管理和编排工具
 
 容器、任务、服务的关系
 
-![image-20220130092903098](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220130092903098.png)
+![image-20220130092903098](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220130092903098.png)
 
 
 

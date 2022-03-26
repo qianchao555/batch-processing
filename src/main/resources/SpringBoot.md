@@ -333,7 +333,7 @@ Spring4 中提供了更加通用的条件注解，让我们可以在**满足不�
 1. bootstrap由父ApplicationContext加载，比application优先加载，配置在应用程序上下文的引导阶段生效
 2. application由ApplicationContext加载，用于sringboot项目的自动化配置
 
-![image-20220320225202514](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/202203202252266.png)
+![image-20220320225202514](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203202252266.png)
 
 ###  什么是YAML
 

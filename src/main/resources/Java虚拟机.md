@@ -33,7 +33,7 @@
 
 Java虚拟机在执行Java程序的过程中，会把它所管理的内存划分为若干个不同的数据区域，这些区域有各自的用途，以及创建和销毁的时间。根据《Java虚拟机规范》的规定，Java虚拟机所管理的内存将包括以下几个运行时数据区域：堆、虚拟机栈、本地方法栈、方法区、程序计数器
 
-![image-20220316144451868](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316144451868.png)
+![image-20220316144451868](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220316144451868.png)
 
 1. 程序计数器
    - 当前线程所执行到的字节码的行号指示器
@@ -43,7 +43,7 @@ Java虚拟机在执行Java程序的过程中，会把它所管理的内存划分
    
 2. Java虚拟机栈
    - 描述的是Java方法执行的内存模型，每个方法在执行的同时都会创建一个"栈帧"，用于存储局部变量表、操作数栈、对象引用、动态链接、方法出口等信息，每个方法从调用直至执行完成的过程，都对应着一个栈帧在虚拟机栈中入栈到出栈的过程
-   - ![image-20220316164319035](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316164319035.png)
+   - ![image-20220316164319035](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220316164319035.png)
    
    - 特性：线程私有，生命周期同线程相同
    - 异常规定
@@ -62,7 +62,7 @@ Java虚拟机在执行Java程序的过程中，会把它所管理的内存划分
    
    - Java8 采用在本地内存中实现的**元空间**来实现方法区（类信息在本地内存保存）
    
-   - ![image-20220316153439225](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316153439225.png)
+   - ![image-20220316153439225](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220316153439225.png)
    
    - 思考一下，为什么使用元空间替换永久代？
    
@@ -86,7 +86,7 @@ Java虚拟机在执行Java程序的过程中，会把它所管理的内存划分
    
 6. 直接内存：并不是运行时数据区的一部分，这部分内存被频繁使用可能导致OOM，JDK 1.4中新加入了NIO类，引入了一种基于Channel与缓冲区Buffer的IO方式，它通过一个存储在Java堆中的DirectByteBuffer对象作为这块内存的引用操作，它因此更高效，它避免了Java堆和Native堆来回交换数据的时间
 
-- ![image-20211125140148249](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211125140148249.png)
+- ![image-20211125140148249](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211125140148249.png)
 
 #### HotSpot虚拟机对象探秘
 
@@ -97,7 +97,7 @@ Java虚拟机在执行Java程序的过程中，会把它所管理的内存划分
    - 内存分配完成之后，JVM必须为分配到的内存空间都初始化为零值，这一步操作保证了对象的实例字段在Java代码中可以不赋初始值就可以直接使用，程序能访问到这些字段的数据类型所对应的零值
 2. 对象的内存布局
    - HotSpot VM中，对象在堆内存中的存储布局分为三个部分：对象头、实例数据、对象填充
-   - ![image-20220316154721053](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316154721053.png)
+   - ![image-20220316154721053](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220316154721053.png)
    - 对象头
      - 第一部分：存储对象自身的运行时数据，例如：哈希码、GC分代年龄、锁状态标识、线程持有锁等，这部分数据在32位和64位的虚拟机中分别为32bit和64bit，官方称为 Mark Word
      - 第二部分：类型指针，对象指向它的类型元数据的指针，JVM通过这个指针来确定该对象是哪个类的实例
@@ -115,11 +115,11 @@ Java虚拟机在执行Java程序的过程中，会把它所管理的内存划分
      - 句柄
        - 会从堆中划分一块内存作为句柄池，引用存放对象的句柄地址
        - 句柄中包含对象实例数据与类型数据各自的具体地址信息
-       - ![image-20220316155755694](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316155755694.png)
+       - ![image-20220316155755694](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220316155755694.png)
      - 直接指针 
        -  HotSpot采用此种方式
        - 引用直接存放堆中对象的地址，且这个对象中存放着类型数据的地址指针
-       - ![image-20220316155903853](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220316155903853.png)
+       - ![image-20220316155903853](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220316155903853.png)
 
 ---
 
@@ -234,7 +234,7 @@ GC分类
 3. 缺点
    - 执行效率不稳定，如果Java堆中有大量对象，而且大部分都是需要回收的，这时必须进行大量标记和清除动作，这个过程随着对象的增多效率降低
    - 内存空间碎片化问题，标记、清除会产生大量不连续的内存碎片，空间碎片太多，可能导致程序运行过程中需要分配较大对象时，无法找到足够连续的内存，而不得不提前触发一次垃圾收集动作
-4. ![image-20211217141244716](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217141244716.png)
+4. ![image-20211217141244716](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211217141244716.png)
 
 ##### 标记-复制算法 
 
@@ -253,7 +253,7 @@ GC分类
      - HotSpot VM 默认Eden和Survivor大小比例为8：1，即：每次新生代中**可用空间**为整个新生代容量的90%
      - 因为不能保证100%每次回收都只要不多于10%的对象存活，所以还得设计一个当Survivor空间不足以容纳一次Minor GC（针对新生代回收）之后存活的对象时，需要依赖其他内存区域（大多是老年代）进行分配担保
      - Survivor空间没有足够空间存放上一次新生代收集下来的存活对象，这些对象便将通过分配担保机制直接进入老年代
-7. ![image-20211217142110952](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217142110952.png)
+7. ![image-20211217142110952](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211217142110952.png)
 
 ##### 标记-整理算法
 
@@ -263,7 +263,7 @@ GC分类
    - 清除算法是一种非移动式的回收算法
    - 整理是移动式的
 4. HotSpot虚拟机里面关注吞吐量的Parallel Scavenge收集器是基于标记-整理算法的，而关注延迟的CMS收集器则是基于标记-清除算法的
-5. ![image-20211217150553381](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217150553381.png)
+5. ![image-20211217150553381](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211217150553381.png)
 
 
 
@@ -279,12 +279,12 @@ GC分类
 
 两个垃圾收集器代表可用搭配使用
 
-![image-20211217151616114](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217151616114.png)
+![image-20211217151616114](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211217151616114.png)
 
 ##### Serial收集器   
 
 1. 这个收集器是一个单线程工作的收集器，但它的“单线程”的意义并不仅仅是说明它只会使用一个处理器或一条收集线程去完成垃圾收集工作，更重要的是强调在它进行垃圾收集时，必须暂停其他所有工作线程，直到它收集结束
-2. ![image-20220317172056284](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220317172056284.png)
+2. ![image-20220317172056284](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220317172056284.png)
 3. 采用标记-复制算法
 4. 当它进行垃圾收集时，必须暂停其他所有工作线程，直到它收集结束
 5. 当时这项工作是虚拟机后台自动发起和完成的
@@ -292,7 +292,7 @@ GC分类
 
 ##### ParNew收集器   
 
-![image-20220317172413464](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20220317172413464.png)
+![image-20220317172413464](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220317172413464.png)
 
 1. 采用标记-复制算法
 2. 实际是Serial收集器的多线程并行版本
@@ -414,7 +414,7 @@ GC分类
 2. 实现语言无关性的基础是**虚拟机和字节码存储格式**
 3. Java虚拟机不与任何程序语言绑定，而只与"Class文件"这种特定的二进制文件格式关联
 4. Class文件中包含了JVM指令集、符号表以及其他若干辅助信息
-5. ![image-20211217173127295](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211217173127295.png)
+5. ![image-20211217173127295](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211217173127295.png)
 
 #### Class类文件的结构
 
@@ -431,7 +431,7 @@ GC分类
      - 表用于描述有层次关系的复合结构的数据，整个Class文件本质上也可以视作是一张表
 4. Class文件的存储格式是严格限定的，各个数据项都有具体的含义
 5. 下图为Class文件格式：
-6. ![image-20211220103839235](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211220103839235.png)
+6. ![image-20211220103839235](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211220103839235.png)
 
 ##### 魔数与Class文件版本
 
@@ -778,7 +778,7 @@ GC分类
 
      加载器实现类的隔离、重载等功能。这些类加载器之间的协作关系“通常”会如图7-2所示
 
-     ![image-20211222152459906](https://gitee.com/qianchao_repo/pic-typora/raw/master/img/image-20211222152459906.png)
+     ![image-20211222152459906](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20211222152459906.png)
 
    - 双亲委派模型要求：除了顶层的启动类加载器外，其余的类加载器都应有自己的父类加载器，不过类加载器之间的父子关系一般不是以继承的关系来实现的，而是通常使用组合关系来复用父加载器的代码
 
