@@ -7,6 +7,295 @@
 
 ---
 
+### JDBC
+
+Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一个规范。它由一组Java语言编写的类和接口组成。各种不同类型的数据库都有相应的实现
+
+![image-20220329213239713](https://gitee.com/qianchao_repo/pic-typora/raw/master/mybatis_img/202203292133603.png)
+
+
+
+#### JDBC编程步骤
+
+1. 装载相应数据库的Jdbc驱动并进行初始化
+
+   - 导包/或者依赖
+
+   - 初始化驱动
+
+     ~~~java
+     try {
+         Class.forName("com.mysql.jdbc.Driver");		
+     } catch (ClassNotFoundException e) { 				
+         e.printStackTrace();
+     }
+     Class.forName是把这个类加载到JVM中，加载的时候，就会执行其中的静态初始化块，完成驱动的初始化的相关工作
+     ~~~
+
+     
+
+2. 建立JDBC和数据库之间的Connection连接
+
+   - Connection是与特定数据库连接会话的接口
+
+     ~~~java
+             /**
+     	 * 取得数据库的连接
+     	 * @return 一个数据库的连接
+     	 */
+     public static Connection getConnection(){
+     		Connection conn = null;
+     		 try {
+     			 	//初始化驱动类com.mysql.jdbc.Driver
+     	            Class.forName("com.mysql.jdbc.Driver");
+     	            conn = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/exam?characterEncoding=UTF-8","root", "admin");
+     	            //该类就在 mysql-connector-java-5.0.8-bin.jar中,如果忘记了第一个步骤的导包，就会抛出ClassNotFoundException
+     	        } catch (ClassNotFoundException e) { 				
+     	            e.printStackTrace();
+     	        }catch (SQLException e) {							
+     	            e.printStackTrace();
+     	        }
+     		 return conn;
+     	}
+     ~~~
+
+     
+
+3. 创建Statement或者PreparedStatement接口，执行SQL
+
+   - Statement
+
+     1. Statement接口创建之后，可以执行SQL语句，完成对数据库的增删改查。其中 ，增删改只需要改变SQL语句的内容就能完成，然而查询略显复杂。在Statement中使用字符串拼接的方式，该方式存在句法复杂，容易犯错等缺点
+
+     2. 字符串拼接方式的SQL语句是非常繁琐的，中间有很多的单引号和双引号的混用，极易出错
+
+     3. ~~~java
+        Statement s = conn.createStatement();
+        // 准备sql语句
+        // 注意： 字符串要用单引号'
+        String sql = "insert into t_courses values(null,"+"'数学')";
+        //在statement中使用字符串拼接的方式，这种方式存在诸多问题
+        s.execute(sql);
+        System.out.println("执行插入语句成功");
+        ~~~
+
+   - PreparedStatement
+
+     1. 与Statement不同的是，需要根据sql语句创建PreparedStatement。除此之外，还能通过设置参数，指定相应的值，而不是使用字符串拼接
+
+     2. ~~~java
+          public void addCourse(String courseName){
+              //该语句为每个 IN 参数保留一个问号（“？”）作为占位符
+        	 String sql = "insert into t_course(course_name) values(?)";  
+              Connection conn = null;			
+              PreparedStatement pstmt = null;		
+              try{
+                  conn = DbUtil.getConnection();
+                  pstmt = (PreparedStatement) conn.prepareStatement(sql);
+                  //给占位符赋值
+                  pstmt.setString(1, courseName); 
+                  //执行
+                  pstmt.executeUpdate();		
+              }catch(SQLException e){
+                  e.printStackTrace();
+              }
+              finally{
+                 //关闭资源
+              }
+        	}
+        
+        
+        
+        	public void delCourse(int courseId){
+        		String sql = "delete from t_course where course_id = ?";
+        		Connection conn = null;
+        		PreparedStatement pstmt = null;
+        		try {
+        			conn = DbUtil.getConnection();
+        			pstmt = (PreparedStatement) conn.prepareStatement(sql);
+        			pstmt.setInt(1, courseId);
+        			pstmt.executeUpdate();
+        		} catch (SQLException e) {
+        			e.printStackTrace();
+        		}finally{
+        			 //关闭资源
+        		}
+        	}
+        
+                /**
+        	 * 修改课程
+        	 * @param courseId
+        	 * @param courseName
+        	 */
+        	public void modifyCourse(int courseId,String courseName){
+        		String sql = "update t_course set course_name =? where course_id=?";
+        		Connection conn = null;
+        		PreparedStatement pstmt = null;
+        		try {
+        			conn = DbUtil.getConnection();
+        			pstmt = (PreparedStatement) conn.prepareStatement(sql);
+        			//利用Preparedstatement的set方法给占位符赋值，参数索引是从1开始的
+                    pstmt.setString(1, courseName);  
+        			pstmt.setInt(2, courseId);
+        			pstmt.executeUpdate();
+        		} catch (SQLException e) {
+        			e.printStackTrace();
+        		}finally{
+        		}
+        	}
+        ~~~
+
+        
+
+4. 处理和显示结果
+
+   - ~~~java
+        /**
+     	 * 查询
+     	 * @return
+     	 */
+     	public List<Course> findCourseList(){
+     		String sql = "select * from t_course order by course_id";
+     		Connection conn = null;
+     		PreparedStatement pstmt = null;
+     		ResultSet rs = null;
+     		//创建一个集合对象用来存放查询到的数据
+     		List<Course> courseList = new ArrayList<>();
+     		try {
+     			conn = DbUtil.getConnection();
+     			pstmt = (PreparedStatement) conn.prepareStatement(sql);
+                 
+                 //结果集
+     			rs = (ResultSet) pstmt.executeQuery();
+     			while (rs.next()){
+     				int courseId = rs.getInt("course_id");
+     				String courseName = rs.getString("course_name");
+     				//每个记录对应一个对象
+     				Course course = new Course();
+     				course.setCourseId(courseId);
+     				course.setCourseName(courseName);
+     				//将对象放到集合中
+     				courseList.add(course);
+     			}
+     		} catch (SQLException e) {
+     			e.printStackTrace();
+     		}finally{
+     			//释放资源
+     		}
+     		return courseList;
+     	}
+     ~~~
+
+   - PreparedStatement和Statement比较
+
+     1. 两者都是用来执行SQL的
+     2. PreparedStatement需要根据SQl语句来创建，它通过设置参数、指定相应的值，不像Statement使用字符串拼接方式
+     3. PreparedStatement使用参数设置，可读性好、不易出错。相反Statement采用字符串拼接，容易出错及可读性和维护性差
+     4. PreparedStatement具有预编译机制，性能比后者好
+     5. 前者能防止SQL注入攻击
+
+5. 释放资源
+
+   - 在JDBC编码的过程中我们创建了Connection、ResultSet等资源，这些资源在使用完毕之后是一定要进行关闭的。关闭的过程中遵循从里到外的原则
+
+
+
+---
+
+### MyBatis核心对象
+
+![image-20220329220927022](https://gitee.com/qianchao_repo/pic-typora/raw/master/mybatis_img/202203292209900.png)
+
+MyBatis有三个基本要素
+
+核心接口和类、Mybatis核心配置文件mybatis-config.xml、SQL映射文件mapper.xml
+
+#### 核心接口和类
+
+每个MyBatis应用程序都以一个SqlSessionFactory对象的实例为核心
+
+1. 首先获取SqlSessionFactoryBuilder对象，可以根据xml或类的实例构建该对象
+2. 通过SqlSessionFactoryBuilder对象来获取SqlSessionFactory对象
+3. 进而通过SqlSessionFactory获取SqlSession
+4. SqlSession对象中完全包含了以数据库为背景的索引执行SQL操作的方法，用该实例可以直接执行已映射的SQL语句
+
+##### SqlSessionFactory
+
+1. 它是一个工厂接口，其任务是创建SqlSession
+
+2. 有了它之后就可以通过SqlSession提供的openSession()来获取SqlSession实例
+
+3. ~~~java
+   public interface SqlSessionFactory {
+       SqlSession openSession();
+       SqlSession openSession(boolean autoCommit);
+       SqlSession openSession(Connection connection);
+       SqlSession openSession(TransactionIsolationLevel level);
+       SqlSession openSession(ExecutorType execType);
+       SqlSession openSession(ExecutorType execType, boolean autoCommit);
+       SqlSession openSession(ExecutorType execType, TransactionIsolationLevel level);
+       SqlSession openSession(ExecutorType execType, Connection connection);
+       Configuration getConfiguration();
+   }
+   ~~~
+
+SqlSessionFactory生命周期和作用域
+
+1. 此对象一旦创建，就会在整个应用程序过程中存在。
+2. 没有理由去销毁或再创建它，并且也不建议应用程序在运行中多次创建它
+3. 因此，它的最佳作用域是Application，即随着应用程序的生命周期一直存在
+4. 采用单例模式
+
+##### SqlSession
+
+SqlSession是用于执行持久化操作的对象，类似与JDBC中的Connection。它提供了面向数据库执行Sql命令所需的所有方法，可以通过SqlSession实例直接运行已映射的Sql语句
+
+~~~java
+void clearCache();
+Configuration getConfiguration();
+void rollback(boolean force);
+void commit(boolean force);
+int delete(String statement, Object parameter);
+...
+~~~
+
+主要用途
+
+1. 获取映射器：让映射器通过命名空间和方法名称找到对应的sql，并发给数据库，执行后返回结果
+2. 直接通过命名空间+SQL id 的方式执行Sql，不需要获取映射器
+
+Sqlsession生命周期和作用域名
+
+Sqlsession对应一次数据库会话。由于数据库会话不是永久的，因此其生命周期也不是永久的，每次访问数据库时都需要创建Sqlsession对象
+
+注意：每个线程都有自己的Sqlsession实例，Sqlsession实例不能共享，也不是线程安全的，因此其作用域范围是request作用域或方法体作用域内
+
+
+
+### 映射器
+
+http://c.biancheng.net/mybatis/mapper.html
+
+映射器是Mybatis最重要的文件，文件中包含一组sql语句，这些语句称为映射语句或映射sql语句
+
+映射器由Java接口和xml文件或注解共同组成，它的作用如下：
+
+1. 定义参数类型
+2. 配置缓存
+3. 提供Sql语句和动态sql
+4. 定义查询结果和POJO的映射关系
+
+#### 映射器实现方式
+
+1. 通过xml文件方式实现
+   - 比如：在mybatis-config.xml文件中描述的xml文件，用来生成mapper
+2. 通过注解方式实现
+   - 使用Configuration对象注册Mapper接口
+
+#### MyBatis映射器主要元素
+
+---
+
 
 
 ### # {} 和 ${}的区别
@@ -188,6 +477,8 @@ list<Stu> stuList=mapper.selectLike(val);
 ~~~
 
 
+
+### Mybatis如何扩展一个mybatis插件
 
 
 
