@@ -1,5 +1,141 @@
 ### Spring
 
+#### BeanFactory
+
+BeanFactory是Ioc最最基本的容器，负责生产和管理bean，它为其他具体的IOC容器提供了最基本的规范
+
+XmlBeanFactory、ApplicationContext 等等具体的容器都是继承了BeanFactory，在其基础之上附加了其他的功能
+
+ClassPathXmlApplicationContext没有继承自BeanFactory
+
+Spring中的Ioc容器，大致分为两种：BeanFactory和ApplicationContext
+
+1. BeanFactory
+   - 是最最基础的Ioc容器，它提供了一个Ioc容器所需的基本功能。
+   - BeanFactory默认采用延迟初始化策略，即当容器启动时，未完成Bean的初始化，只有当调用该Bean的实例时，才会完成其初始化操作，并进行依赖注入
+2. ApplicationContext
+   - ApplicationContext 是在 BeanFactory 的基础上实现的，BeanFactory 的功能它都有，算是一种高级容器
+   - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
+   - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就意味着容器启动时间较长，并且对系统资源要求也较高
+
+#### FactoryBean
+
+Spring BeanFacoty容器中管理两种bean：
+
+1. 标准Java Bean  
+2. 另一种是工厂Bean,   即实现了FactoryBean接口的bean  它不是一个简单的Bean 而是一个生产或修饰对象生成的工厂Bean
+
+在向Spring容器获取bean时  对于标准的java Bean  返回的是类自身的实例。而FactoryBean 其返回的对象不一定是自身类的一个实例，返回的是该工厂Bean的getObject方法所返回的对象
+
+
+
+ FactoryBean也是一个接口，为Ioc容器中Bean的实现提供了更加灵活的方式，当在IOC容器中的Bean实现了FactoryBean时，通过getBean(String BeanName)获取到的Bean对象并不是FactoryBean的实现类对象，而是这个实现类中的getObject()方法返回的对象。要想获取FactoryBean的实现类，就要getBean(&BeanName)，在BeanName之前加上& 。
+
+当调用getBean("car")时，Spring通过反射机制发现CarFactoryBean实现了FactoryBean的接口，这时Spring容器就调用接口方法CarFactoryBean#getObject()方法返回。如果希望获取FactoryBean的实例，则需要在使用getBean(beanName)方法时在beanName前显示的加上"&"前缀：如getBean("&car")
+
+
+一般情况下，Spring通过反射机制利用<bean>的class属性指定实现类实例化Bean，在某些情况下，实例化Bean过程比较复杂，如果按照传统的方式，则需要在<bean>中提供大量的配置信息。配置方式的灵活性是受限的，这时采用编码的方式可能会得到一个简单的方案。Spring为此提供了一个org.springframework.bean.factory.FactoryBean的工厂类接口，用户可以通过实现该接口定制实例化Bean的逻辑
+
+FactoryBean接口在Spring框架中有着重要的地位，spring为此提供了很多种不同的实现类
+
+```java
+public interface FactoryBean<T> {
+ @Nullable
+ T getObject() throws Exception;
+    
+ @Nullable
+ Class<?> getObjectType();
+    
+ default boolean isSingleton() {
+  return true;
+ }
+}
+```
+
+- getObject：该方法返回 FactoryBean 所创建的实例，如果在 XML 配置文件中，我们提供的 class 是一个 FactoryBean 的话，那么当我们调用 getBean 方法去获取实例时，最终获取到的是 getObject 方法的返回值。
+- getObjectType：返回对象的类型。
+- isSingleton：表示getObject 方法所产生的对象是否单例形式存在与容器中。
+
+
+
+![image-20220330222504591](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/202203302225742.png)
+
+~~~java
+//代表这个bean本身就是一个工厂，可以生产其他bean实例，例如：这里生产了teacherBean
+//在实例化阶段，BeanFacotry中会涉及到FactoryBean的逻辑，从而调用getObject()返回当前实例
+@Component("studentBean")
+public class StudentBean implements FactoryBean {
+    @Override
+    public Object getObject() throws Exception {
+        return new TeacherBean();
+    }
+   
+    @Override
+    public Class<?> getObjectType() {  //注意这个方法主要作用是：该方法返回的类型是在ioc容器中getbean所匹配的类型
+        return StudentBean.class;
+    }
+    //一个学生学习方法
+    public void study(){
+        System.out.println("学生学习。。。");
+    }
+}
+
+//*******************************************
+public class TeacherBean {
+    public void teacher(){
+        System.out.println("老师教书。。。。");
+    }
+}
+
+
+//***************************
+public class Demo1 {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(Appconfig.class);
+        //这里会返回一个teacherBean,因为StudentBean implements FactoryBean，会返回getObject()中的bean
+        StudentBean studentBean = (StudentBean)annotationConfigApplicationContext.getBean("studentBean");
+        studentBean.study();
+    }
+}
+//************************************
+public class Demo1 {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(Appconfig.class);
+        //加上了“&”符号,这里返回的是studentBean
+        StudentBean studentBean = (StudentBean)annotationConfigApplicationContext.getBean("&studentBean");
+        studentBean.study();
+    }
+}
+~~~
+
+
+
+##### FactoryBean使用场景
+
+1. 最为典型是则是创建Aop的代理对象，这个对象在Spring中就是ProxyFactoryBean
+
+   ![image-20220330215722491](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/202203302157931.png)
+
+2. Mybatis中的SqlSessionFactoryBean
+
+3. Hibernate中的SessionFactoryBean
+
+4. Dubbo中的Consumer
+
+---
+
+
+
+FactoryBean与BeanFactory区别
+
+1. 两者没有比较性，只是名称接近而已
+2. BeanFactory是Ioc容器、负责生产和管理bean，所有的Bean都是由BeanFactory来进行管理的，给具体的Ioc容器的所需提供了规范
+3. FactoryBean是一个bean，这个Bean不是简单的Bean，而是一个能生产或者修饰对象生成的工厂Bean。可以说是一个为Ioc容器中bean的实现提供了更加灵活的方式，FactoryBean在IOC容器的基础上给Bean的实现加上了一个简单工厂模式和装饰模式，我们可以在getObject()方法中灵活配置
+
+---
+
+
+
 #### Spring IoC、DI
 
 https://blog.csdn.net/a745233700/article/details/80959716
@@ -17,7 +153,119 @@ https://blog.csdn.net/a745233700/article/details/80959716
 
 ##### IoC原理
 
-Spring的IoC实现原理为：工厂模式+反射机制，
+Spring的IoC实现原理为：工厂模式+反射机制
+
+~~~java
+interface Fruit {
+   public abstract void eat();
+ }
+ 
+class Apple implements Fruit {
+    public void eat(){
+        System.out.println("Apple");
+    }
+}
+ 
+class Orange implements Fruit {
+    public void eat(){
+        System.out.println("Orange");
+    }
+}
+ //工厂
+class Factory {
+    public static Fruit getInstance(String ClassName) {
+        Fruit f=null;
+        try {
+            //反射得到类实例
+            f=(Fruit)Class.forName(ClassName).newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return f;
+    }
+}
+ 
+class Client {
+    public static void main(String[] a) {
+        Fruit f=Factory.getInstance("io.github.dunwu.spring.Apple");
+        if(f!=null){
+            f.eat();
+        }
+    }
+}
+~~~
+
+
+
+
+
+##### Spring Ioc容器整体脉络
+
+Ioc在Spring里，只需要低级容器就可以实现，2个步骤：
+
+ Spring 低级容器（BeanFactory）的 IoC：
+
+1. 加载配置文件，解析成一个个的BeanDefiniton放在Map里面
+2. 调用getBean时，从BeanDefinition所属的Map里面取出Class对象进行实例化，同时，如果有依赖关系，将递归调用getBean方式来完成依赖注入
+
+
+
+
+
+1. Bean定义 BeanDefinition
+   - 无论是注解驱动还是xml最终都会将这些配置，读取成一个个的Bean定义
+2. 注册Bean定义 BeanDefinitionRegistry
+   - 如何将Bean定义收集起来
+   - 这个接口只是注册Bean定义，显然还需要一个组件将我们的xml或者配置类读取为Bean定义；
+     不仅仅还有读取，我们通常还会配置扫描的包，只会扫描这个包下带有@Component这种注解的Bean才会最终被Spring管理
+3. BeanDefinitionReader和ClassPathBeanDefinitionScanner
+   - 这两个组件就是负责读取和扫描
+4. 生产bean的大致流程
+   - 实例化，可以通过反射（如xml配置的时候就是通过反射）或new（配置类中往往就是通过new）
+   - 填充属性，比如通过@Autowired； @Value等注解注入的属性
+   - 如果配置了init方法则去调用配置的初始化方法
+   - 如果配置了销毁方法，当Bean销毁的时候就会调用对应的销毁方法
+   - 最终会将这个Bean放到一个Map中（单例池）,一级缓存
+
+
+
+---
+
+#### Spring bean生命周期
+
+https://blog.csdn.net/knknknkn8023/article/details/107130806/
+
+https://blog.csdn.net/weixin_34174105/article/details/85739351?spm=1001.2101.3001.6650.10&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-10.pc_relevant_antiscanv2&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-10.pc_relevant_antiscanv2&utm_relevant_index=15
+
+1. 普通Java对象
+   - 实例化对象
+   - 对象不使用时，垃圾回收机制进行回收
+2. Spring bean
+   - 实例化bean
+   - 属性赋值
+   - 初始化
+   - bean的使用
+   - 容器关闭时 销毁
+
+![Spring 生命周期流程](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/1F32KG1-0.png)
+
+##### Bean 生命周期的整个执行过程描述如下。
+
+1. Spring 启动，查找并加载需要被 Spring 管理的 Bean，对 Bean 进行实例化。
+2. 对 Bean 进行属性注入。
+3. 如果 Bean 实现了 BeanNameAware 接口，则 Spring 调用 Bean 的 setBeanName() 方法传入当前 Bean 的 id 值。
+4. 如果 Bean 实现了 BeanFactoryAware 接口，则 Spring 调用 setBeanFactory() 方法传入当前工厂实例的引用。
+5. 如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。
+6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。
+7. 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。
+8. 如果在配置文件中通过 init-method 属性指定了初始化方法，则调用该初始化方法。
+9. 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的初始化方法 postProcessAfterInitialization()。此时，Bean 已经可以被应用系统使用了。
+10. 如果在 <bean> 中指定了该 Bean 的作用域为 singleton，则将该 Bean 放入 Spring IoC 的缓存池中，触发 Spring 对该 Bean 的生命周期管理；如果在 <bean> 中指定了该 Bean 的作用域为 prototype，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
+11. 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法销毁 Bean；如果在配置文件中通过 destory-method 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁。
+
+---
+
+
 
 #### Spring AOP
 
@@ -201,96 +449,11 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 ---
 
-#### BeanFactory
 
-BeanFactory是IOC最基本的容器，负责生产和管理bean，它为其他具体的IOC容器提供了最基本的规范
-
-XmlBeanFactory,ApplicationContext 等等具体的容器都是实现了BeanFactory，再在其基础之上附加了其他的功能
-
-Spring中的Ioc容器，大致分为两种：
-
-BeanFactory和ApplicationContext
-
-1. BeanFactory
-   - 是最最基础的Ioc容器，它提供了一个Ioc容器所需的基本功能。
-   - BeanFactory默认采用延迟初始化策略，即当容器启动时，未完成Bean的初始化，只有当调用该Bean的实例时，才会完成其初始化操作，并进行依赖注入
-2. ApplicationContext
-   - ApplicationContext 是在 BeanFactory 的基础上实现的，BeanFactory 的功能它都有，算是一种高级容器
-   - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
-   - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就以为着容器启动时间较长，并且对系统资源要求也较高
-
-#### FactoryBean
-
- FactoryBean是一个接口，当在IOC容器中的Bean实现了FactoryBean后，通过getBean(String BeanName)获取到的Bean对象并不是FactoryBean的实现类对象，而是这个实现类中的getObject()方法返回的对象。要想获取FactoryBean的实现类，就要getBean(&BeanName)，在BeanName之前加上& 。
-
-当调用getBean("car")时，Spring通过反射机制发现CarFactoryBean实现了FactoryBean的接口，这时Spring容器就调用接口方法CarFactoryBean#getObject()方法返回。如果希望获取FactoryBean的实例，则需要在使用getBean(beanName)方法时在beanName前显示的加上"&"前缀：如getBean("&car")
-
-
-一般情况下，Spring通过反射机制利用<bean>的class属性指定实现类实例化Bean，在某些情况下，实例化Bean过程比较复杂，如果按照传统的方式，则需要在<bean>中提供大量的配置信息。配置方式的灵活性是受限的，这时采用编码的方式可能会得到一个简单的方案。Spring为此提供了一个org.springframework.bean.factory.FactoryBean的工厂类接口，用户可以通过实现该接口定制实例化Bean的逻辑
-
-FactoryBean接口在Spring框架中有着重要的地位，spring为此提供了很多种不同的实现类
-
-```java
-public interface FactoryBean<T> {
- @Nullable
- T getObject() throws Exception;
-    
- @Nullable
- Class<?> getObjectType();
-    
- default boolean isSingleton() {
-  return true;
- }
-}
-```
-
-- getObject：该方法返回 FactoryBean 所创建的实例，如果在 XML 配置文件中，我们提供的 class 是一个 FactoryBean 的话，那么当我们调用 getBean 方法去获取实例时，最终获取到的是 getObject 方法的返回值。
-- getObjectType：返回对象的类型。
-- isSingleton：getObject 方法所返回的对象是否单例。
 
 ---
 
 
-
-FactoryBean与BeanFactory区别
-
-1. 两者没有比较性，只是名称接近而已
-2. BeanFactory是Ioc容器、负责生产和管理bean，所有的Bean都是由BeanFactory来进行管理的，给具体的Ioc容器的所需提供了规范
-3. FactoryBean是一个bean，这个Bean不是简单的Bean，而是一个能生产或者修饰对象生成的工厂Bean。可以说是一个为Ioc容器中bean的实现提供了更加灵活的方式，FactoryBean在IOC容器的基础上给Bean的实现加上了一个简单工厂模式和装饰模式，我们可以在getObject()方法中灵活配置
-
----
-
-
-
-#### Spring bean生命周期
-
-https://blog.csdn.net/knknknkn8023/article/details/107130806/
-
-1. 普通Java对象
-   - 实例化对象
-   - 对象不使用时，垃圾回收机制进行回收
-2. Spring bean
-   - 实例化bean
-   - 属性赋值
-   - 初始化
-   - bean的使用
-   - 容器关闭时 销毁
-
-![Spring 生命周期流程](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/1F32KG1-0.png)
-
-##### Bean 生命周期的整个执行过程描述如下。
-
-1. Spring 启动，查找并加载需要被 Spring 管理的 Bean，对 Bean 进行实例化。
-2. 对 Bean 进行属性注入。
-3. 如果 Bean 实现了 BeanNameAware 接口，则 Spring 调用 Bean 的 setBeanName() 方法传入当前 Bean 的 id 值。
-4. 如果 Bean 实现了 BeanFactoryAware 接口，则 Spring 调用 setBeanFactory() 方法传入当前工厂实例的引用。
-5. 如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。
-6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。
-7. 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。
-8. 如果在配置文件中通过 init-method 属性指定了初始化方法，则调用该初始化方法。
-9. 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的初始化方法 postProcessAfterInitialization()。此时，Bean 已经可以被应用系统使用了。
-10. 如果在 <bean> 中指定了该 Bean 的作用域为 singleton，则将该 Bean 放入 Spring IoC 的缓存池中，触发 Spring 对该 Bean 的生命周期管理；如果在 <bean> 中指定了该 Bean 的作用域为 prototype，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
-11. 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法销毁 Bean；如果在配置文件中通过 destory-method 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁。
 
 #### Bean装配
 
