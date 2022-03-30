@@ -86,7 +86,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
      2. ~~~java
           public void addCourse(String courseName){
               //该语句为每个 IN 参数保留一个问号（“？”）作为占位符
-        	 String sql = "insert into t_course(course_name) values(?)";  
+           	 String sql = "insert into t_course(course_name) values(?)";  
               Connection conn = null;			
               PreparedStatement pstmt = null;		
               try{
@@ -102,10 +102,10 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
               finally{
                  //关闭资源
               }
-        	}
+           	}
+     
         
-        
-        
+     
         	public void delCourse(int courseId){
         		String sql = "delete from t_course where course_id = ?";
         		Connection conn = null;
@@ -121,8 +121,8 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
         			 //关闭资源
         		}
         	}
-        
-                /**
+        	   
+        	       /**
         	 * 修改课程
         	 * @param courseId
         	 * @param courseName
@@ -135,7 +135,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
         			conn = DbUtil.getConnection();
         			pstmt = (PreparedStatement) conn.prepareStatement(sql);
         			//利用Preparedstatement的set方法给占位符赋值，参数索引是从1开始的
-                    pstmt.setString(1, courseName);  
+        	           pstmt.setString(1, courseName);  
         			pstmt.setInt(2, courseId);
         			pstmt.executeUpdate();
         		} catch (SQLException e) {
@@ -144,46 +144,46 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
         		}
         	}
         ~~~
-
+  
         
 
 4. 处理和显示结果
 
    - ~~~java
         /**
-     	 * 查询
-     	 * @return
-     	 */
-     	public List<Course> findCourseList(){
-     		String sql = "select * from t_course order by course_id";
-     		Connection conn = null;
-     		PreparedStatement pstmt = null;
-     		ResultSet rs = null;
-     		//创建一个集合对象用来存放查询到的数据
-     		List<Course> courseList = new ArrayList<>();
-     		try {
-     			conn = DbUtil.getConnection();
-     			pstmt = (PreparedStatement) conn.prepareStatement(sql);
+       	 * 查询
+       	 * @return
+       	 */
+       	public List<Course> findCourseList(){
+       		String sql = "select * from t_course order by course_id";
+       		Connection conn = null;
+       		PreparedStatement pstmt = null;
+       		ResultSet rs = null;
+       		//创建一个集合对象用来存放查询到的数据
+       		List<Course> courseList = new ArrayList<>();
+       		try {
+       			conn = DbUtil.getConnection();
+       			pstmt = (PreparedStatement) conn.prepareStatement(sql);
                  
                  //结果集
-     			rs = (ResultSet) pstmt.executeQuery();
-     			while (rs.next()){
-     				int courseId = rs.getInt("course_id");
-     				String courseName = rs.getString("course_name");
-     				//每个记录对应一个对象
-     				Course course = new Course();
-     				course.setCourseId(courseId);
-     				course.setCourseName(courseName);
-     				//将对象放到集合中
-     				courseList.add(course);
-     			}
-     		} catch (SQLException e) {
-     			e.printStackTrace();
-     		}finally{
-     			//释放资源
-     		}
-     		return courseList;
-     	}
+       			rs = (ResultSet) pstmt.executeQuery();
+       			while (rs.next()){
+       				int courseId = rs.getInt("course_id");
+       				String courseName = rs.getString("course_name");
+       				//每个记录对应一个对象
+       				Course course = new Course();
+       				course.setCourseId(courseId);
+       				course.setCourseName(courseName);
+       				//将对象放到集合中
+       				courseList.add(course);
+       			}
+       		} catch (SQLException e) {
+       			e.printStackTrace();
+       		}finally{
+       			//释放资源
+       		}
+       		return courseList;
+       	}
      ~~~
 
    - PreparedStatement和Statement比较
@@ -259,12 +259,12 @@ int delete(String statement, Object parameter);
 ...
 ~~~
 
-主要用途
+**主要用途**
 
 1. 获取映射器：让映射器通过命名空间和方法名称找到对应的sql，并发给数据库，执行后返回结果
 2. 直接通过命名空间+SQL id 的方式执行Sql，不需要获取映射器
 
-Sqlsession生命周期和作用域名
+**Sqlsession生命周期和作用域名**
 
 Sqlsession对应一次数据库会话。由于数据库会话不是永久的，因此其生命周期也不是永久的，每次访问数据库时都需要创建Sqlsession对象
 
@@ -289,8 +289,10 @@ http://c.biancheng.net/mybatis/mapper.html
 
 1. 通过xml文件方式实现
    - 比如：在mybatis-config.xml文件中描述的xml文件，用来生成mapper
+   - 接口(一般为dao层接口)+xml
 2. 通过注解方式实现
    - 使用Configuration对象注册Mapper接口
+   - 接口上使用注解，注入sql即可
 
 #### MyBatis映射器主要元素
 
@@ -342,6 +344,10 @@ ${}：是字符串替换，#{}：是预处理
 
 
 ### Mybatis分页
+
+Mybatis分页是基于内存的分页，即先查询出所有记录，再按起始位置和页面容量取出结果
+
+这里指的是JVM内存
 
 #### Mybatis如何分页
 
