@@ -231,21 +231,28 @@ Ioc在Spring里，只需要低级容器就可以实现，2个步骤：
 
 ---
 
-#### Spring bean生命周期
+#### Spring 中bean的生命周期
 
 https://blog.csdn.net/knknknkn8023/article/details/107130806/
 
-https://blog.csdn.net/weixin_34174105/article/details/85739351?spm=1001.2101.3001.6650.10&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-10.pc_relevant_antiscanv2&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-10.pc_relevant_antiscanv2&utm_relevant_index=15
+##### 普通Java对象生命周期
 
-1. 普通Java对象
-   - 实例化对象
-   - 对象不使用时，垃圾回收机制进行回收
-2. Spring bean
-   - 实例化bean
-   - 属性赋值
-   - 初始化
-   - bean的使用
-   - 容器关闭时 销毁
+1. 实例化对象
+2. 对象不使用时，垃圾回收机制进行回收
+
+##### Spring bean
+
+主要包含5个主要阶段，其他都是在这四个主要阶段前后的扩展点，5个主要阶段是：
+
+其中实例化和属性赋值分别对应构造方法和setter方法的注入，初始化和销毁是用户能自定义扩展的两个阶段
+
+1. 实例化bean
+   - 容器寻找Bean的定义信息并将其实例化(构造方法、工厂方法等)
+2. 属性赋值
+   - 使用依赖注入，Spring按照Bean的定义信息配置Bean所有属性(setter等)
+3. 初始化
+4. 使用
+5. 容器关闭时 销毁
 
 ![Spring 生命周期流程](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/1F32KG1-0.png)
 
@@ -253,9 +260,9 @@ https://blog.csdn.net/weixin_34174105/article/details/85739351?spm=1001.2101.300
 
 1. Spring 启动，查找并加载需要被 Spring 管理的 Bean，对 Bean 进行实例化。
 2. 对 Bean 进行属性注入。
-3. 如果 Bean 实现了 BeanNameAware 接口，则 Spring 调用 Bean 的 setBeanName() 方法传入当前 Bean 的 id 值。
+3. 如果 Bean 实现了 BeanNameAware 接口，则 Spring 调用 Bean 的 setBeanName() 方法，传入当前 Bean 的 id 值。
 4. 如果 Bean 实现了 BeanFactoryAware 接口，则 Spring 调用 setBeanFactory() 方法传入当前工厂实例的引用。
-5. 如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。
+5. 如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。  （在实际开发中，我们可能会遇到一些类，需要获取到容器的详细信息）
 6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。
 7. 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。
 8. 如果在配置文件中通过 init-method 属性指定了初始化方法，则调用该初始化方法。
