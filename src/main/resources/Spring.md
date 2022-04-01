@@ -574,8 +574,6 @@ Isolation_Serializable:所有事务逐个依次执行
 
 ### @Transactional
 
-https://www.w3cschool.cn/article/34084832.html
-
 1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式实现。本质是对方法的前后进行拦截，然后在目标方法开始之前创建或加入一个事务，执行完目标方法之后根据执行情况提交或回滚事务
 
 2. 通过该注解就能让spring为我们管理事务，免去了重复的事务管理逻辑，减少对业务代码的侵入，使得开发人员能够专注于业务层面开发
@@ -586,7 +584,7 @@ https://www.w3cschool.cn/article/34084832.html
 
 4. @Transactional(rollbackFor=Exception.class)：如果方法抛出异常，就会回滚，数据库里面的数据也会回滚。如果不配置rollbaceFor属性，则事务只会在遇到运行时异常RuntimeException才会回滚
 
-5. 
+   
 
 
 
@@ -594,7 +592,7 @@ https://www.w3cschool.cn/article/34084832.html
 
 结合：Spring事务的传播机制及原因分析
 
-
+https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 1. Transactional注解标注在非public方法上时
    - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
@@ -603,7 +601,8 @@ https://www.w3cschool.cn/article/34084832.html
    - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
    - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
 3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
-4. 事务方法内部捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
+3. rollbackFor 可以指定能够触发事务回滚的异常类型。**Spring默认抛出了未检查unchecked异常（继承自 RuntimeException 的异常）或者 Error才回滚事务**；其他异常（uncheck异常）不会触发回滚事务。如果在事务中抛出其他类型的异常，但却期望 Spring 能够回滚事务，就需要指定rollbackFor属性
+4. 事务方法内部手动捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
 
 
 
