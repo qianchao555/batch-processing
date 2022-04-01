@@ -18,7 +18,7 @@ public class SpringBootController {
 
     @RequestMapping("/hello")
     @ResponseBody
-    public void hello(){
-        landlord.service();
+    public Object hello(){
+        return landlord.service();
     }
 }

@@ -11,8 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class Landlord {
 
-    public void service(){
+    public Object service(){
         System.out.println("签合同");
         System.out.println("收房租");
+        return "234";
     }
 }

@@ -28,14 +28,18 @@ public class Broker {
 //    }
     //aspectPoint切入点  可以像上面一样写在属性里面
     @Around("aspectPoint()")
-    public void around(ProceedingJoinPoint proceedingJoinPoint){
+    public Object around(ProceedingJoinPoint proceedingJoinPoint){
         System.out.println("前置通知：带租客看房");
         System.out.println("前置通知：谈价格");
         try {
-            proceedingJoinPoint.proceed();
+            //返回目标方法返回值
+//            return proceedingJoinPoint.proceed();
+             proceedingJoinPoint.proceed();
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
         System.out.println("后置通知：交钥匙");
+        //修改返回
+        return "444";
     }
 }

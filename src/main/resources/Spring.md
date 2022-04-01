@@ -263,7 +263,10 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
 3. 如果 Bean 实现了 BeanNameAware 接口，则 Spring 调用 Bean 的 setBeanName() 方法，传入当前 Bean 的 id 值。
 4. 如果 Bean 实现了 BeanFactoryAware 接口，则 Spring 调用 setBeanFactory() 方法传入当前工厂实例的引用。
 5. 如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。  （在实际开发中，我们可能会遇到一些类，需要获取到容器的详细信息）
-6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。
+6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作(在对象创建后，对对象进行修改操作)。此处非常重要，Spring 的 AOP 就是利用它实现的。
+   - 在before或者after方法里面对对象进行判断，看是否需要进行代理，需要则生成代理对象并把代理对象放入容器中
+   -  SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference：解决循环依赖，获取一个拓展好的半成品的对象。解决循环依赖用三级工厂的原因，就是需要遇到注入AOP Bean的时候，通过这个地方解决代理
+   - ![image-20220401171420361](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/image-20220401171420361.png)
 7. 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。
 8. 如果在配置文件中通过 init-method 属性指定了初始化方法，则调用该初始化方法。
 9. 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的初始化方法 postProcessAfterInitialization()。此时，Bean 已经可以被应用系统使用了。
@@ -328,13 +331,17 @@ AOP代理主要分为静态代理和动态代理。静态代理的代表为Aspec
 
 aspectJ是静态代理，也称为编译时增强，AOP框架会在编译阶段生成AOP代理类，并将AspectJ（切面）织入到Java字节码中，运行的时候就是增强之后的Aop对象
 
-
+AspectJ可以单独使用，也可以整合其他框架。单独使用时使用专门的编译器ajc   
 
 ###### Spring AOP
 
+SpringAop需要依赖Ioc容器来管理，并且只能作用于Spring容器
+
+Spring整合了AspectJ使得可以使用aspectj语法来实现Aop
+
 动态代理就是说Aop框架不会去修改字节码，而是每次运行时在内存中临时为方法生成一个Aop对象，这个Aop对象包含了目标对象的全部方法，并且在特定的切点做了增强处理，并回调原对象的方法。Spring Aop中的动态代理主要有两种方式：JDK动态代理，Cglib动态代理
 
-###### 动态代理
+**动态代理**
 
 实现方式：利用截取消息的方式，对该消息进行装饰，以取代原有对象行为的执行
 
@@ -356,9 +363,23 @@ aspectJ是静态代理，也称为编译时增强，AOP框架会在编译阶段�
 2. CGLIB动态代理
 
    - CGLib采用底层的**字节码技术**，可以在运行时动态为指定类创建一个子类对象，并在子类中采用方法拦截的技术拦截所有 父类的调用方法，并顺势织入横切逻辑。它运行期间生成的代理对象是目标类的扩展子类。所以 无法通知final、private的方法,因为它们不能被覆写。是针对类实现代理,主要是为指定的类生 成一个子类，覆盖其中方法。
-   -  在spring中默认情况下使用JDK动态代理实现AOP，如果proxy-target-class设置为true或者 使用了优化策略那么会使用CGLIB来创建动态代理.Spring AOP在这两种方式的实现上基本 一样．以JDK代理为例，会使用JdkDynamicAopProxy来创建代理，在invoke()方法首先需 要织入到当前类的增强器封装到拦截器链中，然后递归的调用这些拦截器完成功能的织入，最 终返回代理对象。
+   - 在spring中默认情况下使用JDK动态代理实现AOP，如果proxy-target-class设置为true或者 使用了优化策略那么会使用CGLIB来创建动态代理.Spring AOP在这两种方式的实现上基本 一样．以JDK代理为例，会使用JdkDynamicAopProxy来创建代理，在invoke()方法首先需 要织入到当前类的增强器封装到拦截器链中，然后递归的调用这些拦截器完成功能的织入，最 终返回代理对象。
 
 静态代理与动态代理区别：在于生成Aop代理对象的时机不同，相对来说AspectJ的静态代理方式具有更好的性能，但是需要特定的编译器进行处理，而Spring Aop则无需特定的编译器处理
+
+###### AspectJ 与SpringAop区别
+
+1. AspectJ属于静态织入，通过修改字节码实现，有几个织入的时机
+   - 编译期织入：例如类A使用AspectJ添加了一个属性，类B引用了它，这个场景就需要编译期的时候就进行织入，否则无法编译B
+   - 编译后织入：也就是生成了.class文件，这种情况需要增强处理的化就要用到编译后织入
+   - 类加载后织入：指的是在类加载的时候进行织入。常见几种方法：自定义类加载器，在被织入类加载到JVM前对它进行加载；jvm启动的时候知道AspectJ提供的agent：-javaagent:xxx/xxx/aspectjweaver.jar
+2. 可以做SpringAop做不了的事情，它是Aop编程的完全解决方案
+3. SpringAop在容器启动的时候需要生成代理实例，在方法调用上也会增加栈的深度，使得SpringAop性能远不如AspectJ那么好
+4. ![image-20220401135239914](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/image-20220401135239914.png)
+
+
+
+
 
 ---
 
@@ -458,13 +479,9 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 
 
----
-
-
-
 #### Bean装配
 
-bean装配是指在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，如何通过依赖注入来把它们装配在一起
+bean装配是指：在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，如何通过依赖注入来把它们装配在一起
 
 ##### bean的自动装配
 
@@ -485,13 +502,19 @@ bean装配是指在Spring容器中把bean组装到一起，前提是容器需要
    - 可以作用于：构造函数上、成员变量、setter方法上
    - 默认按照类型进行装配注入
    - 在启动spring IoC时，容器自动装载了一个AutowiredAnnotationBeanPostProcessor后置处理器，当容器扫描到@Autowied、@Resource或@Inject时，就会在IoC容器自动查找需要的bean，并装配给该对象的属性
-
-   - 使用Autowired时，首先在容器中查询对应类型的bean，如果查询结果刚好有一个，就将该bean装配给@Autowired指定的数据，如果查询的结果不止一个，那么@Autowired会根据名称来查找
+   - 使用Autowired时，首先在容器中查询对应类型的bean，如果查询结果刚好有一个，就将该bean装配给@Autowired指定的数据，如果查询的结果不止一个，则会报错
+   - 上述解决方法：Autowired+Qualifier
    - 如果上述查找的结果为空，会抛出异常。解决方法：required=false
-
+2. @Qualifier：按照类型注入的基础上，再按照名称注入
 2. @Resource
 
    - 默认按照名称来装配注入，只有当找不到与名称匹配的bean才会按照类型来装配注入
+
+
+
+---
+
+
 
 #### Spring事务的实现方式和实现原理
 
@@ -551,7 +574,9 @@ Isolation_Serializable:所有事务逐个依次执行
 
 ### @Transactional
 
-1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式进行管理
+https://www.w3cschool.cn/article/34084832.html
+
+1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式实现。本质是对方法的前后进行拦截，然后在目标方法开始之前创建或加入一个事务，执行完目标方法之后根据执行情况提交或回滚事务
 
 2. 通过该注解就能让spring为我们管理事务，免去了重复的事务管理逻辑，减少对业务代码的侵入，使得开发人员能够专注于业务层面开发
 
@@ -559,26 +584,32 @@ Isolation_Serializable:所有事务逐个依次执行
 
    
 
-   
+4. @Transactional(rollbackFor=Exception.class)：如果方法抛出异常，就会回滚，数据库里面的数据也会回滚。如果不配置rollbaceFor属性，则事务只会在遇到运行时异常RuntimeException才会回滚
 
-   #### Transactional失效场景
-
-   结合：Spring事务的传播机制及原因分析
-
-   
-
-   1. Transactional注解标注在非public方法上时
-      - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
-   2. 在一个类中A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
-      - spring默认的传播机制：Propagation_Required，即：支持当前事务，如果当前没有事务，就新建一个事务。
-      - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
-      - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
-   3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
-   4. 事务方法内部捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
+5. 
 
 
 
+#### Transactional失效场景
 
+结合：Spring事务的传播机制及原因分析
+
+
+
+1. Transactional注解标注在非public方法上时
+   - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
+2. 在一个类中A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
+   - spring默认的传播机制：Propagation_Required，即：支持当前事务，如果当前没有事务，就新建一个事务。
+   - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
+   - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
+3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
+4. 事务方法内部捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
+
+
+
+---
+
+### Spring、SpringMvc常用注解
 
 
 
