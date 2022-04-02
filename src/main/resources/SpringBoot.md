@@ -53,6 +53,12 @@
 3. @Environment
 4. @ConfigurationProperties
 
+
+
+---
+
+
+
 ### 什么是JavaConfig
 
 1. 提供了配置Spring Ioc容器的纯Java方法，避免了使用Xml配置
@@ -91,6 +97,8 @@
 
 ### 自动装配原理
 
+简答：Spring Boot启动的时候会通过@EnableAutoConfiguration注解找到META-INF/spring.factories配置文件中的所有自动配置类，并对其进行加载，而这些自动配置类都是以AutoConfiguration结尾来命名的，它实际上就是一个JavaConfig形式的Spring容器配置类，它能通过以Properties结尾命名的类中取得在全局配置文件中配置的属性如：server.port，而XxxxProperties类是通过@ConfigurationProperties注解与全局配置文件中对应的属性进行绑定的。
+
 1. 启动类上的核心注解：@SpringBootApplication注解，有了这个注解启动时就会为SpringBoot开启一个@EnableAutoConfiguration注解自动配置功能
 
 3. 原理
@@ -125,7 +133,17 @@
 
    - SpringFactoriesLoader中加载配置,SpringFactoriesLoader属于Spring框架私有的一种扩展方案，其主要功能就是从指定的配置文件META-INF/spring.factories加载配置,即根据@EnableAutoConfiguration的完整类名org.springframework.boot.autoconfigure.EnableAutoConfiguration作为查找的Key,获取对应的一组@Configuration类
 
-   - 总结：从classpath路径中搜索所有的META_INF/spring.factories文件，并且将其中的org.springframework.boot.autoconfigure.EnableutoConfiguration作为key所对应的值通过反射实例化为对应的标注了@Configuration的JavaConfig形式的Ioc容器配置类，然后汇总为一个并且加载到容器中。这些功能的配置类要生效的话，回去classpath中找是否有该类的依赖类，并且配置类里面注入了默认属性值类，功能类可以引用并赋默认值
+   - 总结：从classpath路径中搜索所有的META_INF/spring.factories文件，并且将其中的org.springframework.boot.autoconfigure.EnableutoConfiguration作为key所对应的值通过反射实例化为对应的标注了@Configuration的JavaConfig形式的Ioc容器配置类，然后汇总为一个并且加载到容器中。这些功能的配置类要生效的话，会去classpath中找是否有该类的依赖类，并且配置类里面注入了默认属性值类，功能类可以引用并赋默认值
+   
+   
+   
+   AutoConfigurationImportSelector
+   
+   - ![image-20220402154803603](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/image-20220402154803603.png)
+
+SpringFactories
+
+
 
 ### 自定义starter
 

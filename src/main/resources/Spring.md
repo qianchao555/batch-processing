@@ -414,11 +414,25 @@ Spring容器本身没有提供Bean的线程安全策略，因此可以说Spring�
 
 https://blog.csdn.net/a745233700/article/details/110914620
 
+[三级缓存](https://cloud.tencent.com/developer/article/1497692)
+
 1. 什么是循环依赖
 
    1. ~~~java
       //多个Bean之间相互依赖，形成一个闭环
-      //案例：循环依赖
+      //案例：构造器注入，产生循环依赖
+      @Service
+      public class A {
+          public A(B b) {
+          }
+      }
+      @Service
+      public class B {
+          public B(A a) {
+          }
+      }
+      
+      //************field属性注入，不会产生循环依赖，spring已经帮我们解决了**************************//
       class A {
           @Autowired
           private B b;
@@ -431,43 +445,113 @@ https://blog.csdn.net/a745233700/article/details/110914620
           @Autowired
           private A a;
       }
+      
+      //************setter方式注入，原理和字段注入类似，不会产生循环依赖*************************//
+      
+      @Service
+      class A {
+          private B b;
+          
+          @Autowired
+          public void setB(B b){
+              this.b =b;
+          }
+      }
+      @Service
+      class B {
+          
+          private A a;
+          @Autowired
+          public void setA(A a){
+              this.a =a;
+          }
+      }
+      
       //获取Bean时，会报错
       //报错BeanCurrentlyInCreationException 循环依赖问题
       /**
       *A/B两个对象在三级缓存里面迁移过程
       */
-      //1. A创建过程需要B,于时A将自己放到三级缓存里面，去实例化B
+      //1. A创建过程需要B,于时A(仅仅完成了实例化)将自己放到三级缓存里面，调用populateBean方法，注入依赖的对象B,于是去获取B,三级缓存中没发现B,于是去实例化B
       //2. B实例化的时候发现需要A,于时B先去查询一级缓存没有，再去查询二级缓存，还是没有，查询三级缓存，找到A。把三级缓存里面的A放到二级缓存，并删除三级缓存里面的A
       //3.B完成初始化工作，将自己放到一级缓存（此时B里面的A还处于创建中状态），然后回来创建A,此时B已经创建结束，直接从一级缓存里面获取B,然后完成创建，并将自己放到一级缓存里面
       ~~~
 
 2. 两种注入方式对循环依赖的影响
 
-   - 官网解释
    - 构造方法依赖注入可能造成循环依赖
    - setter方式注入依赖且在多例模式下产生循环依赖。每一次getBean()时，都会产生一个新的Bean，如此反复下去就会有无穷无尽的Bean产生了，最终就会导致OOM问题的出现
+
+   
+
    - setter方法进行依赖注入且是在单例模式下产生的循环依赖问题（spring内部解决了这个问题，通过三级缓存）
    - 结论：ABC循环依赖问题 只要注入方式是setter且是Singleton就不会有循环依赖问题
 
 3. **spring内部解决方式**：Spring解决单例模式下的setter方法依赖注入引起的循环依赖通过三级缓存解决
 
-   - spring三级缓存DefaultSingletonBeanRegistry
-   - 也就是三个Map
-   - 一级缓存ConcurrentHashMap  singletonObjects
-     1. （单例池）存放已经经历了完整生命周期的Bean对象。=>成品Bean
-   - 三级缓存 HashMap  singletonFactories
-     1. 三级缓存：存放可以生成Bean的工厂=》准备构建Bean的
+   - spring三级缓存DefaultSingletonBeanRegistry，也就是三个Map
 
+   - ~~~java
+     public class RDefaultSingletonBeanRegistry extends SimpleAliasRegistry implements SingletonBeanRegistry {
+     	...
+     	// 从上至下 分表代表这“三级缓存”
+     	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256); //一级缓存
+     	private final Map<String, Object> earlySingletonObjects = new HashMap<>(16); // 二级缓存
+     	private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16); // 三级缓存
+     	...
+     	
+     	/** Names of beans that are currently in creation. */
+     	// 这个缓存也十分重要：它表示bean创建过程中都会在里面呆着~
+     	// 它在Bean开始创建时放值，创建完成时会将其移出~
+     	private final Set<String> singletonsCurrentlyInCreation = Collections.newSetFromMap(new ConcurrentHashMap<>(16));
+     
+     	/** Names of beans that have already been created at least once. */
+     	// 当这个Bean被创建完成后，会标记为这个 注意：这里是set集合 不会重复
+     	// 至少被创建了一次的  都会放进这里~~~~
+     	private final Set<String> alreadyCreated = Collections.newSetFromMap(new ConcurrentHashMap<>(256));
+     }
+     ~~~
+
+   - 
+
+   - 一级缓存：singletonObjects=new ConcurrentHashMap  
+     1. （单例池）存放已经经历了完整生命周期的Bean对象，从该缓存取出的bean可以直接使用
+     
    - 二级缓存HashMap earlySingletonObjects
      1. 二级缓存：存放早期暴露出来的Bean对象，Bean的生命周期未结束（属性还未填充完成）=》半成品Bean
+     1. 用于解决循环依赖
+     
+   - 三级缓存 HashMap  singletonFactories
+
+     1. 三级缓存：单例对象工厂的cache，存放bean工厂对象 》准备构建Bean的
+     2. 用于解决循环依赖
+
+   
 
 4. 结论：只有单例的Bean，会通过三级缓存提前暴露来解决循环依赖的问题。并非单例的Bean，每次从容器中获取的都是一个新的对象，都会重新创建，所以，非单例的Bean是没有缓存的，不会将其放到三级缓存中
 
 5. 解决的核心原理就是：在对象实例化之后，依赖注入之前，Spring提前暴露的Bean实例的引用在第三级缓存中进行存储
 
+##### 三级缓存流程总结
+
+ 以上面`A`、`B`类使用属性`field`注入循环依赖的例子为例，对整个流程做文字步骤总结如下：
+
+1. 使用`context.getBean(A.class)`，旨在获取容器内的单例A(若A不存在，就会走A这个Bean的创建流程)，显然初次获取A是不存在的，因此走**A的创建之路~**
+2. `实例化`A（注意此处仅仅是实例化），并将它放进`缓存`（此时A已经实例化完成，已经可以被引用了）
+3. 初始化`A：`@Autowired`依赖注入B（此时需要去容器内获取B）`
+4. `为了完成依赖注入B，会通过`getBean(B)`去容器内找B。但此时B在容器内不存在，就走向**B的创建之路~**`
+5. 实例化`B，并将其放入缓存。（此时B也能够被引用了）`
+6. `初始化`B，`@Autowired`依赖注入A（此时需要去容器内获取A）
+7. `此处重要`：初始化B时会调用`getBean(A)`去容器内找到A，上面我们已经说过了此时候因为A已经实例化完成了并且放进了缓存里，所以这个时候去看缓存里是已经存在A的引用了的，所以`getBean(A)`能够正常返回
+8. **B初始化成功**（此时已经注入A成功了，已成功持有A的引用了），return（注意此处return相当于是返回最上面的`getBean(B)`这句代码，回到了初始化A的流程中~）。
+9. 因为B实例已经成功返回了，因此最终**A也初始化成功**
+10. 到此，B持有的已经是初始化完成的A，A持有的也是初始化完成的B，完美
+
+
+
 ##### 为什么要用三级缓存？两级、一级行不行？
 
-如果仅仅是解决循环依赖问题，使用二级缓存就可以了，但是如果对象实现了AOP，那么注入到其他bean的时候，并不是最终的代理对象，而是原始的。这时就需要通过三级缓存的ObjectFactory才能提前产生最终的需要代理的对象
+如果仅仅是解决循环依赖问题，使用二级缓存就可以了。但是如果对象实现了AOP，那么给属性注入到其他bean的时候，并不是最终的代理对象，而是原始的。这时就需要通过三级缓存的ObjectFactory才能提前产生最终的需要代理的对象，调用这个对象的getObject方法返回一个封装后的对象，而对象既可以是原始对象也可以是代理对象，再将这个对象返回给需要注入的类
 
 ##### 解决构造函数相互注入造成的循环依赖：
 
@@ -479,9 +563,11 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 
 
+
+
 #### Bean装配
 
-bean装配是指：在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，如何通过依赖注入来把它们装配在一起
+bean装配是指：在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，**如何通过依赖注入来把它们装配在一起**
 
 ##### bean的自动装配
 
@@ -601,8 +687,12 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
    - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
    - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
 3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
-3. rollbackFor 可以指定能够触发事务回滚的异常类型。**Spring默认抛出了未检查unchecked异常（继承自 RuntimeException 的异常）或者 Error才回滚事务**；其他异常（uncheck异常）不会触发回滚事务。如果在事务中抛出其他类型的异常，但却期望 Spring 能够回滚事务，就需要指定rollbackFor属性
-4. 事务方法内部手动捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
+4. rollbackFor 可以指定能够触发事务回滚的异常类型。**Spring默认抛出了未检查unchecked异常（继承自 RuntimeException 的异常）或者 Error才回滚事务**；其他异常（uncheck异常）不会触发回滚事务。如果在事务中抛出其他类型的异常，但却期望 Spring 能够回滚事务，就需要指定rollbackFor属性
+5. 事务方法内部手动捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
+6. 多线程与Transaction
+   - 如果在一个被@Transactional修饰的方法内启用多线程，那么该方法的事务与线程内的事务是两个完全不相关的事务
+   - 也就是说在@Transactional注解的方法会产生一个新的线程的情况下，事务是不会从调用者线程传播到新建线程的
+   - spring数据库连接信息都放在了ThreadLocal中，所以不同的线程享有不同的连接信息，所以不存在于同一个事务中
 
 
 
@@ -610,13 +700,53 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 ### Spring、SpringMvc常用注解
 
+#### 组件类
+
+@Componet、Controller、Service、Repository
+
+#### 装配Bean时使用的注解
+
+@Autowired、@Qualifier
+
+@Resource
+
+@PostConstruct、@PreDestory
+
+#### Componet+Bean
+
+在@Component类中使用方法或字段时不会使用CGLIB增强(即不使用代理类：调用任何方法，使用任何变量，拿到的是原始对象
+
+在@Component中调用@Bean注解的方法和字段则是普通的Java语义，不经过CGLIB处理
+
+#### Configuration+Bean
+
+在Configuration类中使用方法或字段时，使用Cglib代理对象。当调用@Bean注解的方法时它不是普通的Java语义，而是从容器中拿到由Spring生命周期管理、被Spring代理的Bean的代理对象引用
+
+被@Configuration修饰的类，spring容器中会通过cglib给这个类创建一个代理，代理会拦截所有被@Bean修饰的方法，默认情况（bean为单例）下确保这些方法只被调用一次，从而确保这些bean是同一个bean，即单例的
 
 
 
+@Import
+
+用于导入普通类的注入、@Configuration注解的配置类、声明@Bean注解的bean方法、导入ImportSelector的实现类或导入ImportBeanDefinitionRegistrar的实现类
 
 
 
+---
 
+### Spring启动流程
+
+spring的启动入口有很多，在xml中有xml的方式，在注解中有注解的方式，在web的方式中也有web的注解启动方式。
+
+如果是xml则入口是ClassPathXmlApplicationContext，注解方式启动则入口是AnnotationConfigApplicationContext，它们俩的共同特征便是都继承了 AbstractApplicationContext 类，而大名鼎鼎的 refresh()便是在这个类中定义的
+
+若是以注解的配置类的方式启动，就是传入一个配置类，这个配置类包含了你需要注册的到容器中的bean的一些信息，比如扫描类路径信息，但是这个启动入口类是不支持容器的重复刷新的，也就是refresh只能调用一次，而使用AnnotationWebConfigApplicationContext这个是支持容器的重复刷新的，以AnnotationConfigApplicationContext来讲解下spring的启动过程
+
+大致为三个步骤：（基于java-config技术分析）
+
+1. 初始化Spring容器，注册内置的BeanPostProcessor的BeanDefinition到容器中
+2. 将配置类的BeanDefinition注册到容器中
+3. 调用refresh()方法刷新容器
 
 
 
