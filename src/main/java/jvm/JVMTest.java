@@ -7,7 +7,7 @@ import java.util.List;
  * @ClassName JVMTest
  * @Author qianchao
  * @Date 2022/3/15
- * @Version OPRA V1.0
+ * @Version  V1.0
  **/
 public class JVMTest {
     static class A{}

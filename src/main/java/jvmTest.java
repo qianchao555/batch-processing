@@ -1,9 +1,6 @@
 import org.junit.jupiter.api.Test;
-import spring.circleexception.springinner.A;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.math.BigDecimal;
 
 /**
  * @description:
@@ -128,5 +125,18 @@ public class jvmTest {
         }
         System.out.println(String.format("%s + %s = %s", strNum1, strNum2, sb.reverse().toString()));
 
+    }
+
+    @Test
+    public void testString7() {
+        BigDecimal b1= BigDecimal.valueOf(0);
+        Integer maxValue = Integer.MAX_VALUE;
+        Integer maxValue2 = Integer.MAX_VALUE;
+        Integer maxValue3 = Integer.MAX_VALUE;
+        Long longMaxValue = Long.MAX_VALUE;
+        //9223372036854775807
+        System.out.println(BigDecimal.valueOf(longMaxValue));
+        System.out.println(BigDecimal.valueOf(longMaxValue).add(BigDecimal.valueOf(longMaxValue)));
+//        System.out.println(b1.add(BigDecimal.valueOf(maxValue)));
     }
 }

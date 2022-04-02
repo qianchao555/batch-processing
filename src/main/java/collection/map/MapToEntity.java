@@ -9,7 +9,7 @@ import java.util.Map;
  * @ClassName map转实体
   @Author qianchao
  * @Date 2022/3/30
- * @Version OPRA V1.0
+ * @Version  V1.0
  **/
 
 public class MapToEntity {
