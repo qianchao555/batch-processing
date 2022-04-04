@@ -712,6 +712,37 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 @PostConstruct、@PreDestory
 
+
+
+@Primary该注解标注的bean指示了优先注入的bean
+
+~~~java
+...
+@Autowired
+private MyBean myBean(); // 注入myBean1
+
+@Primary
+@Bean
+public MyBean myBean1() {
+    return new MyBean();
+}
+
+@Bean
+public MyBean myBean2() {
+    return new MyBean();
+}
+...
+
+~~~
+
+
+
+@Lazy
+
+Spring IoC容器(ApplicationContext)会在启动的时候实例化所有单例Bean，用于指定Bean是否取消预初始化
+
+
+
 #### Componet+Bean
 
 在@Component类中使用方法或字段时不会使用CGLIB增强(即不使用代理类：调用任何方法，使用任何变量，拿到的是原始对象

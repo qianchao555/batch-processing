@@ -48,12 +48,82 @@
 
 ### 读取配置相关的注解
 
+~~~yaml
+person:
+  name: 张三
+  age: 13
+  likes:
+    - bike
+    - girl
+    - movie
+    
+system:
+    enable: true
+~~~
+
 1. @PropertySouce
-2. @Value
-3. @Environment
-4. @ConfigurationProperties
 
+   - 用于指定资源文件读取的位置，不仅能读取properties文件，也能读取xml、yml
 
+2. @Environment
+
+   - 引入配置文件时，直接将Environment注入即可
+
+   - ~~~java
+      @Autowired
+      	private Environment environment;
+      		@RequestMapping(value="/env")
+      	public String environmentTest() {
+      		String value=environment.getRequiredProperty("person.name");
+      		System.out.println(value);
+      		return value;
+      	}
+      ~~~
+     ~~~
+     
+     
+     ~~~
+
+3. @Value
+
+   - 需要在每个属性上指定
+
+   - ~~~java
+     @Data
+     @ToString
+     @Component
+     public class Person1 {
+     	@Value("${person.name}")
+     	private String name;
+     	@Value("${person.age}")
+     	private Integer age;
+     	@Value("${person.likes}")
+     	private List<String> likes;
+     }
+     ~~~
+
+   - 运行时会报错，因为yaml中不能采用value方式进行list注入
+
+   - 需要将yaml中likes属性修改为：likes:bike,girl,movie
+
+4. @ConfigurationProperties   推荐使用
+
+   - 将配置文件的属于，绑定到对象的相应字段上
+
+   - 在配置类上添加该注解并指定prefix即可对该对象的属性进行复制
+
+   - ~~~java
+     @Data
+     @ToString
+     @ConfigurationProperties(prefix = "person")
+     @Component
+     public class Person {
+     
+     	private String name;
+     	private Integer age;
+     	private List<String> likes;
+     }
+     ~~~
 
 ---
 
@@ -73,7 +143,15 @@
 
 ### starter 是什么
 
-并非新的技术点，基本上还是基于Spring已有功能来实现的
+starter启动器：简单来讲就是一个引入了一些相关依赖和一些初始化的配置
+
+starter 只不过是把我们某一模块，比如web 开发时所需要的所有JAR 包打包好给我们而已
+
+基本上都会使用到两个相同的内容：ConfigurationProperties和AutoConfiguration。因为Spring Boot坚信“约定大于配置”这一理念，所以我们使用ConfigurationProperties来保存我们的配置，并且这些配置都可以有一个默认值，即在我们没有主动覆写原始配置的情况下，默认值就会生效，这在很多情况下是非常有用的。除此之外，starter的ConfigurationProperties还使得所有的配置属性被聚集到一个文件中（一般在resources目录下的application.properties、yml）
+
+![image-20220403233124973](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/202204032331255.png)
+
+
 
 首先它提供了一个自动化配置类，一般命名为XXXAutoConfiguration，在这个类中通过条件注解来决定一个配置是否生效，然后它还会提供一系列的默认配置，也允许开发者根据实际情况自定义相关配置，然后通过安全的属性注入将这些配置属性注入进来，新注入的属性会代替默认属性。正因为如此，很多第三方框架，我们只需要引入依赖就可以直接使用
 
@@ -149,6 +227,12 @@ SpringFactories
 
 所谓的starter本质就是一个普通的maven项目
 
+1. 创建maven项目
+2. 创建ConfigurationProperties保存配置信息
+3. 创建XXAutoConfiguration，引用定义好多配置信息。并在这个类中实现所有starter应该完成的操作
+4. 把XXAutoConfiguration加入spring.factories配置文件中进行声明
+5. 打包，之后就可以依赖了
+
 因此自定义starter需要首先创建一个普通的maven项目，创建完成后，添加starter的自动化配置类即可
 
 例如：
@@ -165,63 +249,41 @@ SpringFactories
 
    
 
-2. 创建一个HelloProperties属性类，用来接收配置文件中注入的值
+2. 创建一个HelloProperties属性类，用来接收配置文件中注入的值。
 
    ~~~java
+   @Data
    @ConfigurationProperties(prefix = "qc")
    publicclass HelloProperties {
-       privatestaticfinal String DEFAULT_NAME = "qq";
-       privatestaticfinal String DEFAULT_MSG = "cc";
-       private String name = DEFAULT_NAME;
-       private String msg = DEFAULT_MSG;
-       public String getName() {
-           return name;
-       }
-       public void setName(String name) {
-           this.name = name;
-       }
-       public String getMsg() {
-           return msg;
-       }
-       public void setMsg(String msg) {
-           this.msg = msg;
-       }
+       //如果配置文件中配置了qc.name、qc.msg则下列默认值会被覆盖
+       private String name="www";
+       private String msg="baidu.com";
    }
    ~~~
-
    
-
+   
+   
 3. 创建一个HelloService，里面定义一个简单的hello()方法
 
    ~~~java
+   @setter
+   @getter
    publicclass HelloService {
        private String msg;
        private String name;
        public String sayHello() {
            return name + " say " + msg + " !";
        }
-       public String getMsg() {
-           return msg;
-       }
-       public void setMsg(String msg) {
-           this.msg = msg;
-       }
-       public String getName() {
-           return name;
-       }
-       public void setName(String name) {
-           this.name = name;
-       }
    }
    ~~~
-
    
-
+   
+   
 4. **重要：**自动配置类的定义。
 
    ~~~java
    @Configuration
-   //注解是使我们之前配置的 @ConfigurationProperties 生效，让配置的属性成功的进入 Bean 中。
+   //该注解是使我们之前配置的 @ConfigurationProperties 生效，将这个配置注册到Spring容器中
    @EnableConfigurationProperties(HelloProperties.class)
    @ConditionalOnClass(HelloService.class)
    publicclass HelloServiceAutoConfiguration {
@@ -306,10 +368,6 @@ Spring4 中提供了更加通用的条件注解，让我们可以在**满足不�
 @ConditionalOnJndi：在JNDI存在的条件下触发实例化。
 @ConditionalOnSingleCandidate：当指定的Bean在容器中只有一个，或者有多个但是指定了首选的Bean时触发实例化
 
----
-
-### 如何理解SpringBoot配置的加载顺序
-
 
 
 ---
@@ -324,27 +382,65 @@ Spring4 中提供了更加通用的条件注解，让我们可以在**满足不�
 4. Grandle插件
 5. 打包war 一般都是jar
 
+
+
 ### SpringBoot需要独立的容器运行吗
 
 不需要，内置了web容器：Tomcat、Jetty、Undertow，默认是Tomcat
+
+
 
 ### 开启SpringBoot特性有哪些方式
 
 1. 继承spring-boot-starter-parent项目
 2. 导入spring-boot-dependencies项目依赖
 
-### SpringBoot启动时都做了什么
+
+
+### SpringBoot启动流程？
+
+
+
+
 
 ### Async异步调用方法
 
 1. 使用@Async注解即可实现方法的异步调用
 2. 需要在启动类上加@EnableAsync使异步调用@Async注解生效
 
+
+
+### 拦截器
+
+Aop的一种实现，主要拦截Controller层的请求
+
+拦截器是在servlet执行之前执行的程序(可以理解为Controller层之前)，主要用于拦截用户请求并作相应的处理。比如：判断用户登录信息、权限信息管理、日志记录等等
+
+SpringBoot中的拦截器实现和SpringMvc中的一样，大致流程是：定义一个拦截器，这个类实现HandlerInterceptor类或者继承HandlerInterceptorAdapter都可以实现拦截器。然后需要将将自己定义的拦截器注入到适配器中，这里也有两种方式：一是实现WebMvcConfigure接口，一是继承WebMvcConfigureAdapter
+
+#### HandlerInterceptor接口
+
+1. preHandle：在业务处理器处理请求前被调用。例如：预处理、安全控制、权限校验等等处理
+2. postHandle：业务处理器处理请求完成之后、生成视图前执行。
+3. afterCompletion：在dispatcherServlet完成处理后被调用，可用于清理资源等等
+
+#### 拦截器链
+
+我们可以定义多个拦截器组成一个拦截器链，然后在适配器中注入多个拦截器。按照拦截器注入的顺序，拦截器的执行顺序应该是：拦截器1，拦截器2，拦截器2处理，拦截器1处理，拦截器2结束，拦截器1结束。
+
 ---
 
 
 
 ## SpringBoot配置
+
+启动上下文时，SpringCloud会创建一个Bootstrap Context，作为Spring应用的Application Context的父上下文。bootstrap是应用程序的父上下文，初始化的时候负责从外部源加载配置属性并解析配置，bootstrap属性有高优先级，默认情况下不会被本地配置覆盖
+
+bootstarp典型应用场景：获取配置中心的配置
+
+![image-20220404214434467](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/202204042145421.png)
+
+
 
 ### bootstrap.properties和application.properties 有何区别 
 
@@ -359,13 +455,39 @@ Spring4 中提供了更加通用的条件注解，让我们可以在**满足不�
 
 2. 与属性文件相比，yml文件更加结构化。yml具有分层配置数据
 
-3. 支持数组
+3. 层级关系
+
+   - 用缩进表示层级关系，缩进只能用空格，不能用Tab
+   - 缩进的空格数量不重要，但是同一层级的元素必须左对齐
+
+4. 数据结构与类型
+
+   - **对象**
 
    ~~~yaml
+   key: value
+   
+   key:
+    key1: v1
+    key2: v2
+    
+   key: {key1:v1,key2:v2}
+   ~~~
+
+   - 布尔值
+   - 整数、浮点数
+   - 空
+   - 时间戳
+   - 数组
+
+   ~~~yaml
+   #格式1
    my:
      servers:
    	- dev.example.com
    	- another.example.com
+   #格式2	
+   values: [value1,value2]
    ~~~
 
    
@@ -385,32 +507,13 @@ Spring4 中提供了更加通用的条件注解，让我们可以在**满足不�
    //项目启动后，配置中的数组会自动存到servers集合中
    ~~~
 
-4. 优缺点
+5. 优缺点
 
    - yaml配置是有序的，在一些配置中是非常有用的，例如Zuul的配置中，配置代理规则时，顺序显得尤为重要
    - yaml配置不支持@PropertySource注解
    - properties文件是无序的
 
-### 读取配置文件常用方式
-
-#### @Value
-
-字段上配置@Value(${配置项的key:默认值})
-
-#### Environment对象获取
-
-使用很简单，直接使用spring的注解@Autowired引入即可
-
-```java
-    @Autowired
-    private Environment environment;
-```
-
-#### @ConfigurationProperties方式获取（强烈推荐）
-
-为了更契合java的面向对象，我们采用自动配置的方式映射配置文件属性，配置完成后直接当做java对象即可使用
-
-#### @PropertySource方式获取
+#### 
 
 ---
 
@@ -426,69 +529,220 @@ SpringBoot推荐使用Java配置而非Xml配置，但是也可以使用xml配置
 
 ### 什么是Spring Profiles
 
-1. Spring Profiles允许用户根据配置文件(dev、test、prod等等)来注册bean
+实际项目中会存在多个多个环境，如：开发、测试、用户uat、生成、预上线等等环境。不同环境的配置也相同，此时就需要profile提供不同环境下不同的配置提供支持，可以通过激活、指定参数等等方式快速切换环境
 
+#### 多Profile文件格式
 
+application-{profile}.properties/yml
+
+例如：
+
+- application.yml：主配置文件
+- application-dev.yml：开发环境配置文件
+- application-test.yml：测试环境配置文件
+- application-prod.yml：生产环境配置文件
+
+#### 激活Profile
+
+此时主配置文件中，可以通过配置激活不同环境的profile。例如激活生产环境：
+
+1. 通过配置文件激活
+
+   ~~~yaml
+   spring:
+     profiles:
+       active: prod
+   ~~~
+
+2. 命令行激活：将该项目打包成 JAR 文件后，打开命令行窗口跳转到 JAR 所在目录
+
+   ~~~shell
+   java -jar helloworld-0.0.1-SNAPSHOT.jar   --spring.profiles.active=dev
+   ~~~
+
+3. 虚拟机参数激活：将该项目打包成 JAR 文件后，打开命令行窗口跳转到 JAR 所在目录
+
+   ~~~shell
+   java -Dspring.profiles.active=prod -jar helloworld-0.0.1-SNAPSHOT.jar
+   ~~~
+
+   
 
 ---
-
-
-
-### 如何在自定义端口上运行SpringBoot应用程序
 
 ## SpringBoot安全性
 
 ### 如何实现SpringBoot应用程序的安全性
 
+Spring security?
+
 ### SpringBoot中如何解决跨域问题
 
-### SpringBoot 中的监视器是什么
+1. 前后端分离：前端配置Nginx即可
 
-1. SpringBoot Actuator是Spring启动框架中的重要功能之一
-2. 监视器可以帮助我们访问生成环境中正在运行的应用程序的状态
+2. 后端全局配置
 
+   ~~~java
+   //实现WebMvcConfigurer,重写addCorsMappings()
+   // 请求跨域
+   @Configuration
+   public class CorsConfig implements WebMvcConfigurer {
+       @Override
+       public void addCorsMappings(CorsRegistry registry) {
+           //添加映射路径
+           registry.addMapping("/**")
+                   //是否发送Cookie
+                   .allowCredentials(true)
+                   //设置放行哪些原始域   SpringBoot2.4.4下低版本使用.allowedOrigins("*")    
+                   .allowedOriginPatterns("*")
+                   //放行哪些请求方式
+                   .allowedMethods(new String[]{"GET", "POST", "PUT", "DELETE"})
+                   //.allowedMethods("*") //或者放行全部
+                   //放行哪些原始请求头部信息
+                   .allowedHeaders("*")
+                   //暴露哪些原始请求头部信息
+                   .exposedHeaders("*");
+       }
+   }
+   ~~~
 
+   
+
+3. 后端局部配置：在controller层配置需要跨域的类或方法上添加@CrossOrigin
+
+   ~~~java
+   @CrossOrigin(origins = "*",maxAge = 3600)
+   public class UserController {
+    final UserService userService;
+    
+    @GetMapping("/getOne/{id}")
+    public User getOne(@PathVariable("id") Integer id) {
+     return userService.getById(id);
+    }
+   ~~~
+
+4. 定义跨域过滤器
+
+   ~~~java
+   //1、编写 跨域过滤器
+   @Component
+   public class CORSFilter implements Filter {
+    
+       @Override
+       public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+     //*号表示对所有请求都允许跨域访问
+           HttpServletResponse res = (HttpServletResponse) response;
+           res.addHeader("Access-Control-Allow-Credentials", "true");
+           res.addHeader("Access-Control-Allow-Origin", "*");
+           res.addHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT");
+           res.addHeader("Access-Control-Allow-Headers", "Content-Type,X-CAF-Authorization-Token,sessionToken,X-TOKEN");
+           if (((HttpServletRequest) request).getMethod().equals("OPTIONS")) {
+               response.getWriter().println("Success");
+               return;
+           }
+           chain.doFilter(request, response);
+       }
+    
+       @Override
+       public void destroy() {
+    
+       }
+    
+       @Override
+       public void init(FilterConfig filterConfig) throws ServletException {
+    
+       }
+   }
+   
+   
+   //2、注册过滤器
+   @Configuration
+   public class CorsConfig {
+       @Bean
+       public CorsFilter corsFilter() {
+           CorsConfiguration corsConfiguration = new CorsConfiguration();
+           corsConfiguration.addAllowedOrigin("*");
+           corsConfiguration.addAllowedHeader("*");
+           corsConfiguration.addAllowedMethod("*");
+           corsConfiguration.setAllowCredentials(true);
+           UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+           urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+           return new CorsFilter(urlBasedCorsConfigurationSource);
+       }
+   
+   }
+   ~~~
+
+5. SpringSecurity，如果使用了 Spring Security，跨域配置会失效，因为请求被 Spring Security 拦截了。
+
+   [SpringSecurity解决跨域问题参考链接](http://www.javaboy.org/2020/0611/cors-springsecurity.html)
+
+   
 
 ---
 
-### 如何在SpringBoot中禁用Actuator端点安全性
+### SpringBoot  监视器 Actuator
+
+1. SpringBoot Actuator模块是Spring启动框架中的重要功能之一，提供了生产级别的功能。比如：健康检查、审计、指标收集、Http跟踪等等，
+2. 监视器可以帮助我们访问生产环境中正在运行的应用程序的状态，帮助我们监控和管理SpringBoot应用、bean的加载情况、环境变量、日志信息、线程信息、JVM堆信息等等
+3. 这个模块是一个采集应用内部信息暴露给外部的模块，上述功能都可以通过http和jmx访问
+
+#### Endpoint
+
+Springboot给外部提供了所谓endpoints(端点)来与应用程序进行访问和交互。比如： actuatro/health端点提供了关于应用健康情况的一些基础信息
+
+根据端点的作用分为
+
+应用配置类：获取应用程序中加载的应用配置、环境变量、自动化配置报告等与springboot应用密切相关的配置类信息
+
+度量指标类：获取应用程序运行过程中用于监控的度量指标，例如内存信息、线程池信息、Http请求统计等等
+
+操作控制类：提供了对应用的关闭等操作类功能
+
+##### 常用的内置endpoint
+
+actuator/health：查看程序健康信息
+
+actuator/info：展示应用程序的信息=》程序的一些基础信息
+
+actuator/metrics：查看监视标准=》当前应用的各类重要度量指标
+
+actuator/beans：列出程序中的Spring Bean
+
+actuator/env：列出程序运行所有信息
+
+
+
+#### 如何在SpringBoot中禁用Actuator端点安全性
 
 1. 默认情况下，所有敏感的http端点都是安全的，只有具有Actuator角色的用户才能访问它们
 
 2. 安全性是使用标准的HttpServletRequest.isUserInRole方法实施的
 
 3. ~~~yaml
-   management:
-   	security:
-   		enabled:false
-   #使用这个配置来禁用安全性
+   #监视程序运行端口
+   management.server.port: 8080 
+      
+       
+   # 激活所有的内置Endpoints=》打开所有的监控点
+   management.endpoints.web.exposure.include: '*'
+   
+   #禁用端点安全性
+   management.security.enabled: false
+   
    ~~~
-
-   ---
-
+   
+   
+   
+   ![image-20220404224926002](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/202204042249167.png)
+   
    
 
-###  如何监视所有SpringBoot微服务
+####  如何监视所有SpringBoot微服务
 
 1. SpringBoot提供监视器端点以监控各个微服务的度量
 2. 这些端点对于获取有关应用程序的信息以及它们的组件是否正常运行很有帮助
 3. 但是监视器一个主要的缺点是，我们必须单独打开应用程序以了解其状态或健康状况
-
-
-
-### SpringBoot如何解决跨域问题
-
-http://www.javaboy.org/2020/0611/cors-springsecurity.html
-
-#### @CrossOrigin
-
-#### SpringSecurity
-
-如果使用了 Spring Security，跨域配置会失效，因为请求被 Spring Security 拦截了。
-
-当引入了 Spring Security 的时候，我们有两种办法开启 Spring Security 对跨域的支持。
-
-#### OAuth2
 
 ---
 
