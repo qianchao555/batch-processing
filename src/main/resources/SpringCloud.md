@@ -3,6 +3,7 @@
 ### RPC是什么
 
 1. 远程过程调用协议（Remote Procedure Call），是一种通过网络从远程计算机上请求服务，而不需要了解底层网络技术的协议，是分布式系统常见的一种通信方法。
+   - 例如：两台服务器A、B，一个应用部署在A服务器上，想要调用B服务器上应用提供的函数/方法，由于不在一个内存空间，所有不能直接调用，需要通过网络来表达调用的语义和传达调用的数据
 2. 过程是什么：过程就是业务处理、计算任务，更直白说就是程序，就是像调用本地方法一样调用远程的过程
 3. ![img](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/45366c44f775abfd0ac3b43bccc1abc3_1440w.jpg)
 
@@ -18,9 +19,16 @@ RPC采用客户端/服务端的模式，通过request-response消息模式实现
 
 ### RPC三个过程
 
-1. 通讯协议：
-2. 寻址
+1. 通讯协议
+   - 首先，要解决通讯的问题，主要是通过在客户端和服务器之间建立TCP连接，远程过程调用所有交换的数据都在这个连接里传输。
+   - 连接可以是按需连接，调用结束后就断掉，也可以是长连接，多个远程过程调用共享同一个连接
+2. 寻址问题
+   - 也就是说，A服务器上的应用怎么告诉底层的RPC框架，如何连接到B服务器（如主机或IP地址）以及特定的端口、方法的名称名称是什么，这样才能完成调用。
+   - 比如基于Web服务协议栈的RPC，就要提供一个endpoint(端点) URI，或者是从UDDI服务上查找。如果是RMI调用的话，还需要一个RMI Registry来注册服务的地址
 3. 数据序列化
+   - 当A服务器上的应用发起远程过程调用时，方法的参数需要通过底层的网络协议如TCP传递到B服务器，由于网络协议是基于二进制的，内存中的参数的值要序列化成二进制的形式，也就是序列化（Serialize）或编组（marshal），通过寻址和传输将序列化的二进制发送给B服务器
+   - B服务器收到请求后，需要对参数进行反序列化，恢复为内存中的表达方式，然后找到对应的方法（寻址的一部分）进行本地调用，然后得到返回值
+   - 返回值还要发送回服务器A上的应用，也要经过序列化的方式发送，服务器A接到后，再反序列化，恢复为内存中的表达方式，交给A服务器上的应用
 
 ### 为什么要是使用RPC
 
@@ -28,10 +36,6 @@ RPC采用客户端/服务端的模式，通过request-response消息模式实现
 2. 分布式系统架构
 3. 服务可重用
 4. 系统间交互调用
-
-### RPC和其他协议的区别
-
-1. RMI远程方法调用是RPC的一种具体实现，webService、RESTfull都是RPC，只是消息的组织形式、消息协议不同
 
 ### RPC的流程
 
@@ -44,8 +48,6 @@ RPC采用客户端/服务端的模式，通过request-response消息模式实现
 
 sub(存根)：分布式计算中存根是一段代码，它转换在远程过程调用期间client和server之间传递的参数
 
-### RPC核心概念术语
-
 
 
 ### RPC协议
@@ -56,17 +58,23 @@ RPC协议规定请求消息、响应消息的格式，在TCP之上我们可以�
 
 ### RPC框架
 
-封装好了参数编组、消息解组、底层网络通信的RPC程序开发框架，可以直接在此基础上编写。常见的RPC框架：Dubbo、SpringCloud、apache Thrift、GRPC等等
+封装好了参数编组、消息解组、底层网络通信的RPC程序开发框架，可以直接在此基础上编写。常见的RPC框架：Dubbo、SpringCloud、apache Thrift、gRPC等等
 
 ### 服务暴露
 
+远程服务提供者需要以某种形式提供服务调用的相关信息，服务调用者通过一定的途径获取远程访问调用的相关信息
+
 ### 远程代理对象
+
+服务调用者使用的服务实际上是远程服务的本地代理，说白了就是通过动态代理实现
 
 ### 通信
 
+RPC框架的通信与具体的协议无关，具体可基于Http或Tcp协议实现
+
 ### 序列化
 
-传输方式和序列化会之间影响RPC的性能
+传输方式和序列化会之间影响RPC的性能，不同的Rpc框架可以在序列化方式上采用不同的技术，从而提高性能
 
 -----
 
@@ -208,11 +216,13 @@ Spring Cloud Ribbon默认使用轮询策略选取服务实例，我们也可以�
 
 声明式服务调用组件，我们只需要声明一个接口并通过注解进行简单的配置（类似与Dao接口上面的Mapper注解一样）即可实现对http接口的绑定
 
-#### SpringCloud调用接口的方式
+#### SpringCloud服务间通信方式
 
 Feign(集成了ribbon)
 
 RestTemplate+ribbon
+
+这两种方式都是采用Restful API接口调用服务的http接口，参数和结果都采用默认的jackson进行序列化和反序列化
 
 - RestTemplate是Spring提供的用于访问Rest服务的客户端
 - 它在Http客户端库(例如：HttpURLConnection、HttpComponents、okHttp等)的基础上，封装了简单易用的模板方法API
@@ -464,6 +474,12 @@ lb://service-name
 
 
 
+
+
+---
+
+
+
 ## SpringCloud Alibaba
 
 Spring Cloud Alibaba 是阿里巴巴结合自身丰富的微服务实践而推出的微服务开发的一站式解决方案，是 Spring Cloud 第二代实现的主要组成部分
@@ -712,7 +728,171 @@ CREATE TABLE `undo_log` (
 
 
 
+---
 
+## Dubbo
+
+### Dubbo是什么
+
+是一款微服务开发框架，它提供了RPC通信和微服务治理两大关键功能
+
+基本原理架构及调用关系：
+
+![image-20220405225319484](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204052253144.png)
+
+1. 服务容器负责启动、加载、运行服务提供者
+2. 服务提供者在启动时，向注册中心注册自己提供的服务
+3. 服务消费者在启动时，在注册中心订阅自己所需的服务
+4. 注册中心返回服务提供者地址列表给消费者，如果有变更，注册中心将基于长连接推送变更数据给消费者
+5. 消费者从提供者列表中，基于软负载均衡算法，选择一台提供者进行调用，如果调用失败会再选另一台进行调用
+6. 服务消费者和提供者，在内存中累计调用次数和调用时间，定时每分钟发送一次统计数据到监控中心
+
+### 为什么要用Dubbo
+
+1. 使用Dubbo可以将核心业务抽取出来，作为独立的服务，逐渐形成稳定的服务中心，可用于提高业务复用灵活扩展，使前端应用能更快速的响应多变的市场需求。
+2. 分布式架构可以承受更大规模的并发流量
+
+### Dubbo和SpringCloud区别
+
+1. 通信方式不同
+   - Dubbo 使用的是 RPC 通信，而Spring Cloud 使用的是HTTP RESTFul 方式
+2. 组件组成不同
+   - dubbo的服务注册中心为Zookeerper，服务监控中心为dubbo-monitor，无消息总线、服务跟踪、批量任务等组件
+   - springcloud的服务注册中心为eureka、服务监控中心为springboot admin，有消息总线，数据流、服务跟踪、批量任务等组件
+
+### Dubbo需要Web容器吗
+
+不需要，如果硬要用Web容器，只会增加复杂性，也浪费资源
+
+### Dubbo内置的服务容器
+
+1. Spring Container
+2. Jetty Container
+3. Log4j Container
+
+Dubbo的服务容器只是一个简单的Main方法，并加载一个简单的Spring容器，用于暴露服务
+
+---
+
+
+
+### Dubbo支持的协议
+
+1. dubbo://（推荐）
+2. http://
+3. rest://
+4. redis://
+5. memcached://
+
+---
+
+
+
+### Dubbo里面的几种节点角色
+
+1. provide：暴露服务的服务提供方
+2. consumer：调用远程服务的服务消费方
+3. registry：服务注册与发现的注册中心
+4. monitor：统计服务调用次数和调用时间的监控中心
+5. container：服务运行容器
+
+---
+
+
+
+### Dubbo服务注册与发现
+
+Dubbo基于消费者端的自动服务发现能力，其基本原理如图：
+
+![image-20220405234944103](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204052349243.png)
+
+#### Dubbo默认注册中心
+
+Dubbo推荐使用Zookeeper作为注册中心，还有redis、multicast、simple等注册中心
+
+服务发现的的一个核心组件是注册中心，Provider 注册地址到注册中心，Consumer 从注册中心读取和订阅 Provider 地址列表。 因此，要启用服务发现，需要为 Dubbo 增加注册中心配置：
+
+~~~yaml
+dubbo:
+  registry:
+    address: 
+      zookeeper: //127.0.0.1:2181
+~~~
+
+
+
+### Dubbo服务间调用是阻塞的吗
+
+默认是同步等待结果阻塞的，支持异步调用
+
+Dubbo是基于NIO的非阻塞实现并行调用，客户端不需要启动多线程即可完成并行调用多个远程服务，相对多线程开销较小，异步调用会返回一个Future对象
+
+---
+
+
+
+### Dubbo序列化框架
+
+默认使用Hessian序列化，还有Duddo、FastJson、Java自带序列化
+
+---
+
+
+
+### Dubbo核心配置
+
+![image-20220405234317683](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204052343833.png)
+
+---
+
+
+
+### 在Provider上可以配置Consumer端的属性有哪些
+
+1. timeout：方法调用超时
+2. retries：失败重试次数，默认重试2次
+3. loadbalance：负载均衡算法，默认随机
+4. actives：消费者端最大并发调用限制
+
+---
+
+
+
+### Dubbo负载均衡策略
+
+1. random loadbalance：权重设置随机概率，默认负载均衡策略
+2. rounddrobin loadbalance：轮询
+3. lastactive loadbalance：最少活跃调用数，若相同则随机
+4. 4、consistenthash loadbalance：一致性hash，相同参数的请求总是发送到同一提供者
+
+---
+
+
+
+### Dubbo通信框架
+
+Dubbo 默认使用 Netty 框架，也是推荐的选择，另外内容还集成有Mina、Grizzly
+
+
+
+---
+
+
+
+### Dubbo集群容错方案
+
+1. Failover Cluster：失败自动切换，自动重试其他服务器，默认方式
+2. Failfast Cluster：快速失败，立即报错，只发起一次调用
+3. Failsafe Cluster：失败安全，出现异常时直接忽略
+4. Failback Cluster：失败自动恢复，记录失败请求，定时重发
+5. Forking Cluster：并行调用多个服务器，只要一个成功即返回
+6. Broadcast Cluster：广播逐个调用所有提供者，任意一个报错则报错
+
+
+
+### Dubbo分布式事务
+
+暂时不支持！
 
 
 
