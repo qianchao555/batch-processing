@@ -149,24 +149,96 @@ Eureka采用C/S架构。
 
 #### 服务注册和发现是什么
 
-所有服务都在Eureka服务器上注册并通过调用Eureka服务器完成服务查找
+所有服务都在Eureka服务器上注册并通过调用Eureka服务器完成服务查找发现
 
-#### Eureka如何实现高可用
-
-1. Eureka集群
-
-#### Eureka自我保护
-
-1. 默认情况下，如果Eureka服务器在一定时间内(默认90s)没有收到某个微服务的心跳，Eureka会进入自我保护模式
-2. 自我保护模式下，Eureka Service会保护服务注册表中的信息，不在删除注册表中的数据，当网络故障恢复后，Eureka Service节点会自动退出自我保护模式
+主启动类上添加@EnableEurekaServer开启服务
 
 
+
+#### Eureka心跳及自我保护机制
+
+1. 应用服务启动后，各节点会像Eureka Server发送心跳，默认周期为30s，如果Eureka Server在多个心跳周期(默认90s）没有收到某个节点的心跳，Eureka Server将会从服务注册列表中把这个服务节点移除。
+
+2. Eureka服务器向客户端公开下面资源以让其发送心跳
+
+   - PUT /eureka/apps/{app id}/{instance id}?status={status}
+   - {instance id}采用 hostname:app id:port，其中app id代表标识唯一的Eureka客户端实例，Eureka服务器会识别一些状态数值：UP; DOWN; STARTING; OUT_OF_SERVICE; UNKNOWN.
+
+3. 客户端发送心跳时的URL 例如：
+
+   PUT /eureka/apps/ORDER-SERVICE/localhost:order-service:8886?status=UP
+   
+
+4. 自我保护机制
+
+   - Eureka Server在运行期间会去统计心跳成功的比例在15分钟之内是否低于85% , 如果低于85%， Eureka Server会认为当前实例的客户端与自己的心跳连接出现了网络故障，那么Eureka Server会把这些实例(节点)保护起来，让这些实例不会过期导致实例剔除。
+   - 这样做就是为了防止Eureka Client可以正常运行, 但是与Eureka Server网络不通情况下， Eureka Server不会立刻将Eureka Client服务剔除
+   - 自我保护模式下，Eureka Service会保护服务注册表中的信息，不再删除注册表中的数据，当网络故障恢复后，Eureka Service节点会自动退出自我保护模式
+
+5. 关闭自我保护机制，保证不可用服务及时剔除
+
+   ~~~yaml
+   eureka:
+     server:
+     	enable-selt-preservation: false
+   ~~~
 
 #### DiscoverClient作用
 
 可以从注册中心根据服务名 获取注册在Eureka上的服务的信息
 
-#### Eureka和Zookeeper区别
+
+
+#### Eurek遵循AP原则
+
+Eureka Server各个节点都是平等的，几个节点挂掉不会影响正常节点的工作，剩余的节点依然可以提供注册和查找发现服务，客户端向某个Eureka服务端注册或查询服务时，如果发现连接失败，则会自动切换到其他可用服务节点，只要有一台服务可用，就能保证服务的可用性。只不过查到的可能不是最新的(不保证强一致性)，即消费者可能获取到过期的服务列表
+
+
+
+#### Eureka如何实现高可用
+
+Eureka Server集群，相互注册
+
+
+
+#### Eureka数据同步方式
+
+分布式系统数据在多个副本之间的复制方式主要有：
+
+1. 主从复制
+
+   有一个主副本，其他为从副本，所有写操作都提交到主副本，再由主副本更新到其他从副本。写压力主要集中在主副本上，是系统的瓶颈，从副本可用分担读请求
+
+2. 对等复制
+
+   副本之间不分主从，任何副本都可以接收写操作，然后每个副本间互相进行数据更新。对等复制模式下，任何副本都可以接收写请求，不存在写压力瓶颈，但是各个副本间的数据同步时可能产生数据冲突
+
+Eureka Server集群采用对等复制即Peer to Peer模式，节点通过彼此相互注册来提高可用性
+
+Server每当自己的信息变更后，就会把自己的最新信息通知给其他Eureka Server保持数据同步
+
+
+
+### Consul
+
+作为注册中心使用，属于CP
+
+### Zookeeper
+
+1. zk作为注册中心需要jdk的支持
+2. zk注册服务时，存储的是临时节点
+
+
+
+### Eureka和Zookeeper区别
+
+1. Eureka满足AP
+
+   当向注册中心查询服务列表时，我们可以容忍注册中心返回的是几分钟以前的注册信息，但不能接受服务直接down掉不可用。也就是说，服务注册功能对可用性的要求要高于一致性
+
+2. Zookeeper满足CP
+
+   但是ZooKeeper会出现这样一种情况，当Master节点因为网络故障与其他节点失去联系时，剩余节点会重新进行leader选举。问题在于，选举leader的时间太长，30 ~ 120s，且选举期间整个ZooKeeper集群都是不可用的，这就导致在选举期间注册服务瘫痪。在云部署的环境下，因网络问题使得ZooKeeper集群失去Master节点是较大概率会发生的事，虽然服务能够最终恢复，但是漫长的选举时间导致的注册长期不可用是不能容忍的
 
 ---
 
@@ -734,13 +806,13 @@ CREATE TABLE `undo_log` (
 
 ### Dubbo是什么
 
-是一款微服务开发框架，它提供了RPC通信和微服务治理两大关键功能
+是阿里开源的基于Java的高性能RPC分布式服务框架，一款微服务开发框架，它提供了RPC通信和微服务治理两大关键功能
 
 基本原理架构及调用关系：
 
 ![image-20220405225319484](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204052253144.png)
 
-1. 服务容器负责启动、加载、运行服务提供者
+1. 将服务转载容器中，服务容器负责启动、加载、运行服务提供者
 2. 服务提供者在启动时，向注册中心注册自己提供的服务
 3. 服务消费者在启动时，在注册中心订阅自己所需的服务
 4. 注册中心返回服务提供者地址列表给消费者，如果有变更，注册中心将基于长连接推送变更数据给消费者
@@ -749,6 +821,7 @@ CREATE TABLE `undo_log` (
 
 ### 为什么要用Dubbo
 
+1. 内部使用了netty、zookeeper保证了高性能可用性
 1. 使用Dubbo可以将核心业务抽取出来，作为独立的服务，逐渐形成稳定的服务中心，可用于提高业务复用灵活扩展，使前端应用能更快速的响应多变的市场需求。
 2. 分布式架构可以承受更大规模的并发流量
 
@@ -779,7 +852,11 @@ Dubbo的服务容器只是一个简单的Main方法，并加载一个简单的Sp
 ### Dubbo支持的协议
 
 1. dubbo://（推荐）
+1. rmi://
+1. hessian://
 2. http://
+2. webservice://
+2. thrift://
 3. rest://
 4. redis://
 5. memcached://
@@ -818,6 +895,60 @@ dubbo:
     address: 
       zookeeper: //127.0.0.1:2181
 ~~~
+
+
+
+
+
+### 服务流量管理
+
+Dubbo通过定义路由规则，实现对流量分布的控制
+
+#### 流量管理
+
+流量管理本质是将请求根据定制好的路由规则分发到应用服务上
+
+![image-20220406100247529](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/image-20220406100247529.png)
+
+
+
+- 路由规则可以有多个，不同的路由规则之间存在优先级。如：Router(1) -> Router(2) -> …… -> Router(n)
+- 一个路由规则可以路由到多个不同的应用服务。如：Router(2)既可以路由到Service(1)也可以路由到Service(2)
+- 多个不同的路由规则可以路由到同一个应用服务。如：Router(1)和Router(2)都可以路由到Service(2)
+- 路由规则也可以不路由到任何应用服务。如：Router(m)没有路由到任何一个Service上，所有命中Router(m)的请求都会因为没有对应的应用服务处理而导致报错
+- 应用服务可以是单个的实例，也可以是一个应用集群
+
+
+
+
+
+---
+
+### Dubbo部署架构——三大中心化组件
+
+这三个中心并不是运行Dubbo的必要条件，用户可以根据自身业务情况决定启用一个或多个，以达到简化部署的目的。通常情况下，所有用户都会以独立的注册中心 开始 Dubbo 服务开发，而配置中心、元数据中心则会在微服务演进的过程中逐步的按需被引入进来
+
+Dubbo微服务组件与各个中心交互：
+
+![image-20220406102116248](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/image-20220406102116248.png)
+
+#### 注册中心
+
+协调Consumer和Provider之间的地址注册与发现，它承载着服务注册和服务发现的职责。目前Dubbo支持两种粒度的服务注册和发现，分别是接口级别、应用级别，注册中心可以按需进行部署
+
+
+
+#### 配置中心
+
+1. 存储Dubbo启动阶段的全局配置，保证配置的跨环境共享与全局一致性
+2. 负责服务治理规则(路由规则、动态配置等等)的存储与推送
+
+#### 元数据中心
+
+1. 接收Provider上报的服务接口元数据，为Admin等控制台提供运维能力(如：服务测试、接口文档等等)
+2. 作为服务发现机制的补充，提供额外的接口/方法级别配置信息的同步能力，相当于注册中心的额外配置
+
+---
 
 
 
@@ -869,9 +1000,61 @@ Dubbo是基于NIO的非阻塞实现并行调用，客户端不需要启动多线
 
 
 
-### Dubbo通信框架
+### Dubbo网络通信框架
 
-Dubbo 默认使用 Netty 框架，也是推荐的选择，另外内容还集成有Mina、Grizzly
+Dubbo 默认使用 Netty 框架作为网络通信，也是推荐的选择，另外内容还集成有Mina、Grizzly
+
+netty是基于NIO的，它封装了JDK的NIO，使用起来更方便
+
+---
+
+
+
+### Netty
+
+
+
+#### NIO/BIO
+
+BIO是面向流(字节/字符流)同步阻塞的
+
+NIO是面向缓冲区(或面向块)和非阻塞的，数据读取到一个它稍后处理的缓冲区，需要时可在缓冲区前后移动
+
+#### NIO非阻塞模式
+
+1. 非阻塞读：一个线程从某通道读取数据时，仅能读到目前准备好的数据，如果数据还没准备好就立即返回，该线程可以继续做别的事情，而不是像BIO那样保持线程阻塞
+2. 非阻塞写：一个线程写入一些数据到某通道时，先将数据写到缓冲区，等到数据可写时，再将缓冲区的数据写到通道。而BIO调用了write之后就阻塞在这里，即使数据不可写也要一直等待，直到数据完全写出去
+
+##### NIO三大组件
+
+1. IO多路复用器selector
+2. 基于缓冲区的双向管道，channel和buffer
+
+![image-20220406113048060](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/image-20220406113048060.png)
+
+NIO是面向缓冲和非阻塞的，在一个NIO中一个线程处理selector，一个selector可以处理多个channel。使用selector时，必须将channel注册到selector中
+
+##### Buffer
+
+Buffer本质是一个内存块，基于数组实现，Buffer是一个抽象类，7个基本类型(除了boolean)都有自己的实现类，常用的为ByteBuffer，因为网络数据都是以字节方式传输的
+
+buffer读模式和写模式。既可以读又可以写，但是读写要做切换，也就是说，如果buffer当前模式为写模式，则要显式切换到读模式才可以读数据，反之亦然
+
+// 调用flip方法  buffer.flip();   切换到读模式
+
+##### Channel
+
+常见的几种channel
+
+FileChannel
+
+DatagramChannel(用于udp)
+
+ServerSocketChannel(用于TCP)
+
+SocketChannel(用于TCP)
+
+
 
 
 
