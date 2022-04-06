@@ -168,7 +168,6 @@ Eureka采用C/S架构。
 
    PUT /eureka/apps/ORDER-SERVICE/localhost:order-service:8886?status=UP
    
-
 4. 自我保护机制
 
    - Eureka Server在运行期间会去统计心跳成功的比例在15分钟之内是否低于85% , 如果低于85%， Eureka Server会认为当前实例的客户端与自己的心跳连接出现了网络故障，那么Eureka Server会把这些实例(节点)保护起来，让这些实例不会过期导致实例剔除。
@@ -249,18 +248,40 @@ Server每当自己的信息变更后，就会把自己的最新信息通知给�
 #### Ribbon是什么
 
 1. ribbon是Netflix发布的开源项目
-2. 主要功能是提供客户端软件的负载均衡算法和服务调用
-3. Ribbon客户端组件提供了一系列完善的配置项，根据配置信息，Ribbon会自动基于某种规则去连接不同的机器
 
-#### 负载均衡的意义？
+2. 主要功能是**提供客户端软件的负载均衡算法和服务调用(并不是它发起调用，而是它决定调用哪个服务)**
+
+3. Ribbon客户端组件提供了一系列完善的配置项，根据配置信息，Ribbon会自动基于某种规则(如：轮询、随机等）去连接不同的机器。
+
+   
+
+#### 负载均衡
+
+##### 软件负载均衡
+
+nginx：Nginx是**服务器负载均衡**，客户端所有请求都会交给nginx,然后由nginx实现转发请求。即负载均衡是由服务端实现的
+
+##### 负载均衡类型
+
+集中式负载均衡：在消费者和服务提供方中间使用独立的代理方式进行负载，有硬件的（比如 F5），也有软件的（比如 Nginx）
+
+进程内负载均衡：将LB逻辑集成到消费方,消费方从服务注册中心获知有哪些地址可用，然后自己再从这些地址中选择出一个合适的服务器。Ribbon就属于进程内LB,它只是一个类库, 集成于消费方进程,消费方通过它来获取到服务提供方的地址。
+
+
 
 #### Ribbon实现原理
 
-使用discoverClient从注册中心读取目标服务信息，对同一接口请求进行计数，使用取余算法获取目标服务集群索引，返回获取到的目标服务信息，
+使用discoverClient**从注册中心读取目标服务信息**，对同一接口请求进行计数，使用取余算法获取目标服务集群索引，返回获取到的目标服务信息，
 
 #### Ribbon实现负载均衡
 
 Ribbon 是一个客户端的负载均衡器，它可以与 Eureka 配合使用轻松地实现客户端的负载均衡。Ribbon 会先从 Eureka Server（服务注册中心）去获取服务端列表，然后通过负载均衡策略将请求分摊给多个服务端，从而达到负载均衡的目的
+
+Ribbon本地负载均衡，在调用微服务接口时候，会在注册中心上获取注册信息服务列表之后缓存到JVM本地,从而在本地实现RPC远程服务调用技术。
+
+
+
+Ribbon核心组件：IRule
 
 SpringCloud Ribbon 提供了一个IRule接口，该接口主要用来定义负载均衡策略，他有7个默认实现类，每一个实现类都是一个负载均衡策略
 
@@ -278,6 +299,42 @@ Spring Cloud Ribbon默认使用轮询策略选取服务实例，我们也可以�
 
 
 
+#### RestTemplate
+
+1. RestTemplate作用是发送http请求的客户端，用于2个服务之间的请求发送
+2. 其简化了Rest Api调用，只需要使用它的一个方法，就可以完成请求、响应、Json转换
+
+API
+
+1. getForObject/getForEntity  (url，转换的类型.class，提交的参数)
+
+   ![image-20220406212604863](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204062126157.png)
+
+​		![image-20220406212830912](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204062128387.png)
+
+1. postForObject/postForEntity   （url，协议体数据，转换的类型.calss)
+
+RestTemplate并没有限制Http的客户端类型，目前常用的三种都支持：HttpClient、OkHttp、Jdk原生的UrlConnection
+
+
+
+RestTemplate不+Ribbon也可以调用，只是没有负载均衡而已
+
+RestTemplate+Ribbon可实现 ：带负载均衡的远程调用
+
+~~~java
+@Configuration
+public class ApplicationContext {
+    @Bean
+    @LoadBalanced
+    public RestTemplate GetrestTemplate(){
+        return new RestTemplate();
+    }
+}
+~~~
+
+
+
 ---
 
 
@@ -288,17 +345,56 @@ Spring Cloud Ribbon默认使用轮询策略选取服务实例，我们也可以�
 
 声明式服务调用组件，我们只需要声明一个接口并通过注解进行简单的配置（类似与Dao接口上面的Mapper注解一样）即可实现对http接口的绑定
 
+它底层是基于http协议，是一个http请求调用的轻量级框架，可以以Java接口注解的方式调用Http请求，Feign通过处理注解，将请求模板化，当时就调用的时候，传入参数，再应用到请求上，从而转化成真正的请求，封装了http调用流程
+
+Feign默认使用JDK原生的URLConnection发送Http请求，没有连接池、对每个请求地址会保持一个长连接。建议换用Apache HttpClient作为底层的http client包，从而获取连接池、超时时间等与性能相关的控制能力
+
+Feign真正发送Http请求是委托为feign.client来做的
+
+~~~yaml
+#换底层http客户端
+feign.httpclient.enabled: true
+~~~
+
+
+
+使用方法：定义一个服务接口，然后在上面添加注解
+
+
+
+原理：
+
+1. 程序启动时，会扫描所有包下@FeignClient注解的类，并将这些类注入到Spring Ioc容器中，当定义的Fiegn中的接口被调用时，通过Jdk动态代理为其生成RequestTemplate
+2. RequestTemplate中包含了请求的所有信息。例如：请求参数、请求url等等
+3. 
+
+
+
+Feign内置了一个重试器，当Http请求出现IO异常时，会有一个最大尝试次数发送请求
+
 #### SpringCloud服务间通信方式
 
 Feign(集成了ribbon)
 
 RestTemplate+ribbon
 
+
+
 这两种方式都是采用Restful API接口调用服务的http接口，参数和结果都采用默认的jackson进行序列化和反序列化
 
 - RestTemplate是Spring提供的用于访问Rest服务的客户端
 - 它在Http客户端库(例如：HttpURLConnection、HttpComponents、okHttp等)的基础上，封装了简单易用的模板方法API
 - restTemplate处理异常：ResponseErrorHandler、DefaultResponseErrorHandler等几个类
+
+#### Feign超时配置控制
+
+其服务调用以及负载均衡是依靠底层Ribbon实现的，因此超时控制通过Ribbon来设置
+
+~~~yaml
+ribbon:
+  ReadTimeout: 6000 #建立连接所用的时间，适用于网络状况正常的情况下，两端连接所用的时间
+  ConnectionTimeout: 6000 #建立连接后，服务器读取到可用资源的时间
+~~~
 
 
 
@@ -315,26 +411,32 @@ RestTemplate+ribbon
 它是 Spring 官方推出的一种声明式服务调用与负载均衡组件，它的出现就是为了替代进入停更维护状态的 Feign
 
 1. 里面集成了ribbon、feign的封装、hystrix
+1. feign不支持SpringMvc注解，所有OpenFeign在Feign的基础上支持SpringMvc的注解，例如@RequestMapping等等
+1. @FeignClient可以解析SpringMVC的@RequestMapping注解下的接口，并通过动态代理的方式产生实现类，实现类中做负载均衡并调用其他服务
 2. 其服务调用以及负载均衡是依靠底层Ribbon实现的，因此超时控制通过Ribbon来设置
 3. OpenFeign里面默认没有开启Hystrix
 
 #### 常用注解
 
-@FeignClient
-
-该注解用于通知OpenFeign组件对@RequestMapping注解下的接口进行解析，并通过动态代理的方式产生实现类，实现负载均衡和服务调用
-
 @EnableFeignClient
 
 启动类上添加，表示开启OpenFeign功能，SpringCloud启动时，会去扫描标记@FeignClient注解的接口生成代理并且注入到Spring容器中
 
+@FeignClient
+
+该注解用于通知OpenFeign组件对@RequestMapping注解下的接口进行解析，并通过动态代理的方式产生实现类，实现负载均衡和服务调用
+
 ---
+
+
 
 ### Hystrix
 
 #### 什么是Hystrix
 
 Spring Cloud Hystrix是一款优秀的服务容错与保护组件，它提供了熔断器功能，能有效地阻止分布式微服务系统中出现联动故障，以提高微服务系统的弹性。Hystrix具有服务降级、服务熔断、线程隔离、请求缓存、请求合并、以及实时故障监控等强大功能
+
+能够保证一个依赖出错的情况下，不会导致整体服务的失败，避免级联故障，提高分布式系统的弹性
 
 #### 微服务中，如何保护服务
 
@@ -355,17 +457,30 @@ Spring Cloud Hystrix是一款优秀的服务容错与保护组件，它提供了
 
 ##### 服务降级(fallback)
 
-1. 当某些服务不可用时，为了避免长时间等待造成服务卡顿或者雪崩效应，而主动执行备用的服务降级逻辑，立即返回一个友好的提示，以保障主体业务不受影响
+1. 当某些服务不可用时，为了避免长时间等待造成服务卡顿或者雪崩效应，而主动执行备用的服务降级逻辑，立即返回一个友好的提示，以保障主体业务不受影响，fallback
 2. Hystrix实现服务降级的功能是通过重写HystrixCommand中的getFallback方法，或者HystrixObservableCommand的resumeWithFallback()方法，使服务支持服务降级
+
+什么情况下会触发服务降级
+
+1. 程序运行异常
+2. 超时
+3. 服务熔断发生服务降级
+4. 线程池、信号量也会导致服务降级
 
 ##### 服务熔断
 
-在服务降级的基础上更直接的一种保护方式，当在一个统计时间范围内的请求失败数量达到设定值或当前的请求错误率达到设定的错误率阈值时开启断路，之后的请求直接走fallback()方法，在设定时间后尝试恢复
+在服务降级的基础上更直接的一种保护方式，当在一个统计时间范围内的请求失败数量达到设定值或当前的请求错误率达到设定的错误率阈值时开启断路，之后的请求直接走fallback()方法，在设定时间后尝试恢复。
+
+类似与保险丝达到最大访问后，直接拒绝访问，拉闸限电，然后调用访问降级的方法来返回友好提示
+
+![image-20220406231253626](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204062312840.png)
 
 1. 熔断机制是**为了应对雪崩效应**而出现的一种微服务链路保护机制
 2. 当微服务系统中的某个微服务不可用或响应时间太长时，为了保护系统的整体可用性，熔断器会暂时切断请求对该服务的调用，并快速返回一个友好的错误响应。这种熔断状态不是永久的，在经历了一定的时间后，熔断器会再次检测该微服务是否恢复正常，若服务恢复正常则恢复其调用链路
 
-###### 熔断状态
+具体配置：[参考](https://blog.csdn.net/weixin_44449838/article/details/110765752)
+
+###### 熔断状态及原理
 
 1. 断路器三种状态
    - 打开状态:一段时间内，达到一定的次数无法调用并且多次监测没有恢复的迹象，断路器完全打开，那么下次请求就不会请求该服务，而是快速返回失败响应
@@ -374,10 +489,10 @@ Spring Cloud Hystrix是一款优秀的服务容错与保护组件，它提供了
 2. ![熔断状态转换](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/10162355X-7.png)
 3. SpringCloud中，熔断机制通过Hystrix实现。Hystrix会监控微服务间的调用情况，当失败调用到一定比例时，就会启动熔断机制
 4. Hystrix 实现服务熔断的步骤如下：
-   1. 当服务的调用出错率达到或超过 Hystix 规定的比率（默认为 50%）后，熔断器进入熔断开启状态。
+   1. 当服务的调用请求失败数量达到设定值(默认10s内超过20次请求)达到或超过 Hystix 规定的比率（默认为10s内超过 50%请求失败）后，熔断器进入熔断开启状态。
    2. 熔断器进入熔断开启状态后，Hystrix 会启动一个休眠时间窗，在这个时间窗内，该服务的降级逻辑会临时充当业务主逻辑，而原来的业务主逻辑不可用。
    3. 当有请求再次调用该服务时，会直接调用降级逻辑快速地返回失败响应，以避免系统雪崩。
-   4. 当休眠时间窗到期后，Hystrix 会进入半熔断转态，允许部分请求对服务原来的主业务逻辑进行调用，并监控其调用成功率。
+   4. 当休眠时间窗到期后（默认5s），Hystrix 会进入半熔断转态，允许部分请求对服务原来的主业务逻辑进行调用，并监控其调用成功率。
    5. 如果调用成功率达到预期，则说明服务已恢复正常，Hystrix 进入熔断关闭状态，服务原来的主业务逻辑恢复；否则 Hystrix 重新进入熔断开启状态，休眠时间窗口重新计时，继续重复第 2 到第 5 步。
 
 ##### 服务隔离
