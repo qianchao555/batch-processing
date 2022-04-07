@@ -548,11 +548,23 @@ Hystrix为隔离的服务开启一个独立的线程池，这样在高并发的�
 
 
 
+服务端：分布式配置中心，是一个独立的微服务
+
+客户端：读取配置
+
+将配置信息以Rest接口的形式暴露
+
+
+
 #### Spring Cloud Config可以实现实时刷吗
+
+自身不能
 
 SpringCloud Config实时刷新采用SpringCloud Bus消息总线实现
 
 ---
+
+
 
 ### Spring Cloud Bus
 
@@ -603,7 +615,7 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 #### 什么是Springcloud gateway
 
 1. 作为SpringCloud官方推出的第二代网关框架，取代Zuul网关
-2. 网关常见的功能：路由转发、权限校验、限流控制等待
+2. 网关常见的功能：**路由转发、权限校验、限流控制等等**
 3. 基于Spring5、SpringBoot2、Project Reactor等技术开发的高性能API网关组件
 
 #### SpringCloud gateway三大核心概念
@@ -630,8 +642,12 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 作用范围划分：
 
 1. GatewayFilter：应用在单个路由或一组路由上的过滤器
+
 2. GlobalFilter：应用在所有的路由上的过滤器
+
 3. 可以自定义全局过滤器：实现GlobalFileter、复写方法
+
+   <img src="https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204072311361.png" alt="image-20220407231132016" style="zoom:150%;" />
 
 #### SpringCloud Gateway工作流程
 
@@ -659,9 +675,38 @@ lb://service-name
 
 
 
+### 服务链路追踪 Zipkin
 
+Zipkin是一个分布式链路追踪系统，可以采集时序数据来协助定位延迟等相关问题
 
+Sleuth提供了一套完整的服务追踪的解决方案，在分布式系统中提供追踪解决方案并且兼容支持了Zipkin
 
+下载：https://dl.bintray.com/openzipkin/maven/io/zipkin/java/zipkin-server/
+
+运行
+
+服务启动后web端地址：http://localhost:9411/zipkin/
+
+架构图
+
+![image-20220407221143409](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204072212823.png)
+
+#### 结构
+
+zipkin包括四个组件：collector、storage、search、webUI，其中collector中有两个参数
+
+1. span：表示一个追踪节点，有唯一标识
+2. Trace：表示一条调用链路，根据Span的parentId串联起来
+
+#### 跟踪web请求
+
+springcloud中，采用sleuth来做跟踪处理，具体通过一个拦截器实现
+
+#### 发送跟踪数据
+
+#### 数据存储
+
+zipkin支持MySQL、ES等存储方式
 
 ---
 
@@ -675,19 +720,15 @@ Spring Cloud Alibaba 吸收了 Spring Cloud Netflix 的核心架构思想，并�
 
 
 
-### SpringCloud Alibaba组件
+### SpringCloud Alibaba三大组件
 
-Nacos
+Nacos：服务注册中心和配置中心
 
-Sentinel
+Sentinel：熔断限流
 
-Dubbo
+Seata：分布式事务
 
-Seata
 
-Alibaba Cloud OSS
-
-Alibaba Cloud Schedulerx
 
 
 
@@ -705,6 +746,12 @@ Alibaba Cloud Schedulerx
 
 ### Spring Cloud Alibaba 服务注册与配置中心(Nacos)
 
+[官网地址](https://nacos.io/zh-cn/)
+
+等价于Eureka+config+bus
+
+属于AP模型
+
 Nacos：Dynamic Naming and Configuration Service，由阿里巴巴团队使用Java语言开发的开源项目。
 
 Nacos是一个更易于帮助云原生应用的动态服务发现、配置和服务管理平台
@@ -716,6 +763,8 @@ Nacos是一个更易于帮助云原生应用的动态服务发现、配置和服
 | s        | service           | 即服务，表示 Nacos 实现的服务注册中心和配置中心都是以服务为核心的。 |
 
 
+
+Nacos可集成Ribbon，可以使用Ribbon来进行负载均衡
 
 #### Nacos特性
 
@@ -730,6 +779,8 @@ Nacos提供对服务的实时健康检查，能够阻止请求发送到不健康
 ##### 动态配置服务
 
 动态配置服务可以让我们以中心化、外部化、动态化的方式，管理所有环境的应用配置和服务配置
+
+Nacos默认动态刷新配置文件，历史版本默认保留30天，还有一键回滚功能
 
 ##### 动态DNS服务
 
@@ -781,11 +832,68 @@ Nacos Server 还可以作为配置中心，对 Spring Cloud 应用的外部配�
 
 从配置管理的角度看，Nacos 可以说是 Spring Cloud Config 的替代方案，但相比后者 Nacos 的使用更简单，操作步骤也更少
 
+##### 动态刷新
+
+@RefreshScope，当配置中心更改配置后，响应的getId值会刷新
+
+~~~java
+@RefreshScope
+public class IdEntity {
+    @Value("${id}")
+    private int id;
+    public int getId(){
+        return this.id;
+    }
+}
+~~~
+
+
+
+
+
+#### Nacos服务配置三种方案
+
+1. DataId
+   - 指定DataId
+   - 在web端配置一个config
+   - 在ymal中激活对应的环境
+2. Group
+   - 通过Group实现环境区分
+   - 新建group
+   - 修改配置文件信息
+3. Namespace
+   - 新建命名空间
+   - 新建DataId
+
+三者关系：![image-20220407230120882](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204072301174.png)
+
+
+
+
+
+
+
 #### Nacos Server集群化部署（后期深入）
 
+![image-20220407230202144](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/202204072302345.png)
+
+三种部署方式：
+
+1. 单机模式：用于调试
+2. 集群模式：生产环境
+3. 多集群模式：多数据环境
 
 
 
+#### Nacos持久化
+
+默认自带嵌入式数据库derby
+
+derby切换到本地库步骤
+
+1. 在nacos安装目录下的conf中找到sql脚本，然后导入本地数据库中
+2. 找到application.properties，修改其默认数据库配置信息
+3. 重启nacos，这时，使用的就是笨的数据库了
 
 ---
 
@@ -829,6 +937,8 @@ Seata是一个分布式事务处理框架，阿里巴巴和蚂蚁金服共同开
 **全局事务**：指的是一次性操作多个资源管理器完成的事务，由一组分支事务组成
 
 分布式事务可以理解为：一个包含了若干个分支事务的全局事务。全局事务的职责是协调其管辖的各个分支事务达成一致，要么一起成功提交，要么一起失败回滚。通常，分支事务本身就是一个满足ACID特性的本地事务
+
+---
 
 
 
