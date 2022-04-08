@@ -267,6 +267,48 @@ nginx：Nginx是**服务器负载均衡**，客户端所有请求都会交给ngi
 
 进程内负载均衡：将LB逻辑集成到消费方,消费方从服务注册中心获知有哪些地址可用，然后自己再从这些地址中选择出一个合适的服务器。Ribbon就属于进程内LB,它只是一个类库, 集成于消费方进程,消费方通过它来获取到服务提供方的地址。
 
+~~~yaml
+#ribbon超时配置
+ribbon:
+  OkToRetryOnAllOperations: false #对所有操作请求都进行重试,默认false,包括连接超时(connectTimeout)和请求超时(readTimeOut)
+  ReadTimeout: 3000   #负载均衡超时时间，默认值5000
+  ConnectTimeout: 2000 #ribbon请求连接的超时时间，默认值2000
+  MaxAutoRetries: 0     #对当前实例的重试次数，默认0,不包含首次调用
+  MaxAutoRetriesNextServer: 0 #对切换实例的重试次数，默认1,不包含首次调用
+  
+  
+  #熔断配置
+  hystrix:
+  command:
+    default:
+      execution:
+        timeout:
+          enabled: true
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000 #默认1000ms
+
+
+
+#feign超时配置
+feign:
+  hystrix:
+    enabled: true #默认为false，如果为false,则使用ribbon的超时设置和重试机制，否则使用feign的相关设置
+  client:
+    config:
+      default:
+        #连接到目标的时间，此处会收到注册中心启动中的影响。设置为3秒钟，如果注册中心有明显的不在线，基本是毫秒级熔断拒绝
+        connectTimeout: 3000
+        #获取目标连接后执行的最长时间，设置为32秒，即服务最长时
+        readTimeout: 32000
+
+#结论
+根据上面分析，Hystrix的熔断时间要大于Feign或Ribbon的connectTimeout+readTimeout，
+由于ribbon的重试次数为RetryCount = (maxAutoRetries + 1) * (maxAutoRetriesNextServer + 1)，因此必须保证(maxAutoRetries + 1) * (maxAutoRetriesNextServer + 1)*（ConnectTimeout+ReadTimeout）< timeoutInMilliseconds，因为如果小于超时时间, 那就熔断了, 没有机会重试了
+~~~
+
+
+
 
 
 #### Ribbon实现原理
@@ -782,6 +824,8 @@ Nacos提供对服务的实时健康检查，能够阻止请求发送到不健康
 
 Nacos默认动态刷新配置文件，历史版本默认保留30天，还有一键回滚功能
 
+![image-20220408104916236](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/image-20220408104916236.png)
+
 ##### 动态DNS服务
 
 Nacos提供动态DNS服务，能够让我们更容易地实现负载均衡、流量控制以及数据中心内网的简单DNS解析服务
@@ -869,7 +913,51 @@ public class IdEntity {
 
 
 
+#### 命名空间
 
+用于进行租户粒度的配置隔离，不同命名空间下，可以存在相同的groupId和Data Id的配置。命名空间的常用常见为：为不同环境的配置区分隔离，例如开发、测试、生产等等环境的资源(配置、服务等等)隔离等
+
+一个命名空间下，可存在多个配置，一个配置对应一个DataId
+
+#### GroupId
+
+Nacos中的一组配置集，是组织配置的维度之一，通过一个有意义的字符串对配置集进行分组，从而区分Data Id相同的配置集。在Nacos上创建一个配置时，若未填写分组的名称，则配置分组的名称默认未Default_group
+
+配置分组的常见场景：不同的应用或组件使用了相同的配置类型，如：dataId_url、MQ_topic配置
+
+#### DataId
+
+Nacos中某个配置集的Id。配置集ID是组织划分配置的维度之一。DataId常用于组织划分系统的配置集，一个系统或应用可以配置多个配置集，每个配置集都可以被一个有意义的名称标识
+
+DataId通常采用类Java包的命名规则保证全局唯一性，非强制
+
+Springcloud中，dataId的完整格式如下：
+
+~~~java
+${prefix}-${spring.profile.active}.${file-extension}
+~~~
+
+
+
+
+
+#### Nacos配置中心集群
+
+工作原理：
+
+Nacos作为配置中心的集群结构中，是一种无中心化节点的设计，由于没有主从节点，也没有选举机制，所以为了能够实现热备，就需要增加虚拟IP（VIP）。
+
+Nacos的数据存储分为两部分
+
+1. Mysql数据库存储，所有Nacos节点共享同一份数据，数据的副本机制由Mysql本身的主从方案来解决，从而保证数据的可靠性。
+2. 每个节点的本地磁盘，会保存一份全量数据，具体路径：`/data/program/nacos-1/data/config-data/${GROUP}`
+
+![](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/1666682-20220329151449681-423821799.png)
+
+当配置发生变化时：
+
+1. Nacos会把变更的配置保存到数据库，然后再写入本地文件。
+2. 接着发送一个HTTP请求，给到集群中的其他节点，其他节点收到事件后，从Mysql中dump刚刚写入的数据到本地文件中
 
 
 
@@ -924,7 +1012,9 @@ Sentinel核心库不依赖Sentinel Dashboard，但两者结合使用可以有效
 
 [参考文章](http://c.biancheng.net/springcloud/seata.html)
 
-Seata是一个分布式事务处理框架，阿里巴巴和蚂蚁金服共同开源的分布式事务解决方案，能够在微服务架构下提供高性能且简单易用的分布式事务服务
+Seata是一个分布式事务处理框架，阿里巴巴和蚂蚁金服共同开源的分布式事务解决方案，能够在微服务架构下提供高性能且简单易用的分布式事务服务。Seata为用户提供了AT、TCC、SAGA、XA事务模式，为用户打造一站式分布式解决方案
+
+![image-20220408164209711](https://gitee.com/qianchao_repo/pic-typora/raw/master/springcloud_img/image-20220408164209711.png)
 
 #### 分布式事务相关概念
 
@@ -985,6 +1075,21 @@ Seata提供了AT、TCC、SAGA、XA四种事务模式，可以快速有效地对�
 1. 必须使用支持本地ACID事务特性的关系型数据库
 2. 应用程序必须是使用JDBC对数据库进行访问的Java应用
 
+##### AT模式的工作机制
+
+大致分为两个阶段
+
+1. 一阶段：业务数据和回滚日志记录在一个本地事务中提交，释放本地锁和连接资源
+2. 二阶段：
+   - 提交异步化，非常快速地完成
+   - 回滚通过一阶段的回滚日志进行反向补偿
+
+#### 写隔离
+
+1. 一阶段本地事务提交前，需要确保先拿到全局锁
+2. 拿不到全局锁，不能提交本地事务
+3. 拿全局锁的尝试被限制在一定范围内，超出范围内将放弃，并回滚本地事务，回滚本地锁
+
 此外，我们还需要针对业务中涉及的各个数据库表，分别创建一个 UNDO_LOG（回滚日志）表。不同数据库在创建 UNDO_LOG 表时会略有不同，以 MySQL 为例，其 UNDO_LOG 表的创表语句如下：
 
 ```mysql
@@ -1002,9 +1107,7 @@ CREATE TABLE `undo_log` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 ```
 
-##### AT模式的工作机制
 
-大致分为两个阶段（后期深入）
 
 
 
