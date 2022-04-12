@@ -17,9 +17,52 @@
 
 ---
 
+### 线程状态(生命周期)
+
+![image-20220412212247848](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204122122015.png)
+
+
+
+1. 新建(初始态)New：实现Runnable接口和继承Thread可以得到一个线程类，new一个实例出来，线程就进入了初始状态
+2. 可运行态(就绪态)Runnable：线程创建后，调用start()方法，此时线程处于可运行线程池中，等待被线程调度选中，获取cpu是使用权
+3. 运行态Running：线程获得了cpu时间片，执行任务
+4. 阻塞态Blocked：线程由于某种原因放弃了cpu的使用权，直到线程进入可运行态，才有机会再次获得cpu时间片进入到运行态
+5. 死亡态Dead：线程run()、main()方法执行结束，或者异常退出了，则该线程结束生命周期
+
+---
+
 
 
 ### 线程池
+
+高并发情况下，频繁的创建线程会大大降低系统的效率，因为频繁创建和销毁线程需要时间，所以引入了线程池技术
+
+假设一个服务器完成一项任务所需时间为：创建线程时间T1 ，在线程中执行任务的时间T2 ， 销毁线程时间T3。如果：T1 + T3 远大于 T2，则可以采用线程池，以提高服务器性能
+
+线程池：即一个存放线程的容器，调用线程池去执行并发任务时，从线程池中取出线程去执行任务，每个线程执行完任务后，并不被销毁，而是被线程池回收，下一次继续执行任务
+
+#### 线程池基本组成部分
+
+1. 线程池管理器ThreadPool：用于创建并管理线程池，包括创建线程池、销毁线程池、添加新任务等等
+2. 工作线程PoolWorker：线程池中的线程，在没有任务时，处于等待状态，可以循环的执行任务
+3. 任务接口Task：每个任务必须实现的接口，以供工作线程调度任务的执行
+4. 任务队列taskQueue：存放没有处理的任务。提供一种缓冲机制
+
+#### 线程池的实现原理
+
+当向线程池中提交一个任务后，线程池是如何处理这个任务的呢？线程池处理流程如下：
+
+1. 线程池判断 当前工作线程数是否小于核心线程数
+   - 如果是则创建一个工作线程来执行任务
+   - 如果不小于，则转到第二步
+2. 线程池判断任务队列是否已经满了
+   - 没有满则将这个任务存储在工作队列里面
+   - 满了则进入第三步
+3. 线程池判断当前工作线程数是否小于最大线程数
+   - 没有小于则创建一个线程来执行这个任务
+   - 如果最大线程池里面线程数量已经满了则交给饱和策略来处理这个任务
+
+
 
 #### 工具类
 
@@ -39,25 +82,22 @@
 
 构造器七大参数：
 
-corePoolSize：核心线程数量
-
-MaximumPoolSize：能容纳最大线程数
-
-keepAliveTime：多余的空闲线程等待新任务的最长时间，超过这个时间后多余的线程被终止
-
-TimeUnit：keepAliveTime的单位
-
-BlockingQueue：暂存任务的工作队列
-
-ThreadFactory：用于创建线程的工厂
-
-RejectExceptionHandler：拒绝策略，当工作队列已满时，并且线程池创建的线程数量达到了设置的最大线程数时，触发拒绝策略
-
-1. AbortPolicy：默认策略，该策略会直接抛出异常，组织系统正常工作
-2. CallerRunsPolicy：该策略会把任务队列中的任务放在调用者线程中运行
-3. DiscardOledestPolice：该策略会丢弃任务队列中最老的一个任务
-4. DiscardPolice：该策略会丢弃无法处理的任务，不予任务处理
-5. 可以自定义拒绝策略：实现RejectedExecutionHandler 
+1. corePoolSize：核心线程数量
+2. MaximumPoolSize：能容纳最大线程数
+3. keepAliveTime：多余的空闲线程等待新任务的最长时间，超过这个时间后多余的线程被终止
+4. TimeUnit：keepAliveTime的单位
+5. BlockingQueue：暂存任务的工作队列
+   - 一般采用以下几种阻塞队列
+   - ArrayBlockingQueue
+   - LinkedBlockingQueue
+   - SynchronousQueue
+6. ThreadFactory：用于创建线程的工厂
+7. RejectExceptionHandler：拒绝处理任务时的策略，当工作队列已满时，并且线程池创建的线程数量达到了设置的最大线程数时，触发拒绝策略
+   - AbortPolicy：默认策略，该策略会直接抛出异常，组织系统正常工作
+   - CallerRunsPolicy：该策略会把任务队列中的任务放在调用者线程中运行
+   - DiscardOledestPolice：该策略会丢弃任务队列中最老的一个任务
+   - DiscardPolice：该策略会丢弃无法处理的任务，不予任务处理
+   - 可以自定义拒绝策略：实现RejectedExecutionHandler 
 
 ![image-20220411213851879](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204112139305.png)
 
@@ -99,13 +139,17 @@ Java虚拟机会实现这个规范
 
 Java内存模型定义了Java线程对内存数据进行交互的规范，线程之间的共享变量存储在主内存中，每个线程有自己私有的本地内存，本地内存存储了该线程以读/写共享变量的副本。本地内存是Java内存模型抽象的概念，并不是真实存在的
 
-https://www.cnblogs.com/Java3y/p/15468855.html#:~:text=Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E6%8A%BD%E8%B1%A1%E7%BB%93%E6%9E%84,%EF%BC%9A%E7%BA%BF%E7%A8%8B%E4%B9%8B%E9%97%B4%E7%9A%84%E3%80%8C%E5%85%B1%E4%BA%AB%E5%8F%98%E9%87%8F%E3%80%8D%E5%AD%98%E5%82%A8%E5%9C%A8%E3%80%8C%E4%B8%BB%E5%86%85%E5%AD%98%E3%80%8D%E4%B8%AD%EF%BC%8C%E6%AF%8F%E4%B8%AA%E7%BA%BF%E7%A8%8B%E9%83%BD%E6%9C%89%E8%87%AA%E5%B7%B1%E7%A7%81%E6%9C%89%E7%9A%84%E3%80%8C%E6%9C%AC%E5%9C%B0%E5%86%85%E5%AD%98%E3%80%8D%EF%BC%8C%E3%80%8C%E6%9C%AC%E5%9C%B0%E5%86%85%E5%AD%98%E3%80%8D%E5%AD%98%E5%82%A8%E4%BA%86%E8%AF%A5%E7%BA%BF%E7%A8%8B%E4%BB%A5%E8%AF%BB%2F%E5%86%99%E5%85%B1%E4%BA%AB%E5%8F%98%E9%87%8F%E7%9A%84%E5%89%AF%E6%9C%AC%E3%80%82
-
 Java内存模型的抽象结构图：
 
 ![image-20220411231453088](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204112314267.png)
 
-Java内存模型规定了：线程对变量的所以操作都必须在本地内存进行，不能直接读写主内存的变量
+Java内存模型规定了：线程对变量的所以操作都必须在本地内存进行，不能直接读写主内存的变量。
+
+JMM定义了8种操作来完成变量如何从主内存到本地内存，以及变量如何从本地内存到主内存
+
+分别是：read、load、use、assign、store、write、lock、unlock
+
+![image-20220412204327444](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204122043152.png)
 
 
 
@@ -136,6 +180,18 @@ Java内存模型规定了：线程对变量的所以操作都必须在本地内�
 5. 如何解决不保证原子性
    - sync
    - 原子类
+
+##### volatitle原理
+
+JMM为了实现volatitle的有序性和可见性，定义了4种内存屏障(规范)，分别是LoadLoad / LoadStore / StoreLoad /StoreStore
+
+就是在volatitle前后加上内存屏障，使得编译器和cpu无法进行重排序，并且写volatitile变量对其他线程可见
+
+##### MESI
+
+MEMI是cpu缓存一致性协议，不同cpu架构都不一样
+
+
 
 #### 原子类
 
@@ -191,10 +247,61 @@ CAS执行依赖于UnSafe类实现
 
 比较更新时，添加版本号--AtomicStampedReference
 
-	
+​	
 
 
 
 为什么CAS而不用sync？
 CAS保证一致性，并提高并发性
 	
+
+---
+
+### Java中的锁
+
+#### Synchronized关键字
+
+---
+
+
+
+#### Lock接口
+
+
+
+##### 队列同步器AQS
+
+###### https://blog.csdn.net/mulinsen77/article/details/84583716
+
+https://www.cnblogs.com/waterystone/p/4920797.html
+
+
+
+AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组件的基础框架，它使用了一个int的成员变量表示同步状态，通过内置的FIFO队列来完成资源获取线程的排队工作。
+
+实现同步器主要通过继承来实现，子类通过继承同步器并实现它的抽象方法来管理同步状态
+
+同步器是实现锁的关键，锁是面向使用者的，同步器是面向锁的实现者、它简化了锁的实现方式
+
+同步器基于模板方法模式
+
+
+
+###### AQS核心思想
+
+如果请求的共享资源空闲，则将当前请求资源的线程设置为有效的线程，并将共享资源设置为锁定状态，如果请求的共享资源被占用，那么就需要一套线程阻塞等待以及被唤醒时锁分配的机制，这个机制AQS是采用CLH队列锁实现的，即：将暂时获取不到锁的线程构造成一个节点加入队列中
+
+CLH：Craig Landin and Hagersten ，CLH队列（是FIFO）是一个虚拟的双向队列，虚拟的双向队列：即不存在队列实例，仅存在节点之间的关联关系
+
+AQS是将每一条请求共享资源的线程封装成一个CLH锁队列的一个结点（Node），来实现锁的分配，每个节点保存线程的信息、等待状态、前驱后继节点等信息
+
+
+
+
+
+
+
+
+
+
+
