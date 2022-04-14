@@ -267,7 +267,7 @@ CAS保证一致性，并提高并发性
 
 #### Lock接口
 
-
+Lock接口的实现基本上都是通过聚合了一个AbstractQueuedSynchronizer同步器的子类来完成线程访问控制的
 
 ##### 队列同步器AQS
 
@@ -294,6 +294,84 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 CLH：Craig Landin and Hagersten ，CLH队列（是FIFO）是一个虚拟的双向队列，虚拟的双向队列：即不存在队列实例，仅存在节点之间的关联关系
 
 AQS是将每一条请求共享资源的线程封装成一个CLH锁队列的一个结点（Node），来实现锁的分配，每个节点保存线程的信息、等待状态、前驱后继节点等信息
+
+
+
+直白：AQS是基于CLH队列，用volatile修饰共享变量state，线程通过CAS去改变状态，成功则获取锁成功，失败则进入队列等待，等待被唤醒
+
+AQS是自旋锁，在等待被唤醒的时候，经常会使用自旋( while(!cas() )的方式，不停的尝试获取锁，直到被其他线程获取成功
+
+
+
+实现了AQS的锁有：自旋锁、互斥锁、读写锁、信号量、栅栏等等都是AQS的衍生物
+
+AQS的具体实现：
+
+![image-20220414211911107](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204142119244.png)
+
+AQS维护了一个volatile的int类型的state，和一个FIFO线程等待队列，多线程争用资源被阻塞的时候就会进入到这个队列
+
+AQS定义了两种资源共享方式：
+
+1. 独占：只有一个线程能执行，例如ReentrantLock
+2. 共享：多个线程可以同时执行，例如Semaphore、CountDownLatch、ReadWriteLock、CyclicBarrier
+3. 不同的自定义的同步器争用资源的方式也不同
+
+
+
+##### AQS底层使用了模板方法设计模式
+
+同步器的设计基于模板方法设计模式的，如果需要自定义同步器一般是：
+
+1. 使用者继承AbstractQueuedSynchronizer并重写指定的方法
+2. 将AQS组合在自定义的同步组件的实现中，并调用模板方法，而这些模板方法会调用使用者重写的方法
+
+
+
+
+
+
+
+#### Condition接口
+
+condition接口提供了类似Object的监视器方法，与Lock接口配合可以实现等待/通知模式
+
+
+
+### Java并发容器和框架
+
+#### ConcurrentHashMap
+
+线程安全的HashMap
+
+##### 实现原理
+
+concurrentHashMap采用锁分段技术，首先将数据分为一段一段的存储，然后给每一段数据配一把锁，当一个线程占用锁访问其中一段数据的时候，其他段的数据能被其他线程访问
+
+##### concurrentHashMap结构
+
+![image-20220414225538803](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204142255782.png)
+
+由Segment数组结构和HashEntry数组构成
+
+Segment是一个可重入锁，在concurrentHashMap里面扮演锁的角色，HashEntry则用于蹭饭键值对数据
+
+一个ConcurrentHashMap中包含一个Segment数组，Segment的结构和HashMap类似，是一种数组和链表结构。一个Segment里面包含一个HashEntry数组，每个HashEntry是一个链表的元素。每个Segment拥有一个锁，当对HashEntry数组的数据进行修改时，必须先获得对应的Segment锁
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
