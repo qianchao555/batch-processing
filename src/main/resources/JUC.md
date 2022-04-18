@@ -283,7 +283,7 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 
 同步器是实现锁的关键，锁是面向使用者的，同步器是面向锁的实现者、它简化了锁的实现方式
 
-同步器基于模板方法模式
+同步器基于模板方法模式，基于AQS可以实现自己的很多锁类，比如ReentrantLock等等
 
 
 
@@ -328,6 +328,16 @@ AQS定义了两种资源共享方式：
 
 
 
+#### ReentrantLock
+
+##### 可重入锁
+
+简单理解：同一个线程对于已经获得的锁，可以继续申请到该锁的使用权
+
+内部为sync extends AQS内部类实现，其次，它的公平锁与非公平锁都是在xxx extends sync内部类中实现的
+
+如何实现可重入：volitale类型的int state变量  0表示没有任何线程持有该锁
+
 
 
 
@@ -335,6 +345,92 @@ AQS定义了两种资源共享方式：
 #### Condition接口
 
 condition接口提供了类似Object的监视器方法，与Lock接口配合可以实现等待/通知模式
+
+---
+
+### Java中哪个对象才是锁？
+
+1. 对于实例同步方法，锁是当前实例对象。
+2. 对于静态同步方法，锁是当前对象的Class对象。
+3. 对于同步方法块，锁是Synchonized括号里配置的对象
+
+---
+
+
+
+### Java中的读写锁
+
+假设你的程序中涉及到对一些共享资源的读和写操作，且写操作没有读操作那么频繁。在没有写操作的时候，两个线程同时读一个资源没有任何问题，所以应该允许多个线程能在同时读取共享资源。但是如果有一个线程想去写这些共享资源，就不应该再有其它线程对该资源进行读或写
+
+也即是：读读共存，读写、写写不能共存
+
+#### ReadWriteLock接口
+
+##### 主要实现：ReentrantReadWriteLock
+
+提供了以下特性：
+
+1. 公平性的选择：支持公平与非公平（默认）的锁获取方式，吞吐量非公平优先于公平
+2. 可重入：读线程获取读锁之后可以再次获取读锁，写线程获取写锁之后可以再次获取写锁、同时也可以获取读锁
+3. 锁可降级：写线程获取写锁之后，其还可以再次获取读锁，然后释放写锁的次序，那么此时该线程是读锁状态，也就是降级操作
+
+
+
+核心：基于AQS的同步器Sync，然后扩展出ReadLock、WriteLock所构成
+
+主要包括：读写状态的设计、读锁的获取与释放、写锁的获取与释放、锁降级
+
+##### 读写状态的设计
+
+同步状态需要在一个int类型的state字段上维护多个多线程和一个写线程的状态，使得该状态的设计成为读写锁实现的关键
+
+这个状态在抽象的AQS中，由具体同步器(如ReentrantReadWriteLock)的内部类Sync来维护，Sync继承自AQS
+
+如何用一个int类型变量来维护多种状态？
+
+实现：**按位切割使用**这个变量，将高16位表示读锁的个数，低16位表示写锁的个数
+
+下图状态表示：一个线程已经获取到了写锁，且重入了两次，同时也连续获取了两次读锁
+
+![image-20220418230634085](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182306630.png)
+
+读写锁如何确定各自的状态的？
+
+通过位运算实现：假如当前同步状态为S，写状态通过 S & 0x0000FFFF(将高16位抹掉)，读状态等于S>>16(无符号补0右移16位)
+
+当写状态+1时：就等于S+1
+
+当读状态+1时：等于S+(1>>16)
+
+
+
+##### 读锁的获取与释放
+
+读锁是一个支持重入的共享锁
+
+读锁的释放：
+
+减少读状态值为1（1<<16)
+
+##### 写锁的获取与释放
+
+写锁是一个支持重入的排他锁。
+
+如果当前线程已经获取写锁时，则增加写状态。
+
+如果当前线程在获取写锁时，读锁已经被获取或者当前线程不是已经获取写锁的线程，则当前线程进入等待状态
+
+写锁的释放：
+
+与ReentrantLock的释放过程类似，每次释放均减少写状态
+
+##### 锁降级
+
+指的是写锁降级成读锁。写线程获取写锁之后，其还可以再次获取读锁，然后释放写锁的次序，那么此时该线程是读锁状态，也就是降级操作
+
+ReentantReadWriteLock不支持锁升级。目的：保证数据的可见性，如果读锁被多个线程获取，其中的任意线程成功获取写锁后并更新了数据，那么其更新对其他获取到读锁的线程是不可见的
+
+---
 
 
 
@@ -358,24 +454,212 @@ Segment是一个可重入锁，在concurrentHashMap里面扮演锁的角色，Ha
 
 一个ConcurrentHashMap中包含一个Segment数组，Segment的结构和HashMap类似，是一种数组和链表结构。一个Segment里面包含一个HashEntry数组，每个HashEntry是一个链表的元素。每个Segment拥有一个锁，当对HashEntry数组的数据进行修改时，必须先获得对应的Segment锁
 
+##### ConcurrentHashMap主要参数
 
 
 
+segment数组：2的n 次方。原因：保证能够通过按位与的散列算法来定位到segments数组的索引。默认segment数组大小为16
+
+segmentShifi：段偏移量
+
+segmentMask：段掩码
+
+HashEntry数组
 
 
 
+##### 定位segment
+
+因为ConcurrentHashMap使用分段锁Segment来保护不同段的数据，那么在插入和获取元素的时候，必须先通过hash算法定位到segment
+
+concurrentHashMap是采用hash的变种算法，对元素的hashCode进行一次再散列。目的是减少hash冲突，使元素能均匀的分布在不同的segment上，从而提高容器的存取效率
+
+~~~java
+/**
+*h为元素的hashcode值，然后再进行散列
+*/
+private static int hash (int h){
+    
+}
+~~~
 
 
 
+##### concurrentHashMap的get操作
+
+1. 根据key进行进行一次再散列，然后使用这个散列值通过散列运算定位到segment
+
+2. 再通过散列算法定位到元素
+
+3. ~~~java
+   public V get(Object key){
+       int hash=hash(key.hashCode());
+       return segmentFor(hash).get(key,hash);
+   }
+   //之前的JDK版本
+   ~~~
+
+4. ~~~java
+   //会发现源码中没有一处加了锁
+   public V get(Object key) {
+       Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
+       int h = spread(key.hashCode()); //计算hash
+       if ((tab = table) != null && (n = tab.length) > 0 &&
+           (e = tabAt(tab, (n - 1) & h)) != null) {//读取首节点的Node元素
+           if ((eh = e.hash) == h) { //如果该节点就是首节点就返回
+               if ((ek = e.key) == key || (ek != null && key.equals(ek)))
+                   return e.val;
+           }
+           //hash值为负值表示正在扩容，这个时候查的是ForwardingNode的find方法来定位到nextTable来
+           //eh=-1，说明该节点是一个ForwardingNode，正在迁移，此时调用ForwardingNode的find方法去nextTable里找。
+           //eh=-2，说明该节点是一个TreeBin，此时调用TreeBin的find方法遍历红黑树，由于红黑树有可能正在旋转变色，所以find里会有读写锁。
+           //eh>=0，说明该节点下挂的是一个链表，直接遍历该链表即可。
+           else if (eh < 0)
+               return (p = e.find(h, key)) != null ? p.val : null;
+           while ((e = e.next) != null) {//既不是首节点也不是ForwardingNode，那就往下遍历
+               if (e.hash == h &&
+                   ((ek = e.key) == key || (ek != null && key.equals(ek))))
+                   return e.val;
+           }
+       }
+       return null;
+   }
+   ~~~
+
+   
+
+整个get过程不需要加锁：因为所有的共享变量都定义为了volatile类型，Node中的val是用volatile修饰的
+
+![image-20220418210204525](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182102569.png)
 
 
 
+##### concurrentHashMap的put操作
+
+为了保证共享变量的线程安全，所有采用了加锁方式
+
+1. put方法首先定位到segment，然后在segment里面进行插入操作
+2. 插入时经过了两个步骤
+   - 判断hashEntry数组是需要扩容：需要则创建一个容量是原来容量两倍的数组，然后将原数组里的元素进行再散列后插入到新数组里。为了高效ConcurrentHashMap不会对整个容器扩容，而是针对某个segment进行扩容
+   - 定位添加元素的位置，然后将其插入到HashEntry数组中
 
 
 
+---
+
+#### ConcurrentLinkedQueue
+
+非阻塞的线程安全的队列，采用循环的cas算法实现
+
+它是一个基于链接节点的无界线程安全队列，采用先进先出的规则对节点进行排序，添加元素时，添加到队列的尾部，获取元素时，它会返回队列头部的元素
+
+##### 数据结构
+
+由head节点和tail节点组成，每个节点Node由节点元素和指向下一个节点的引用组成，节点与节点之间通过这个next关联起来，从而组成一张链表结构的队列
+
+![image-20220418212146272](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182121424.png)
+
+默认情况下head节点存储的元素为空，tail节点等于head节点
+
+~~~java
+public ConcurrentLinkedQueue() {
+      head = tail = new Node<E>(null);
+}
+~~~
 
 
 
+##### 入队列
+
+1. 通过cas算法入队列
+2. 定位尾节点
+3. 设置入队列节点为尾节点
+
+##### 出队列
+
+1. 从队列里返回一个节点元素，并清空该节点对元素的引用
+
+
+
+---
+
+
+
+#### Java中的阻塞队列
+
+##### 什么是阻塞队列
+
+阻塞队列：支持阻塞插入和阻塞移除(获取)方法
+
+当队列满时，队列会阻塞插入元素的线程，直到队列不满
+
+当队列空时，获取元素的线程会阻塞等待队列变为非空
+
+##### 使用场景：生产者消费者场景
+
+
+
+##### 阻塞队列的4种处理方式
+
+![image-20220418213120686](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182131837.png)
+
+1. 抛出异常：是指当阻塞队列满时，再往队列插入元素，会抛出 IllegalStateException("Queue full") 异常。当队列为空时，从队列里获取元素时会抛出 NoSuchElementException 异常
+2. 返回特殊值：插入方法会返回是否成功，成功则返回 true。移除方法，则是从队列里拿出一个元素，如果没有则返回 null
+3. 一直阻塞：当阻塞队列满时，如果生产者线程往队列里 put 元素，队列会一直阻塞生产者线程，直到队列可用或者响应中断退出。当队列空时，消费者线程试图从队列里 take 元素，队列也会阻塞消费者线程，直到队列不为空
+4. 超时退出：当阻塞队列满时，队列会阻塞生产者线程一段时间，如果超过一定的时间，生产者线程就会退出
+
+##### 分类
+
+**ArrayBlockingQueue** ：一个由数组结构组成的有界阻塞队列。
+
+- 队列按照先进先出的原则对元素进行排序
+
+- 默认不保证线程公平的访问队列
+
+- 公平的阻塞队列采用可重入锁实现
+
+- ~~~java
+  public ArrayBlockingQueue(int capacity,boolean fair){
+      if(capacity<=0){
+          throw new IllegalArgumentException();
+      }
+      this.items=new Object(capacity);
+      lock=new ReentrantLock(fair);
+      notEmpty=lock.newCondition();
+      notFull=lock.newCondition();
+  }
+  ~~~
+
+  
+
+**LinkedBlockingQueue** ：一个由链表结构组成的有界阻塞队列。
+
+- 链表长度默认为Integer.Max_Value
+- 按照先进先出的原则对元素进行排序
+
+PriorityBlockingQueue ：一个支持优先级排序的无界阻塞队列。
+
+DelayQueue：一个使用优先级队列实现的无界阻塞队列。
+
+**SynchronousQueue**：一个不存储元素的阻塞队列。
+
+- 不存储元素的阻塞队列
+- 每一个put操作必须等待一个take操作，否则不能继续添加元素
+- 适用与传递性的场景
+
+LinkedTransferQueue：一个由链表结构组成的无界阻塞队列。
+
+LinkedBlockingDeque：一个由链表结构组成的双向阻塞队列
+
+
+
+##### 实现原理
+
+使用等待/通知模式实现
+
+通知模式：当生产者往满的队列里添加元素时，会阻塞生产者，当消费者消费了队列里面的元素后，会通知生产者当前队列可用
+
+例如ArryBlockingQueue采用了ReentantLock+Condition的等待/通知（await/signal）来实现
 
 
 
