@@ -1,9 +1,7 @@
 package juc;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.ArrayList;
+import java.util.concurrent.*;
 
 /**
  * @description:
@@ -16,6 +14,7 @@ public class Test {
         ConcurrentHashMap concurrentHashMap=new ConcurrentHashMap();
         concurrentHashMap.put("name","qc");
         concurrentHashMap.get("name");
-        ReentrantReadWriteLock
+        ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(1,2,1,TimeUnit.SECONDS,new ArrayBlockingQueue(10));
+                threadPoolExecutor.execute();
     }
 }
