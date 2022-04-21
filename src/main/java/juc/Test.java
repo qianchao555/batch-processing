@@ -1,7 +1,10 @@
 package juc;
 
-import java.util.ArrayList;
-import java.util.concurrent.*;
+import java.util.HashMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @description:
@@ -15,6 +18,7 @@ public class Test {
         concurrentHashMap.put("name","qc");
         concurrentHashMap.get("name");
         ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(1,2,1,TimeUnit.SECONDS,new ArrayBlockingQueue(10));
-        threadPoolExecutor.execute();
+//        threadPoolExecutor.execute();
+        HashMap
     }
 }
