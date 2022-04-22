@@ -21,6 +21,5 @@ public class Test {
         Integer b=null;
          System.out.println(b==null?null:Long.valueOf(5));
 //        threadPoolExecutor.execute();
-        HashMap
     }
 }

@@ -61,8 +61,46 @@
    - 任务队列没有满则将这个任务存储在工作队列里面
    - 满了则进入第三步
 3. 线程池判断当前工作线程数是否小于最大线程数
-   - 没有小于则创建一个线程来执行这个任务
+   - 小于则创建一个线程来执行队列里面的任务，此任务放入队列里面
    - 如果最大线程池里面线程数量已经满了则交给饱和策略来处理这个任务
+
+#### 如何优雅关闭线程池
+
+shuwdown: 不接收新任务, 中断空闲线程, 继续处理完线程池中的任务
+
+shutdownNow: 不接收新任务, 中断运行线程, 空闲线程和处理完正在运行的任务的线程会退出
+
+使用shutdownNow方法，可能会引起报错，使用shutdown方法可能会导致线程关闭不了。所以当我们使用shutdownNow方法关闭线程池时，一定要对任务里进行异常捕获。
+
+当我们使用shuwdown方法关闭线程池时，一定要确保任务里不会有永久阻塞等待的逻辑，否则线程池就关闭不了
+
+shutdown()/  shutdownNow()+awaitTermination()
+
+#### 线程池队列满了，还有任务来怎么办？
+
+https://blog.csdn.net/weixin_38336658/article/details/119907919?spm=1001.2101.3001.6650.5&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-5.pc_relevant_default&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-5.pc_relevant_default&utm_relevant_index=8
+
+无非就是从队列入手，增加消费者、增加消费者的处理效率；限制生产者生成速度
+
+1. 首选：通过自定义实现拒绝策略RejectedExecutionHandler
+
+   - ~~~java
+     //采用put方法，会阻塞生产者
+     public class BlockWhenQueueFullHandler implements RejectedExecutionHandler {
+     
+         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+             pool.getQueue().put(new FutureTask(r));
+         }
+     }
+     ~~~
+
+   - 用sleep达到阻塞的目的
+
+   - 把线程池无法执行的任务信息持久化写入数据库去，后台专门启动一个线程，后续等待线程池的工作负载降低了，这个后台线程就可以慢慢的从磁盘里读取之前持久化的任务重新提交到线程池
+
+   - 在拒绝策略里面添加一个延迟任务队列，延迟任务重新投向线程池
+
+2. 修改默认拒绝策略为：CallerRunsPolicy该策略队列满时，会把任务放在调用者线程中运行
 
 
 
