@@ -20,5 +20,7 @@ public class Test {
         a=null;
         Integer b=null;
          System.out.println(b==null?null:Long.valueOf(5));
+//        threadPoolExecutor.execute();
+        HashMap
     }
 }
