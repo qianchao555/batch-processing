@@ -15,6 +15,10 @@ public class Test {
         concurrentHashMap.put("name","qc");
         concurrentHashMap.get("name");
         ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(1,2,1,TimeUnit.SECONDS,new ArrayBlockingQueue(10));
-        threadPoolExecutor.execute();
+//        threadPoolExecutor.execute();
+        Long a=10l;
+        a=null;
+        Integer b=null;
+         System.out.println(b==null?null:Long.valueOf(5));
     }
 }
