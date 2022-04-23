@@ -65,7 +65,33 @@ static final int hash(Object key) {
 
 实际上就是把一个数的低16位 与 高16位做异或运算。目的是减少hash冲突
 
+#### Hash算法
 
+hash其实就是一个函数，该函数实现的就是一种算法，通过一系列的算法来得到一个hash值，通过hash算法得到的hash值存放与hash表中
+
+#### HashCode
+
+1. hashCode就是通过hash函数得到的，hashcode就是在hash表中有对应的位置
+2. 每个对象都有hashcode，对象的hashcode是通过对象的内部地址(也就是物理地址)转换成一个整数，然后该整数通过hash函数的算法就得到了hashcode(不同jvm的实现不同）。
+3. 比如：hash表中有hashcode为1、hashcode为2、3、4、5、6、7、8等这样八个位置，有一个对象A，假如A的物理地址转换为一个整数17，就通过hash算法(假如直接取余算法)，17%8=1，那么A的hashcode就为1，则A就在hash表中1的位置
+
+##### 为什么使用hashcode
+
+1. 为了查找的快捷性，HashCode是用来在散列存储结构中确定对象的存储地址的
+2. hashmap之所以快，就是因为使用了散列表，根据key的hashcode值，生成数组下标以得到对应的对象
+
+##### equals
+
+默认对象的equals，比较的是内存地址值，除开String对象外，因为它重写了此方法
+
+将对象存入散列集合的流程
+
+1. 判断对象是否与集合中任意一个对象的hashcode是否相等
+   - 不相等，则加入对象
+   - 相等，则判断对象与任意一个对象的equals方法是否相等
+2. equlas判断情况
+   - 不相等，则加入对象
+   - 相等，则放弃加入
 
 #### 解决hash冲突的方法
 
@@ -86,7 +112,7 @@ static final int hash(Object key) {
 
 ##### 为什么引入链表
 
-HashMap底层是数组，当put操作时候，会进行hash计算，判断这个对象属于数组的那个位置。当多个对象值再同一个数组位置上面的时候，就会有hash冲突，从而引入了链表
+HashMap底层是数组，当put操作时候，会进行hash计算，判断这个对象属于数组的那个位置。当多个对象值出现在同一个数组位置上面的时候，就会有hash冲突，从而引入了链表来对其进行链式的存放
 
 ##### 为什么引入红黑树
 
@@ -158,6 +184,16 @@ static final int tableSizeFor(int cap) {
 #### HashMap扩容原理
 
 当map中的Entry的数量大于等于threshold=loadFactor*capacity的时候，且新建的Entry刚好落在一个非空的桶上(数组[i])上，此时触发扩容机制，将其容量扩大为原来的两倍
+
+#### put过程
+
+1. 对key的hashCode()做hash运算，计算出index
+2. 如果没有hash碰撞，则调用newNode()来创建Node放入tab中
+3. 碰撞了，则以链表的形式存在tab中。当碰撞导致链表长度过长就会将链表转为红黑树
+4. 如果某节点已经存在，则新的值替换为旧的值(保证key的唯一性)
+5. 如果tab快满了(阈值=loadFacotr*currentCapacity)，则会进行扩容(resize)
+
+#### 为什么转为红黑树
 
 
 
