@@ -7,6 +7,7 @@
 1. kafka是一个分布式的基于发布/订阅模式的消息队列，可以处理大量的数据，并使你能够将消息从一个端点传递到另一个端点
 2. Kafka消息保留在磁盘上，并在集群内复制以防止数据丢失，Kafka构建在Zookeeper同步服务之上
 3. 主要应用于大数据实时处理领域
+3. 最新定义：分布式事件流平台，被数千家公司用于高性能数据管道、流分析、数据集成和关键认为应用
 
 ### 术语
 
@@ -20,6 +21,7 @@
 
 1. broker    n:代理、中间人   v:协调、安排
 2. Kafka集群中有很多台Server，其中每一台Server都可以存储消息，将每一台Server称为一个Kafka实例，也叫做broker
+2. broker接受生产者发生的消息并存入磁盘，broker同时服务消费者拉取分区消息的请求，返回目前已经提交的信息
 
 #### Topic
 
@@ -49,6 +51,18 @@ partition：分区
 
 ---
 
+## 消息队列应用场景
+
+常见消息队列：kafka，activeMq，RabbitMq，RocketMq
+
+大数据场景主要采用kafka做为消息队列。在JavaEE开发中采用另外三种
+
+1. 缓冲和消峰：有助于控制和优化数据流经过系统的速度，解决生产消息和消费消息的处理速度不一致请求
+2. 解耦：允许独立的拓展或修改两边的处理过程，只要确保它们遵守同样的接口约束
+3. 异步通信：允许把消息放入队列，但并不立即处理它，然后在需要的时候再去处理它们
+
+---
+
 
 
 ### 消息队列的两种模式
@@ -56,15 +70,17 @@ partition：分区
 #### 点对点模式
 
 1. 在点对点的消息系统中，消息保留在队列中，一个或者多个消费者可以消耗队列中的消息，但是消息最多只能被一个消费者消费，一旦有一个消费者将其消费掉，消息就从该队列中消失
+1. ![image-20220424221006967](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204242212370.png)
 
 #### 发布/订阅模式
 
-1. 一对多，消费者消费数据之后，不会消除消息
+1. 一对多，消费者消费数据之后，消费者消费后，队列不会消除消息
 2. 消息生产者（发布）将消息发布到topic中，同时又多个消息消费者（订阅）消费该消息
 3. topic是一个队列
 4. 这种模式下有两种消费方式
    - 消费者主动消费消息
    - topic主动推送给消费者
+5. ![image-20220424221235289](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204242212437.png)
 
 ---
 
@@ -81,6 +97,7 @@ partition：分区
 
 1. kafka可以配置partition需要备份的个数(replicas)，每个partition将会被备份到多台机器上，以提高高可用性，备份的数量可以通过配置文件指定
 2. 既然有副本，就涉及到对同一个文件的多个备份如何进行管理和调度。kafka 采取的方案是：每个 partition 选举一个 server 作为“leader”，由 leader 负责所有对该分区的读写，其他 server 作为 follower 只需要简单的与 leader 同步，保持跟进即可。如果原来的 leader 失效，会重新选举由其他的 follower 来成为新的 leader。如何选取：kafka所以zookeeper在broker中选出一个controller，用于partition分配和leader选举
+2. 一个分区只能由一个消费者消费
 
 #### 整体数据流
 
@@ -119,11 +136,7 @@ kafka支持3中消息投递语义，通常使用At least once模型
 2. At least once：最少一次，消息不会丢失，可能会重复
 3. Exactly once：只且一次，消息不丢失不重复，只且消费一次
 
----
 
-
-
-## Kafka集群架构
 
 ---
 
@@ -168,10 +181,52 @@ Apache Kafka 的一个关键依赖是 Apache Zookeeper，它是一个分布式�
 
 
 
+kafka2.8 之后可以不要配置zk了
+
+
+
 ---
 
 
 
+## Kafka ack机制
+
+kafka的ack机制：
+
+1. producer发送消息到leader收到消息之后发送ack
+2. leader和follower之间同步完数据会发送ack
+
+这直接影响kafka集群的吞吐量和消息可靠性
+
+ack有3个可选值0、1、-1
+
+1. 0：就是producer发送一次就不再发送了，不管是否发送成功
+2. 1：默认值1，producer只要收到一个分区副本成功写入的通知就认为推送消息成功了。这个分区副本必须是leader副本，只有leader副本成功写入了，producer才会认为消息发送成功
+3. -1（all)：producer只要收到分区内所有副本的成功写入的通知才认为推送消息成功了
+
+ack=1的情况下，为什么消息也会丢失？
+
+ack=1的情况下，producer只要收到分区leader成功写入的通知就会认为消息发送成功了。但是如果leader成功写入后，还没有来得及把数据同步到follower节点就挂了，这时候消息就丢失了
+
+
+
+## kafka数据重复写入、消费问题
+
+
+
+### 重复写入
+
+大多出现在ack=-1情况下
+
+例如：producer发送消息到broker，broker里的leader、follower已经落盘，准备回应producer的时候，突然这个leader挂了，ack没有发送出去，producer没有收到确认消息。这时候，会重新选举出一个leader，producer会重新发送消息到新的leader，这就造成了数据重复写入
+
+### 重复消费
+
+大多出现在ack=0或者1的情况下
+
+例如：某个消费者因为消费过慢、网络原因、无法消费等情况，触发rebalanced，此时数据会重新发到一个新的consumer的消费，这时候就出现重复消费
+
+**如何解决**
 
 
 
@@ -179,34 +234,69 @@ Apache Kafka 的一个关键依赖是 Apache Zookeeper，它是一个分布式�
 
 
 
+## kafka命令行
+
+
+
+## kafka生产者
+
+### 生产者消息发送流程
+
+将外部数据发送到kafka
+
+producer->send(ProducerRecord)->[Interceptors拦截器可有可无]->
+
+Serializer序列化器(kafka自己实现的，没有Java的)->Partitioner分区器(一个分区会创建一个队列)
+
+
+
+sender线程
+
+Sender(读取数据)
+
+batch.size：只有数据累积到batac.size后，sender才会发送数据。默认16k
+
+linger.ms：如果数据迟迟未到batch.size，sender等待linger.ms设置的时间后就会发送数据。单位是ms，默认是0ms表示没有延迟
+
+kafka集群收到消息后，给sender应答（ack机制）
+
+sender成功后，清理队列里的消息，失败会去重试
+
+
+
+### 异步发送
+
+外部的数据发送到队列里面  采用异步发送
+
+生产者.send()
+
+### 带回调函数的异步发送
+
+生产者.send(ProducerRecord，Callback)
+
+
+
+### 同步发送
+
+生成者.send()，外部数据需要等待队列里面的数据处理完后，才能发送
+
+send().get()
 
 
 
 
 
+### 生产者分区
 
+分区的好处
 
+1. 便于合理使用存储资源，每个分区在一个Broker上存储，可以把海量的数据按照分区切割成一块一块数据存储在多台Broker上。合理控制分区的任务，可以实现负载均衡的效果
+2. 提高并行度，生产者可以以分区为单位发送数据，消费者可以以分区为单位进行消费数据
 
+#### 生产者发送消息的分区策略
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+1. 默认的分区器DefaultPartitioner
+2. 自定义分区
 
 
 
