@@ -296,7 +296,89 @@ send().get()
 #### 生产者发送消息的分区策略
 
 1. 默认的分区器DefaultPartitioner
-2. 自定义分区
+
+2. 自定义分区器
+
+   - 实现Partitioner接口
+
+   - 重写核心方法
+
+   - ~~~java
+     public int partition(String topic，Object key，byte[] keyBytes，Object value，byte[] valueBytes，Cluster cluster) {
+         //获取数据
+         String msgValue=value.toString();
+         int partition;
+         if(msgValue.contains("qc")){
+             partition=0;
+         }else{
+             partition=1;
+         }
+         return partition;
+     }
+     ~~~
+
+   - 关联自定义分区器
+
+
+
+
+
+### 生产者如何提高吞吐量
+
+RecordAccumulator:缓冲区大小，修改为64m
+
+### 数据可靠性
+
+应答机制ack
+
+1. ack=0：生产者发送过来的数据，broker不需要落盘应答
+   - 数据可靠性：丢数
+2. ack=1：生产者发送过来的数据，需要leader收到数据后应答
+   - 数据可靠性：丢数
+   - leader应答完后，还没有开始同步副本follower，leader挂了
+3. ack=-1/all：生产者发送过来的数据，leader和ISR队列(follower)里面的所有节点收齐数据后应答
+   - 问题：leader收到数据，所有follower开始同步数据，但有follower挂了，迟迟不能与leader进行同步，怎么解决?
+   - Leader维护了一个动态的ISR：和leader保持同步的follower+leader集合(leader:broker0，isr：follower0，1，2)
+   - 如果follower长时间未向leader发送通信请求或同步数据，则将该follower提出ISR，该时间阈值由replica.lag.time.max.ms参数设定，默认30s
+   - 数据可靠性：如果分区数副本设置为1个，或者isr里应答的最小副本数量设置为1，则和ack=1是一样的
+
+数据完全可靠条件=ack级别设置为-1 +分区副本数大于等于2 + ISR里应答的最小副本数量大于等于2
+
+ack=1：一般用于传输普通日志，允许丢失个别数据
+
+ack=-1：一般用于传输和钱相关的数据，对可靠性要求高的场景
+
+### 数据重复性
+
+ack=-1会导致
+
+场景：follower同步完成后，leder应答时突然挂掉，此时就需要选举新的leader
+
+由于上一次leader未应答，所有producer会发送数据到 新的leader，此时出现数据重复
+
+
+
+幂等性 和事务
+
+kafka幂等性：指的producer无论向borker发送多少次重复数据，broker端只会持久化一条，保证了不重复
+
+重复数据判断标准：具有<pid,partition,Seqnumber>相同主键的消息提交时，broker只会持久化一条。其中pid是kafka每次重启都会分配一个新的，partition表示分区号，sequence number是单调自增的
+
+所以幂等性只能保证：单分区会话内不重复
+
+enable.idempotence=true  默认开启幂等性
+
+
+
+事务：开启事务，必须开启幂等性
+
+
+
+---
+
+### 数据有序
+
+多分区时，分区与分区间无序
 
 
 
