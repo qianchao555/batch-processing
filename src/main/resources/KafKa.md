@@ -382,7 +382,124 @@ enable.idempotence=true  默认开启幂等性
 
 
 
+### 数据乱序
 
+kafka1.x后，启用幂等后，kafka服务端会缓存producer发来的最近5个request的元数据，所以，无论如何都可以保证最近5个request的数据是有序的
+
+开启了幂等性且缓存的请求个数小于5个，会在服务端重写排序
+
+
+
+## kafka broker
+
+Zookeeper中存储的kafka信息，比较多
+
+1. /kafka/brokers/ids：记录有哪些服务器   [0,1,2]
+2. /kafka/brokers/topics/first/partitions/0/state {"leader":1,"isr":[1,0,2]}  记录谁是leader，有哪些服务器可用
+3. /kafka/controller {brokerid:0}  :辅助选举leader
+
+
+
+### kafka副本
+
+副本作用：提高数据可靠性
+
+默认一个副本，生成环境一般配置为2个；太多副本会增加磁盘存储空间，增加网络上的数据传输，降低了效率
+
+kafka中副本分为：leader和follower
+
+kafka生产者只会把数据发往leader，然后follower找leader进行同步数据
+
+kafka分区中的所有副本统称为：AR assigned repllicas
+
+AR=ISR+OSR
+
+ISR：表示和Leader保持同步的**Follower集合**。如果Follower长时间未向Leader发送通信请求或同步数据，则Follower将被踢出ISR，该时间阈值默认30s，由replica.lag.time.max.ms设定。leader发生故障后，会从ISR中选举新的leader
+
+OSR：表示Follower与Leader副本同步时延迟过多的副本
+
+
+
+### Leader选举流程
+
+1. 每台broker启动后，会在zk中注册
+2. zk的controller：谁先注册，谁说了算
+3. broker与zookeeper里面都有controller节点
+4. 由选举出来的controller（broker里面的）监听brokers节点变化
+5. controller决定leader选举
+   - 选举规则：在isr队列中存活为前提，按照AR中排在前面的优先
+   - 例如：ar[1,0,2]，isr[1,0,2]，那么leader就会按照1，0，2的顺序轮询
+   - AR:kafka分区中的所有副本统称
+6. controller将节点信息上传到zk
+7. 其他controller从zk同步相关信息
+8. 假设broker中的leader挂了，controller监听到节点的变化，从zk获取isr，选举新的leader
+9. 更新leader以及Isr
+
+
+
+### Follower故障处理
+
+LEO：log end offset 每个副本的最后一个offset，其实就是最小的offset+1
+
+HW：high watermark 所有副本中最小的LEO
+
+
+
+
+
+
+
+
+
+### 分区副本分配
+
+假如kafka服务器只有4个节点，设置kafka分区数大于服务器台数，kafka底层如何分配存储副本？
+
+
+
+### Broker文件存储
+
+Topic
+
+topic是一个逻辑上的概率，partition是物理上的概念，每一个partition对应于一个log文件，该log文件中存储的就是Producer生产的数据。Producer生产的数据会不断追加到该log文件末端。是一个虚拟概念。为了防止log过大导致数据定位效率低下哎，kafka采取了分片和索引机制，将每个partition分为多个segment。每个segment包括：.index文件，.log文件，.timeindex文件等。这些文件位于一个文件夹下，该文件夹命名规则：topic名称+分区序号，例如：first-0
+
+一个topic可分为多个分区，一个分区可分为多个segment
+
+segment默认1G，里面包含：.log文件 .index偏移量索引文件 .timeindex时间戳索引文件等等
+
+默认7天会删除里面的数据
+
+index和log文件以当前segment的第一条消息的offset命名
+
+注意：
+
+1. index为稀疏索引，大约每往log写入4k，会往index文件写入一条索引
+2. index文件中保存的offset为相对offset，这样能确保offset的值所占空间不会过大，因此能将offset的值控制在固定大小
+
+如何在log中定位到offset=xxx的Record?
+
+1. 根据目标offset定位segment文件
+2. 找到小于等于目标offset的最大offset对应的索引项
+
+![image-20220426212527332](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204262125861.png)
+
+
+
+
+
+### Broker文件清理策略
+
+kafka中默认的日志保存时间为7天，可以通过参数进行调整
+
+kafka提供的日志清理策略有delete和compact
+
+1. delete：日志删除，将过期数据删除
+   - log.cleanup.policy=delete，所有数据启用删除策略
+   - 基于时间：默认打开，以segment中所有记录中的最大时间戳作为该文件的时间戳
+   - 基于文件大小：默认关闭，超过设置的日志总大小，则删除最早的segment
+2. compact：日志压缩
+   - 对应相同key的不同value值，只保留最后一个版本
+   - 
 
 
 
