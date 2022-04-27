@@ -499,7 +499,170 @@ kafka提供的日志清理策略有delete和compact
    - 基于文件大小：默认关闭，超过设置的日志总大小，则删除最早的segment
 2. compact：日志压缩
    - 对应相同key的不同value值，只保留最后一个版本
-   - 
+
+
+
+### 高效读写数据
+
+1. kafka本身是分布式集群，可以采用分区技术，并行度高
+2. 读数据采用稀疏索引，可以快速定位要消费的数据
+3. 顺序写磁盘
+   - kafka的producer生产数据，要写入log文件中，写的过程一直追加到文件末端，为顺序写
+   - 顺序写能达到600M/s
+4. 页缓存+零拷贝技术
+   - 零拷贝：kafka的数据加工处理操作交由kafka生产者和kafka消费者处理，kafka broker应用层不关心存储的数据，所以不用走应用层，传输效率高
+   - PageCache页缓存：kafka重度依赖底层操作系统提高的pagecache功能。当上层有写操作时，操作系统只是将数据写入pagecache，当读操作发生时，先从pagecache查找，如果找不到，再去磁盘中读取。
+   - ![image-20220427205334342](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272053956.png)
+
+
+
+## kafka消费者
+
+
+
+### kafka消费方式
+
+#### pull方式
+
+consumer采用从broker中主动拉取数据。kafka采用这种方式
+
+![image-20220427205659931](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272057175.png)
+
+
+
+缺点：如果kafka没有数据，那么消费者可能会陷入循环中，一直返回空的数据
+
+#### push方式
+
+kafka没有采用这种方式
+
+因为：由broker决定消息发送速率，很难适应消费者的消费速率
+
+
+
+### 消费者工作流程
+
+![image-20220427210633676](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272106921.png)
+
+offset放在zookeeper 的consumer节点中
+
+offset为什么移除zookeeper？
+
+如果所有消费者都把offset存在zk中，则所有消费者需要于zk进行大量的交换，会导致网络数据传输频繁，所以存放在系统主题中，方便管理
+
+
+
+### 消费者组原理
+
+Consumer Grop：由多个consumer组成，形成一个消费者组
+
+1. 消费者组内每个消费者负责消费不同分区的数据，一个主题的分区只能由一个组内的消费者消费
+2. 消费者组之间互不影响
+
+![image-20220427211607003](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272116428.png)
+
+
+
+
+
+![image-20220427211716358](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272117602.png)
+
+
+
+### 消费者组初始化流程
+
+![image-20220427215200765](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272152197.png)
+
+
+
+
+
+### 消费者组消费流程
+
+![image-20220427215650700](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272156995.png)
+
+
+
+
+
+### 独立消费者  消费一个主题
+
+例子：一个独立消费者，消费first主题。其中first主题有3个分区（每一个分区都在一台broker上）
+
+~~~java
+//0、配置
+	连接kafka、反序列化方式、消费者组id
+//1、创建消费者
+     
+//2、订阅主题
+        kafkaconsumer.subscribe("first")
+//3、消费数据
+        while(true){
+            if(flag==true){
+                break;
+            }
+     ConsumerRecords<String,String>cr=kafkaconsumer.poll();
+        }
+~~~
+
+
+
+### 独立消费者  消费分区
+
+例如：消费first主题的0号分区
+
+~~~java
+//0、配置
+	连接kafka、反序列化方式、消费者组id
+//1、创建消费者
+     kafkaconsumer=
+        new KafkaConsumer<String,String>(properties);
+//2、订阅主题对应的分区
+	Collection<TopicPartition>  topicPartition;
+	topicPartition.add(new TopicPartition("first",0));
+     kafkaconsumer.assign(topicPartition)
+//3、消费分区的数据
+        while(true){
+            if(flag==true){
+                break;
+            }
+  ConsumerRecords<String,String>cr=kafkaconsumer.poll(xxx);
+        }
+~~~
+
+
+
+
+
+### 消费者组 消费
+
+例如：同一个主题的分区数据，只能由一个消费者组中的一个消费
+
+
+
+多个消费者，配置在一个组里面
+
+
+
+### 分区的分配以及再平衡
+
+
+
+![image-20220427225649493](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272256859.png)
+
+
+
+#### Range分区及再平衡
+
+range时候的再平衡：有消费者挂了，它的任务交给其他consumer
+
+![image-20220427230004999](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272300268.png)
+
+
+
+![image-20220427230018304](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272300542.png)
+
+
 
 
 
