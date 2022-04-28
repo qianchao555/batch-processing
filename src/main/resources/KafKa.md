@@ -666,6 +666,184 @@ range时候的再平衡：有消费者挂了，它的任务交给其他consumer
 
 
 
+#### RoundRobin分区及再平衡 
+
+![image-20220428201322929](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282013691.png)
+
+
+
+#### Sticky 以及再平衡
+
+黏性分区：可以理解为分配的结果代意黏性的。即在执行一次新的分配之前，考虑上一次分配的结果，尽量少的调整分配的变动，可以节省大量的开销
+
+是kafka 0.11x版本开始引入的分配策略，首先会尽量均衡的放置分区到消费者上面，在出现同一消费者组内消费者出现问题的时候，会尽量保持原有分配的分区不变化
+
+## Offset
+
+![image-20220428201925433](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282019003.png)
+
+
+
+_consumer_offsets主题里面采用k-v的方式存储数据。key是group.id+topic+分区号，v是当前offset的值，每隔一段时间，kafka内部会对这个topic进行compact，也就是每个group.id+topic+分区号就保留最新数据
+
+在配置文件 config/consumer.properties中添加配置：exclude.internal.topics=false   默认为true，表示不能消费系统主题。为了能查看该系统主题数据，需要将该参数设置为false
+
+
+
+
+
+
+
+消费过程中会产生offset存放在这个系统主题中
+
+![image-20220428203023561](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282030761.png)
+
+
+
+#### 自动提交offset
+
+为了使用户专注于自己的业务逻辑，kafka提供了自动提交offset的功能
+
+自动提交offset的相关参数：
+
+1. enable.auto.commit：是否开启自动提交offset功能，默认true
+2. auto.commit.interval.ms：自动提交offset的时间间隔，默认5s
+
+##### 自动提交offset实现原理
+
+![image-20220428203358834](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282033218.png)
+
+
+
+#### 手动提交offset
+
+虽然自动提交offset方便，但是是基于时间提交的，开发人员难以把握offset提交的时机，因此可以通过手动提交offset
+
+![image-20220428205244851](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282052076.png)
+
+两种方式
+
+1. commitSync：同步提交，必须等待offset提交完毕，再去消费下一批数据
+2. commitAsync：异步提交，发送完offset请求后，就开始消费下一批数据了
+
+相同点：都会将本次提交的一批数据最高的偏移量提交
+
+不同点：
+
+1. 同步提交会阻塞当前线程，一直到提交成功，并且会自动失败重试。但由于不可控因素，也会出现提交失败
+2. 异步提交没有失败重试机制，故有可能提交失败
+
+
+
+
+
+#### 指定offset消费
+
+当kafka没有初始偏移量(消费者组第一次消费)或服务器上不再存在当前偏移量时(例如该数据已被删除)该怎么办？
+
+1. earliest：自动将偏移量重置为最早的偏移量，--from-beginning
+2. latest：默认值，自动将偏移量重置为最新偏移量
+3. none：如果未找到消费者组的先前偏移量，则向消费者抛出异常
+
+
+
+#### 按照指定时间消费
+
+遇到消费的数据异常，想重新按照指定时间消费
+
+将时间 转换为 offset
+
+
+
+#### 漏消费和重复消费
+
+![image-20220428215121984](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282151370.png)
+
+
+
+如何做到既不漏消费也不重复消费？ 解决：消费者事务
+
+#### 消费者事务
+
+![image-20220428215447661](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282154017.png)
+
+
+
+## 数据积压
+
+消费者如何提高吞吐量 问题
+
+![image-20220428215818999](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282158353.png)
+
+
+
+
+
+## kafka监控
+
+kafka-Eagle框架可以监控
+
+kafka-eagle.org   最新名字：efak
+
+
+
+## kafka-Kraft模式
+
+已经可以不需要Zookeeper了，但是是兼容的
+
+kafka2.8x后
+
+![image-20220428221103795](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282211144.png)
+
+
+
+
+
+## kafka集成springboot
+
+
+
+![image-20220428221642033](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282216342.png)
+
+
+
+ 
+
+~~~java
+//1、配置文件中 配置kafka的相关信息
+
+//生产者
+@Autowired
+KafkaTemplate<String,String> kafka;
+
+kafka.send();//参数具体地方，具体修改
+//发送到了kafka broker上
+
+~~~
+
+
+
+~~~java
+//配置文件中 配置相关信息
+
+//消费者  需要指定为配置类
+@Configuration
+public class KafkaConsumer{
+    @KafkaListener(topics="xxx")
+    public void consumerTopics(String msg){
+        //msg就是 消息的内容
+    }
+}
+
+    
+    
+
+~~~
+
+
+
+
+
 
 
 
