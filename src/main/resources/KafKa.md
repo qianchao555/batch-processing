@@ -548,7 +548,11 @@ OSR：表示Follower与Leader副本同步时延迟过多的副本
 
 
 
-### Leader选举流程
+### kafka集群Leader选举流程
+
+kafka的leader选举是通过在zk上创建/controller临时节点来实现leader选举，并在该节点中写入当前broker的信息
+
+kafka在所有broker中选出一个controller，所有partition的leader选举都由controller决定。
 
 1. 每台broker启动后，会在zk中注册
 2. zk的controller：谁先注册，谁说了算
@@ -778,7 +782,7 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 
 
-### 分区的分配以及再平衡
+### 消费者分区的分配以及再平衡
 
 
 
@@ -796,11 +800,18 @@ range时候的再平衡：有消费者挂了，它的任务交给其他consumer
 
 ![image-20220427230018304](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272300542.png)
 
-
+Range范围分区的弊端：如上图，随着topic的数量增多，那么C0消费者会出现多消费n个分区，导致部分消费者过载
 
 
 
 #### RoundRobin分区及再平衡 
+
+轮询分区策略
+
+轮询分区分为以下2种情况：
+
+1. 同一消费组内所有消费者订阅的topic都是相同的
+2. 同一消费者组内的消费者订阅的消息有不相同的
 
 ![image-20220428201322929](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282013691.png)
 
@@ -818,7 +829,13 @@ range时候的再平衡：有消费者挂了，它的任务交给其他consumer
 
 ---
 
+### 位移offset
 
+对于Kafka 中的分区而言，它的每条消息都有唯一的offset ，用来表示消息在分区中对应的位置
+
+对于消费者而言， 它也有一个offset 的概念，消费者使用offset 来表示消费到分区中某个消息所在的位置
+
+通常把消费者位移存储起来的动作称为提交，消费者在消费完消息之后，需要执行消费位移的提交
 
 ### 消费者位移提交方式
 
@@ -1018,7 +1035,19 @@ public class MyConsumer4 {
 
 
 
-#### 漏消费和重复消费
+### 消费者拦截器
+
+kafka consumer在poll()方法返回之前，会先调用拦截器的onConsume()方法，可以在此方法里预先对消息进行定制化操作。kafka consumer在提交完消费位移之后，会调用拦截器的onCommit()方法
+
+
+
+自定义拦截器，实现ConsumerInterceptor，并在props里面配置即可
+
+
+
+
+
+### 漏消费和重复消费
 
 ![image-20220428215121984](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282151370.png)
 
@@ -1026,7 +1055,11 @@ public class MyConsumer4 {
 
 如何做到既不漏消费也不重复消费？ 解决：消费者事务
 
-#### 消费者事务
+### 消费者事务
+
+kafka的消费者事务和数据库的ACID不是同一类东西
+
+kafka事务指的是：一系列的生产者生产消息，和消费者提交偏移量的操作在一个事务中，或者说是一个原子操作，生产消息和提交偏移量同时成功和失败
 
 ![image-20220428215447661](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282154017.png)
 
@@ -1034,27 +1067,13 @@ public class MyConsumer4 {
 
 
 
-## 数据积压
+### 消费者 数据积压
 
 消费者如何提高吞吐量 问题
 
 ![image-20220428215818999](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282158353.png)
 
 
-
----
-
-
-
-## kafka数据重复写入、消费问题
-
-
-
-### 重复消费
-
-大多出现在ack=0或者1的情况下
-
-例如：某个消费者因为消费过慢、网络原因、无法消费等情况，触发rebalanced，此时数据会重新发到一个新的consumer的消费，这时候就出现重复消费
 
 ---
 
@@ -1164,24 +1183,6 @@ kafka 内存= kafka堆内存（kafka内部配置） +页缓存（服务器的内
 堆内存：10-15g
 
 页缓存：segment(1g)   分区数Leader(假如10个分区)  *  1g  *  25%  =1g
-
-
-
-### kafka生产者
-
-
-
-相关的参数调整
-
-
-
-### kafka Broker调优
-
-
-
-
-
-
 
 
 
@@ -1483,6 +1484,18 @@ kafka如何保证顺序传输？
 
 这些都可以参考kafka的实现
 
+
+
+### kafka消息存储在硬盘上的消息格式是什么？
+
+消息由一个固定长度的头部和可变长度的字节数组组成
+
+1. 头部包含
+   - 版本号：1 byte
+   - CRC 32校验码：4 bytes
+2. 具体的消息
+   - n bytes
+
 ---
 
 
@@ -1490,6 +1503,18 @@ kafka如何保证顺序传输？
 
 
 
+
+## @KafkaListener
+
+spring-kafka项目进行了集成kafka
+
+kafkaListener原理：
+
+Spring初始化的过程中，会执行所有实现了BeanPostProcessor接口的postProcessBeforeInitialization、postProcessAfterInitializationr方法
+
+每个注解了KafkaListener的方法都会在KafkaListenerAnnotationBeanPostProcessor中，随之spring的启动，创建相应的kafkaMessageListenerContainer
+
+KafkaMessageListenerContainer中创建了一个线程，这个线程new一个KafkaConsumer对象并执行poll方法进行消费
 
 
 
