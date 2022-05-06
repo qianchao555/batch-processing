@@ -528,7 +528,7 @@ Zookeeper中存储的kafka信息，比较多
 
 
 
-### kafka副本
+### kafka 分区副本
 
 副本作用：提高数据可靠性
 
@@ -538,7 +538,7 @@ kafka中副本分为：leader和follower
 
 kafka生产者只会把数据发往leader，然后follower找leader进行同步数据
 
-kafka分区中的所有副本统称为：AR assigned repllicas
+kafka分区中的所有副本集合：AR assigned repllicas
 
 AR=ISR+OSR
 
@@ -570,12 +570,6 @@ OSR：表示Follower与Leader副本同步时延迟过多的副本
 LEO：log end offset 每个副本的最后一个offset，其实就是最小的offset+1
 
 HW：high watermark 所有副本中最小的LEO
-
-
-
-
-
-
 
 
 
@@ -826,7 +820,7 @@ range时候的再平衡：有消费者挂了，它的任务交给其他consumer
 
 
 
-## Offset
+### 消费者位移提交方式
 
 ![image-20220428201925433](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282019003.png)
 
@@ -835,10 +829,6 @@ range时候的再平衡：有消费者挂了，它的任务交给其他consumer
 _consumer_offsets主题里面采用k-v的方式存储数据。key是group.id+topic+分区号，v是当前offset的值，每隔一段时间，kafka内部会对这个topic进行compact，也就是每个group.id+topic+分区号就保留最新数据
 
 在配置文件 config/consumer.properties中添加配置：exclude.internal.topics=false   默认为true，表示不能消费系统主题。为了能查看该系统主题数据，需要将该参数设置为false
-
-
-
-
 
 
 
@@ -852,10 +842,47 @@ _consumer_offsets主题里面采用k-v的方式存储数据。key是group.id+top
 
 为了使用户专注于自己的业务逻辑，kafka提供了自动提交offset的功能
 
+自动位移提交的动作是在poll()方法里面完成的，每次向服务端发起拉取请求之前会检查是否可以进行位移提交，如果可以那么就会提交上一次轮询的位移。
+
+如果在下一次自动提交消费位移之前，消费者宕机了，那么又得从上一次位移提交的地方开始消费，导致了重复消费
+
 自动提交offset的相关参数：
 
 1. enable.auto.commit：是否开启自动提交offset功能，默认true
 2. auto.commit.interval.ms：自动提交offset的时间间隔，默认5s
+
+~~~java
+/**
+ * 自动提交offset
+ */
+public class MyConsumer1 {
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "vm1:9092,vm2:9092,vm3:9092");
+        //group.id相同的属于同一个消费者组
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "group_test");
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
+        //自动提交offset,每1s提交一次
+        props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(props);
+        kafkaConsumer.subscribe(Arrays.asList("topic_test"));
+        //消费者启动死循环不断消费
+        while (true) {
+            //一旦拉取到数据就返回，否则最多等待duration设定的时间
+            ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
+            records.forEach(record -> {
+                System.out.printf("topic = %s ,partition = %d,offset = %d, key = %s, value = %s%n", record.topic(), record.partition(),
+                        record.offset(), record.key(), record.value());
+            });
+        }
+    }
+}
+
+~~~
+
+
 
 ##### 自动提交offset实现原理
 
@@ -872,7 +899,9 @@ _consumer_offsets主题里面采用k-v的方式存储数据。key是group.id+top
 两种方式
 
 1. commitSync：同步提交，必须等待offset提交完毕，再去消费下一批数据
+   - 同步提交，线程会阻塞，直到当前批次offset提交成功
 2. commitAsync：异步提交，发送完offset请求后，就开始消费下一批数据了
+   - 异步提交，可以带回调函数，线程不会阻塞
 
 相同点：都会将本次提交的一批数据最高的偏移量提交
 
@@ -900,6 +929,92 @@ _consumer_offsets主题里面采用k-v的方式存储数据。key是group.id+top
 遇到消费的数据异常，想重新按照指定时间消费
 
 将时间 转换为 offset
+
+
+
+
+
+可以自定义offset的存储位置
+
+ 在Kafka中，offset默认存储在broker的内置Topic中，我们可以自定义存储位置。比如为了保证消费和提交偏移量同时成功或失败，我们可以利用数据库事务来实现，把offset存储在Mysql即可。下面的例子仅为示例代码，其中getOffset和commitOffset方法可以根据所选的offset存储系统(比如mysql)自行实现
+
+~~~java
+/**
+ * 自定义offset提交
+ * 在Kafka中，offset默认存储在broker的内置Topic中，我们可以自定义存储位置
+ * 比如为了保证消费和提交偏移量同时成功或失败，我们可以利用数据库事务来实现，把offset存储在Mysql即可
+ * 下面的例子仅为示例代码，其中getOffset和commitOffset方法可以根据所选的offset存储系统(比如mysql)自行实现
+ */
+public class MyConsumer4 {
+    public static Map<TopicPartition, Long> currentOffset = new HashMap<>();
+
+    public static void main(String[] args) {
+
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "vm1:9092,vm2:9092,vm3:9092");
+        //group.id相同的属于同一个消费者组
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "group_test");
+        //关闭自动提交offset,手动提交
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(props);
+        kafkaConsumer.subscribe(Arrays.asList("topic_test"), new ConsumerRebalanceListener() {
+            //该方法会在Rebalanced之前调用
+            @Override
+            public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+                commitOffset(currentOffset);
+            }
+
+            //该方法会在Rebalanced之后调用
+            @Override
+            public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+                currentOffset.clear();
+                for (TopicPartition partition : partitions) {
+                    //定位到每个分区最近提交的offset位置继续消费
+                    kafkaConsumer.seek(partition, getOffset(partition));
+                }
+            }
+        });
+
+        //消费者启动死循环不断消费
+        while (true) {
+            //一旦拉取到数据就返回，否则最多等待duration设定的时间
+            ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(100));
+            records.forEach(record -> {
+                System.out.printf("topic = %s ,partition = %d,offset = %d, key = %s, value = %s%n", record.topic(), record.partition(),
+                        record.offset(), record.key(), record.value());
+                currentOffset.put(new TopicPartition(record.topic(), record.partition()), record.offset());
+            });
+
+            //提交offset
+            commitOffset(currentOffset);
+        }
+    }
+
+    /**
+     * 获取某分区最新的offset
+     *
+     * @param partition
+     * @return
+     */
+    private static long getOffset(TopicPartition partition) {
+        return 0;
+    }
+
+    /**
+     * 提交该消费者所有分区的offset
+     *
+     * @param currentOffset
+     */
+    private static void commitOffset(Map<TopicPartition, Long> currentOffset) {
+    }
+}
+
+~~~
+
+
 
 
 
