@@ -1538,6 +1538,64 @@ KafkaMessageListenerContainer中创建了一个线程，这个线程new一个Kaf
 
 
 
+公司配置实现
+
+containerFactory 监听容器工厂，当监听时需要区分单数据还是多数据消费时，需要配置containerFactory属性
+
+公司实现了批量消费
+
+![image-20220507222340054](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205072231174.png)
+
+
+
+~~~java
+  @Bean
+    public KafkaListenerContainerFactory<?>xxxxxxBatchFactory() {
+        ConcurrentKafkalistenerContainerFactory<String, String > factory = new ConcurrentKafkalistenerContainerFactory<>();
+        //自定义的一个工厂
+        factory.setConsumerFactory(xxxxConsumerFactory());
+        //创建多少个KafkaListenerContainer实例，一个实例分配一个分区进行消费
+        //若设置为1则代表这个实例消费topic的所有分区  
+        factory.setConcurrency(Integer.parseInt(env.getProperty("spring.kafka.template.concurrency","1")));
+        
+        factory.setBatchListener(true);//设置为批量消费，每个批次数量在Kafka配置参数中设置
+
+        //设置提交偏移量的方式
+ConsumerConfig.MAX_POLL_RECORDS_CONFI6factory.getContainerProperties().setAckMode(AckMode.MANUAL);//MANUAL_IMMEDIATE);
+
+        return factory;
+
+    }
+
+
+public ConsumerFactory<Object,Object> xxxxConsumerFactory(){
+    return new DefaultKafkaConsumerFactory<xxxConsumerConfig>;
+}
+~~~
+
+
+
+~~~java
+    public Map<String, Object> xxxConsumerConfig() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, env.getProperty("spring.kafka.bootstrap-servers"));
+        props.put(ConsumerConfig.ENABLEAUTO_COMMIT_CONFIG, false);
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, env.getProperty("spring.kafka.max.poll.interval.ms", "300000"));
+        props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, env.getProperty("spring.kafka.request.timeout.ms", "150000"));
+        props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, env.getProperty(
+                "spring.kafka.auto.commit.interval.ms",
+                "10000"));
+        props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, env.getProperty("spring.kafka.session.timeout.ms", "150000"));
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, env.getProperty("spring.kafka.max.poll.records", "1000"));//每一批数量
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, env.getProperty("spring.kafka.auto.offset.reset", "earliest"));
+        props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, env.getProperty("spring.fetch.min.bytes", "10000000"));//10M
+        KafkaSaalUtils.saalConfig(props, env);
+        return props;
+    }
+~~~
+
 
 
 

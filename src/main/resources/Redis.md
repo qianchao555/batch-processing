@@ -2094,6 +2094,196 @@ latch.countDown();
 
 
 
+---
+
+### 分布式缓存
+
+#### 项目中怎么用缓存的
+
+#### 为什么要用缓存
+
+1. 提高性能
+   - 把一些负责操作耗时的查询出结果后，若后面有很多请求都需要读取，那么可以将结果放进缓存，后面的请求读取缓存就可以了
+   - ![image-20220508203048601](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082030789.png)
+2. 提高并发
+   - ![image-20220508203132273](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082031397.png)
+
+#### 不用行不行
+
+#### 用了缓存后会有什么不良的后果
+
+场景的缓存问题：
+
+1. 缓存与数据库双写不一致
+2. 缓存雪崩
+3. 缓存穿透
+4. 缓存并发竞争
+
+
+
+---
+
+### Redis单线程模型
+
+1. 文件事件处理器
+   - redis基于reactor模式开发了网络事件处理器，这个处理器叫做文件事件处理器，file event handler。这个文件事件处理器，是单线程的，redis才叫做单线程的模型，采用IO多路复用机制同时监听多个socket，根据socket上的事件来选择对应的事件处理器来处理这个事件。
+   - 如果被监听的socket准备好执行accept、read、write、close等操作的时候，跟操作对应的文件事件就会产生，这个时候文件事件处理器就会调用之前关联好的事件处理器来处理这个事件。
+   - 文件事件处理器是单线程模式运行的，但是通过IO多路复用机制监听多个socket，可以实现高性能的网络通信模型，又可以跟内部其他单线程的模块进行对接，保证了redis内部的线程模型的简单性。
+   - 文件事件处理器的结构包含4个部分：多个socket，IO多路复用程序，文件事件分派器，事件处理器（命令请求处理器、命令回复处理器、连接应答处理器，等等）。
+   - 多个socket可能并发的产生不同的操作，每个操作对应不同的文件事件，但是IO多路复用程序会监听多个socket，但是会将socket放入一个队列中排队，每次从队列中取出一个socket给事件分派器，事件分派器把socket给对应的事件处理器。
+   - 然后一个socket的事件处理完之后，IO多路复用程序才会将队列中的下一个socket给事件分派器。文件事件分派器会根据每个socket当前产生的事件，来选择对应的事件处理器来处理。
+2. 文件事件
+   - 当socket变得可读时（比如客户端对redis执行write操作，或者close操作），或者有新的可以应答的sccket出现时（客户端对redis执行connect操作），socket就会产生一个AE_READABLE事件。
+   - 当socket变得可写的时候（客户端对redis执行read操作），socket会产生一个AE_WRITABLE事件。
+   - IO多路复用程序可以同时监听AE_REABLE和AE_WRITABLE两种事件，要是一个socket同时产生了AE_READABLE和AE_WRITABLE两种事件，那么文件事件分派器优先处理AE_REABLE事件，然后才是AE_WRITABLE事件。
+3. 文件事件处理器
+   - 如果是客户端要连接redis，那么会为socket关联连接应答处理器
+   - 如果是客户端要写数据到redis，那么会为socket关联命令请求处理器
+   - 如果是客户端要从redis读数据，那么会为socket关联命令回复处理器
+4. 客户端与redis通信的一次流程
+   - 在redis启动初始化的时候，redis会将连接应答处理器跟AE_READABLE事件关联起来，接着如果一个客户端跟redis发起连接，此时会产生一个AE_READABLE事件，然后由连接应答处理器来处理跟客户端建立连接，创建客户端对应的socket，同时将这个socket的AE_READABLE事件跟命令请求处理器关联起来。
+   - 当客户端向redis发起请求的时候（不管是读请求还是写请求，都一样），首先就会在socket产生一个AE_READABLE事件，然后由对应的命令请求处理器来处理。这个命令请求处理器就会从socket中读取请求相关数据，然后进行执行和处理。
+   - 接着redis这边准备好了给客户端的响应数据之后，就会将socket的AE_WRITABLE事件跟命令回复处理器关联起来，当客户端这边准备好读取响应数据时，就会在socket上产生一个AE_WRITABLE事件，会由对应的命令回复处理器来处理，就是将准备好的响应数据写入socket，供客户端来读取。
+   - 命令回复处理器写完之后，就会删除这个socket的AE_WRITABLE事件和命令回复处理器的关联关系。
+
+![image-20220508205702299](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082057463.png)
+
+
+
+为什么redis单线程模型也能效率这么高实现高并发
+
+1. **非阻塞的IO多路复用程序**
+2. **纯内存操作**
+3. 单线程反而避免了多线程上下文切换问题
+
+
+
+---
+
+### Redis过期策略
+
+redis是基于内存的，缓存里面的数据是会过期的，要么自己设置一个过期时间，要么redis自己清理这些数据
+
+1. 设置key过期时间
+   - set key value expireTime
+2. redis是如何删除key的：定期删除+惰性删除
+   - 定期删除：redis默认每100ms随机抽取设置了过期时间的key，检查是否过期，过期就删除。这个随机抽取并没有遍历所有设置了过期时间的key，这样便会导致某些过期key到了时间并没有删除的情况，所有有了惰性删除
+   - 惰性删除：获取某个key的时候，redis会检查一下 ，这个key如果设置了过期时间那么是否过期了？如果过期了此时就会删除，不会给你返回任何东西
+
+通过以上两个手段，保证过期的key一定被删除
+
+但是，如果定期删除漏掉了很多过期key，然后也没及时去查这些key，也就没走惰性删除，此时会怎么样？如果大量过期key堆积在内存里，导致redis内存块耗尽了，咋整？
+
+答案是：走内存淘汰机制
+
+#### 内存淘汰机制
+
+redis的内存占用过多的时候，此时会进行内存淘汰，有如下一些策略：
+
+1. noeviction：当内存不足以容纳新写入数据时，新写入操作会报错，这个一般没人用吧，实在是太恶心了
+2. allkeys-lru：当内存不足以容纳新写入数据时，在键空间中，移除最近最少使用的key（这个是最常用的）
+   -  redis 10个key，现在已经满了，redis需要删除掉5个key
+   -  1个key，最近1分钟被查询了100次
+   - 1个key，最近10分钟被查询了50次
+   - 1个key，最近1个小时倍查询了1次，这个key会被删除
+3. allkeys-random：当内存不足以容纳新写入数据时，在键空间中，随机移除某个key，这个一般没人用吧，为啥要随机，肯定是把最近最少使用的key给干掉啊
+4. volatile-lru：当内存不足以容纳新写入数据时，在设置了过期时间的键空间中，移除最近最少使用的key（这个一般不太合适）
+5. volatile-random：当内存不足以容纳新写入数据时，在设置了过期时间的键空间中，随机移除某个key
+6. volatile-ttl：当内存不足以容纳新写入数据时，在设置了过期时间的键空间中，有更早过期时间的key优先移除
+
+
+
+
+
+问题1：往redis里面写的数据怎么没了？
+
+答：往redis里面写的数据太多，内存满了。或者触发redis的内存淘汰机制自动清理了一些数据
+
+问题2：数据设置了过期时间，但是到了时间redis中key还存在，还占用着内存？
+
+答：定期删除+惰性删除  
+
+
+
+#### 自己实现一个LRU?
+
+思路即可：知道如何利用已有的jdk数据结构实现一个java版的LRU
+
+```java
+public class LRUCache<K, V> extends LinkedHashMap<K, V> {
+    
+private final int CACHE_SIZE;
+ 
+    // 这里就是传递进来最多能缓存多少数据
+    public LRUCache(int cacheSize) {
+        // 这块就是设置一个hashmap的初始大小
+        //true:指的是让linkedhashmap按照访问顺序来进行排序，最近访问的放在头，最老访问的就在尾
+        super((int) Math.ceil(cacheSize / 0.75) + 1, 0.75f, true); 
+        CACHE_SIZE = cacheSize;
+    }
+ 
+    @Override
+    protected boolean removeEldestEntry(Map.Entry eldest) {
+        //当map中的数据量大于指定的缓存个数的时候，就自动删除最老的数据
+        return size() > CACHE_SIZE; 
+    }
+ 
+}
+```
+
+
+ 
+
+ 
+
+---
+
+### Redis高并发高可用
+
+redis是支撑高并发架构里面，非常重要的，
+
+如何redis通过读写分离承载请求QPS超过10w+
+
+#### redis不能支撑高并发的瓶颈
+
+单机的reids瓶颈
+
+![image-20220508225817298](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082258459.png)
+
+#### 如果redis要支撑超过10w+
+
+读写分离，一般缓存是用来支撑读高并发，写的请求比较少。可能写请求也就一秒钟几千，一两千。大量的请求都是读，一秒钟二十万次读
+
+
+
+写多读少：可能就会采用异步写+队列方式了
+
+读写分离架构：
+
+主从架构->读写分离->支撑10w+读QPS的架构
+
+![image-20220508230358292](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082303428.png)
+
+
+
+
+
+#### Redis主从复制原理
+
+redis replication
+
+master ->slave的数据同步，是采用异步方式的
+
+redis主从架构->读写分离架构->可支持水平扩展的读高并发架构
+
+redis replication的核心机制
+
+（1）redis采用异步方式复制数据到slave节点，不过redis 2.8开始，slave node会周期性地确认自己每次复制的数据量
+（2）一个master node是可以配置多个slave node的
+（3）slave node也可以连接其他的slave node
+（4）slave node做复制的时候，是不会block master node的正常工作的
+（5）slave node在做复制的时候，也不会block对自己的查询操作，它会用旧的数据集来提供服务; 但是复制完成的时候，需要删除旧数据集，加载新数据集，这个时候就会暂停对外服务了
+（6）slave node主要用来进行横向扩容，做读写分离，扩容的slave node可以提高读的吞吐量
 
 
 
@@ -2101,6 +2291,59 @@ latch.countDown();
 
 
 
+master持久化对于主从架构的安全保障的意义?
+
+如果采用了主从架构，那么建议必须开启master node的持久化！
+
+不建议用slave node作为master node的数据热备，因为那样的话，如果你关掉master的持久化，可能在master宕机重启的时候数据是空的，然后可能一经过复制，salve node数据也丢了
+
+master -> RDB和AOF都关闭了 -> 全部在内存中
+
+master宕机，重启，是没有本地数据可以恢复的，然后就会直接认为自己IDE数据是空的
+
+master就会将空的数据集同步到slave上去，所有slave的数据全部清空
+
+100%的数据丢失
+
+master节点，必须要使用持久化机制
+
+第二个，master的各种备份方案，要不要做，万一说本地的所有文件丢失了; 从备份中挑选一份rdb去恢复master; 这样才能确保master启动的时候，是有数据的
+
+即使采用了后续讲解的高可用机制，slave node可以自动接管master node，但是也可能sentinal还没有检测到master failure，master node就自动重启了，还是可能导致上面的所有slave node数据清空故障
 
 
 
+主从复制原理：
+
+![image-20220508231943564](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082319699.png)
+
+1 主从架构的核心原理
+
+当启动一个slave node的时候，它会发送一个PSYNC命令给master node
+
+如果这是slave node重新连接master node，那么master node仅仅会复制给slave部分缺少的数据; 否则如果是slave node第一次连接master node，那么会触发一次full resynchronization
+
+开始full resynchronization的时候，master会启动一个后台线程，开始生成一份RDB快照文件，同时还会将从客户端收到的所有写命令缓存在内存中。RDB文件生成完毕之后，master会将这个RDB发送给slave，slave会先写入本地磁盘，然后再从本地磁盘加载到内存中。然后master会将内存中缓存的写命令发送给slave，slave也会同步这些数据。
+
+slave node如果跟master node有网络故障，断开了连接，会自动重连。master如果发现有多个slave node都来重新连接，仅仅会启动一个rdb save操作，用一份数据服务所有slave node。
+
+2、主从复制的断点续传
+
+从redis 2.8开始，就支持主从复制的断点续传，如果主从复制过程中，网络连接断掉了，那么可以接着上次复制的地方，继续复制下去，而不是从头开始复制一份
+
+master node会在内存中常见一个backlog，master和slave都会保存一个replica offset还有一个master id，offset就是保存在backlog中的。如果master和slave网络连接断掉了，slave会让master从上次的replica offset开始继续复制
+
+但是如果没有找到对应的offset，那么就会执行一次resynchronization
+
+3、无磁盘化复制
+
+master在内存中直接创建rdb，然后发送给slave，不会在自己本地落地磁盘了
+
+repl-diskless-sync
+repl-diskless-sync-delay，等待一定时长再开始复制，因为要等更多slave重新连接过来
+
+4、过期key处理
+
+slave不会过期key，只会等待master过期key。如果master过期了一个key，或者通过LRU淘汰了一个key，那么会模拟一条del命令发送给slave。
+
+#### Redis哨兵模式
