@@ -33,7 +33,9 @@ public class SnowFlake {
     }
 
     //初始时间戳(纪元） 一般为当前时间2022-05-10 22:59:27
-    private long initEpoch = 1652194767190L;
+//    private long initEpoch = 1652194767190L;
+//    2062-05-10 22:58:49
+    private long initEpoch = 2914498729000L;
     // 记录最后使用的毫秒时间戳，主要用于判断是否同一毫秒，以及用于服务器时钟回拨判断
     private long lastTimestamp = -1L;
     //datacenterId占用的位数
@@ -44,17 +46,20 @@ public class SnowFlake {
     // dataCenterId占用5个比特位，最大值31
     // 0000000000000000000000000000000000000000000000000000000000011111
     // 这个是二进制运算，就是5 bit最多只能有31个数字，也就是说机器id最多只能是32以内
-    private long maxWorkerId = -1L ^ (-1L << workerIdBits);
+//    private long maxWorkerId = -1L ^ (-1L << workerIdBits);
+    private long maxWorkerId = ~(-1L << workerIdBits);
 
     // workId占用5个比特位，最大值31
     // 0000000000000000000000000000000000000000000000000000000000011111
     // 这个是一个意思，就是5 bit最多只能有31个数字，机房id最多只能是32以内
-    private long maxDatacenterId = -1L ^ (-1L << datacenterIdBits);
+//    private long maxDatacenterId = -1L ^ (-1L << datacenterIdBits);
+    private long maxDatacenterId = ~(-1L << datacenterIdBits);
 
     //序列号，最后12位
     private long sequenceBits = 12L;
     // 同一毫秒内的最新序号，最大值可为 2^12 - 1 = 4095
-    private long sequenceMask = -1L ^ (-1L << sequenceBits);
+//    private long sequenceMask = -1L ^ (-1L << sequenceBits);
+    private long sequenceMask = ~(-1L << sequenceBits);
 
     //workerId需要左移的位数
     private long workerIdShift = sequenceBits;
@@ -63,9 +68,6 @@ public class SnowFlake {
     //时间戳需要左移的位数：12+5+5
     private long timestampLeftShift = sequenceBits + workerIdBits + datacenterIdBits;
 
-    public long getTimestamp() {
-        return System.currentTimeMillis();
-    }
 
     /**
      * 通过雪花算法生成下一个id,需要进行同步
@@ -73,7 +75,6 @@ public class SnowFlake {
     public synchronized long nextId() {
         // 获取当前时间戳，单位是毫秒
         long timestamp = System.currentTimeMillis();
-        ;
 
         // 当前时间小于上一次生成id使用的时间，可能出现服务器时钟回拨问题
         if (timestamp < lastTimestamp) {
@@ -130,7 +131,7 @@ public class SnowFlake {
 
     //---------------测试---------------
     public static void main(String[] args) {
-        SnowFlake worker = new SnowFlake(1, 3);
+        SnowFlake worker = new SnowFlake(30, 30);
         for (int i = 0; i < 5; i++) {
             System.out.println(Long.toBinaryString(worker.nextId()));
         }
