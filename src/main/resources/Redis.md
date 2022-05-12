@@ -1966,7 +1966,7 @@ lock.unlock();
 
 RedissonRedLock 继承自RedissonMultiLock
 
-如果线程一在Redis的master节点上拿到了锁，但是加锁的key还没同步到slave节点。恰好这时，master节点发生故障，一个slave节点就会升级为master节点。线程二就可以获取同个key的锁啦，但线程一也已经拿到锁了，锁的安全性就没了
+如果线程一在Redis的master节点上拿到了锁，但是加锁的key还没同步到slave节点。恰好这时，master节点发生故障，一个slave节点就会升级为master节点，数据丢失。线程二就可以获取同个key的锁啦，但线程一也已经拿到锁了，锁的安全性就没了
 
 分布式锁算法RedLock可以解决：核心思想是 搞多个Redis master部署，以保证它们不会同时宕掉。并且这些master节点是完全相互独立的，相互之间不存在数据同步。同时，需要确保在这多个master实例上，是与在Redis单实例，使用相同方法来获取和释放锁。
 
@@ -2088,9 +2088,9 @@ latch.countDown();
 
 
 
+### zk分布式锁
 
-
-
+![image-20220511205617605](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205112056393.png)
 
 
 
@@ -2232,9 +2232,9 @@ private final int CACHE_SIZE;
 ```
 
 
- 
 
- 
+
+
 
 ---
 
