@@ -854,6 +854,44 @@ springcloud中，采用sleuth来做跟踪处理，具体通过一个拦截器实
 
 zipkin支持MySQL、ES等存储方式
 
+
+
+---
+
+### Spring Cloud Stream
+
+#### 为什么引入Cloud Stream
+
+为了不关注具体MQ的细节，只需要用一种适配绑定的方式，自动给我们在各种mq内切换，即：屏蔽底层消息中间件的差异，降低切换成本，同一消息的编程模型，靠的就是Binder
+
+应用程序通过inputs或者outputs来与SpringCloud Stream中的binder对象交互
+
+通过配置来binding，stream的binder对象负责与消息中间件交互
+
+所以只需要搞清楚如何与stream交互就可以方便使用消息驱动的方式
+
+
+
+通过使用Spring Integration来连接消息代理中间件以实现消息事件驱动
+
+Stream为了一些供应商的消息中间件产品提供了个性化的自动化配置实现，引用了发布-订阅、消费组、分区三个核心概念
+
+目前支持rabbitmq 、kafka
+
+Springcloud alibaba 加入了Rocket MQ Binder用于RocketMq 集成到SpringCould Stream
+
+系统用到了rabbitmq 、kafka
+
+通过stream来沟通两者
+
+#### cloud stream设计思想
+
+binder input：对应于生产者
+
+binder output：对应于消费者
+
+Stream 应用到了发布-订阅模式
+
 ---
 
 
