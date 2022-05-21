@@ -1,6 +1,5 @@
-package com;
+package com.springbootproject;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,8 +9,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @createTime:2022/5/19 21:03
  * @version:1.0
  */
+//默认扫描启动程序所在包，以及子包
+//@ComponentScan(basePackages ={"com.springbootproject"})
 @SpringBootApplication
-@MapperScan("com.mapper")
+//@MapperScan("com.mapper")
 public class SpringBootRun {
 
     public static void main(String[] args) {
