@@ -149,7 +149,7 @@ starter 只不过是把我们某一模块，比如web 开发时所需要的所�
 
 基本上都会使用到两个相同的内容：ConfigurationProperties和AutoConfiguration。因为Spring Boot坚信“约定大于配置”这一理念，所以我们使用ConfigurationProperties来保存我们的配置，并且这些配置都可以有一个默认值，即在我们没有主动覆写原始配置的情况下，默认值就会生效，这在很多情况下是非常有用的。除此之外，starter的ConfigurationProperties还使得所有的配置属性被聚集到一个文件中（一般在resources目录下的application.properties、yml）
 
-![image-20220403233124973](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/202204032331255.png)
+![image-20220403233124973](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springboot_img/202204032331255.png)
 
 
 
@@ -217,7 +217,7 @@ starter 只不过是把我们某一模块，比如web 开发时所需要的所�
    
    AutoConfigurationImportSelector
    
-   - ![image-20220402154803603](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/image-20220402154803603.png)
+   - ![image-20220402154803603](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springboot_img/image-20220402154803603.png)
 
 SpringFactories
 
@@ -438,7 +438,7 @@ SpringBoot中的拦截器实现和SpringMvc中的一样，大致流程是：定�
 
 bootstarp典型应用场景：获取配置中心的配置
 
-![image-20220404214434467](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/202204042145421.png)
+![image-20220404214434467](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springboot_img/202204042145421.png)
 
 
 
@@ -734,7 +734,7 @@ actuator/env：列出程序运行所有信息
    
    
    
-   ![image-20220404224926002](https://gitee.com/qianchao_repo/pic-typora/raw/master/springboot_img/202204042249167.png)
+   ![image-20220404224926002](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springboot_img/202204042249167.png)
    
    
 

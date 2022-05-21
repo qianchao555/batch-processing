@@ -19,7 +19,7 @@
 
 ### 线程状态(生命周期)
 
-![image-20220412212247848](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204122122015.png)
+![image-20220412212247848](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204122122015.png)
 
 
 
@@ -139,7 +139,7 @@ https://blog.csdn.net/weixin_38336658/article/details/119907919?spm=1001.2101.30
    - DiscardPolice：该策略会丢弃无法处理的任务，不予任务处理
    - 可以自定义拒绝策略：实现RejectedExecutionHandler 
 
-![image-20220411213851879](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204112139305.png)
+![image-20220411213851879](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204112139305.png)
 
 
 
@@ -181,7 +181,7 @@ Java内存模型定义了Java线程对内存数据进行交互的规范，线程
 
 Java内存模型的抽象结构图：
 
-![image-20220411231453088](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204112314267.png)
+![image-20220411231453088](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204112314267.png)
 
 Java内存模型规定了：线程对变量的所以操作都必须在本地内存进行，不能直接读写主内存的变量。
 
@@ -189,7 +189,7 @@ JMM定义了8种操作来完成变量如何从主内存到本地内存，以及�
 
 分别是：read、load、use、assign、store、write、lock、unlock
 
-![image-20220412204327444](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204122043152.png)
+![image-20220412204327444](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204122043152.png)
 
 
 
@@ -277,7 +277,7 @@ CAS执行依赖于UnSafe类实现
 2. 只能保证一个共享变量的原子操作
 3. 产生ABA问题
    - 什么是ABA问题
-   - ![image-20220411230210765](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204112302908.png)
+   - ![image-20220411230210765](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204112302908.png)
 
 
 
@@ -366,7 +366,7 @@ AQS是自旋锁，在等待被唤醒的时候，经常会使用自旋( while(!ca
 
 AQS的具体实现：
 
-![image-20220414211911107](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204142119244.png)
+![image-20220414211911107](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204142119244.png)
 
 AQS维护了一个volatile的int类型的state，和一个FIFO线程等待队列，多线程争用资源被阻塞的时候就会进入到这个队列
 
@@ -447,7 +447,7 @@ condition接口提供了类似Object的监视器方法，与Lock接口配合可�
 
 下图状态表示：一个线程已经获取到了写锁，且重入了两次，同时也连续获取了两次读锁
 
-![image-20220418230634085](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182306630.png)
+![image-20220418230634085](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204182306630.png)
 
 读写锁如何确定各自的状态的？
 
@@ -501,7 +501,7 @@ concurrentHashMap采用锁分段技术，首先将数据分为一段一段的存
 
 ##### concurrentHashMap结构
 
-![image-20220414225538803](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204142255782.png)
+![image-20220414225538803](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204142255782.png)
 
 由Segment数组结构和HashEntry数组构成
 
@@ -585,7 +585,7 @@ private static int hash (int h){
 
 整个get过程不需要加锁：因为所有的共享变量都定义为了volatile类型，Node中的val是用volatile修饰的
 
-![image-20220418210204525](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182102569.png)
+![image-20220418210204525](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204182102569.png)
 
 
 
@@ -612,7 +612,7 @@ private static int hash (int h){
 
 由head节点和tail节点组成，每个节点Node由节点元素和指向下一个节点的引用组成，节点与节点之间通过这个next关联起来，从而组成一张链表结构的队列
 
-![image-20220418212146272](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182121424.png)
+![image-20220418212146272](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204182121424.png)
 
 默认情况下head节点存储的元素为空，tail节点等于head节点
 
@@ -656,7 +656,7 @@ public ConcurrentLinkedQueue() {
 
 ##### 阻塞队列的4种处理方式
 
-![image-20220418213120686](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204182131837.png)
+![image-20220418213120686](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204182131837.png)
 
 1. 抛出异常：是指当阻塞队列满时，再往队列插入元素，会抛出 IllegalStateException("Queue full") 异常。当队列为空时，从队列里获取元素时会抛出 NoSuchElementException 异常
 2. 返回特殊值：插入方法会返回是否成功，成功则返回 true。移除方法，则是从队列里拿出一个元素，如果没有则返回 null
@@ -751,14 +751,14 @@ public CountDownLatch(int count) {
 
 ##### 实现原理
 
-![image-20220419213953040](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204192139189.png)
+![image-20220419213953040](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204192139189.png)
 
 上面的流程，如果落实到代码，把 state置为0的那个线程，会判断head指向节点的状态，如果为通知状态，则唤醒后续节点，即线程3节点，然后head指向线程3节点，head指向的旧节点会被删除掉。当线程3恢复执行后，发现自身为通知状态，又会把head指向线程4节点，然后删除自身节点，并唤醒线程4
 
 
 将调用await()方法的线程，组装成Node，放在CLH同步队列尾中。一个线程在阻塞前会把它前面的节点设置为通知状态，这样便实现了链式唤醒机制
 
-![image-20220419213822123](https://gitee.com/qianchao_repo/pic-typora/raw/master/juc_img/202204192138362.png)
+![image-20220419213822123](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204192138362.png)
 
 
 

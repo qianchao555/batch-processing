@@ -11,7 +11,7 @@
 
 Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一个规范。它由一组Java语言编写的类和接口组成。各种不同类型的数据库都有相应的实现
 
-![image-20220329213239713](https://gitee.com/qianchao_repo/pic-typora/raw/master/mybatis_img/202203292133603.png)
+![image-20220329213239713](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202203292133603.png)
 
 
 
@@ -204,7 +204,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
 
 ### MyBatis核心对象
 
-![image-20220329220927022](https://gitee.com/qianchao_repo/pic-typora/raw/master/mybatis_img/202203292209900.png)
+![image-20220329220927022](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202203292209900.png)
 
 MyBatis有三个基本要素
 
