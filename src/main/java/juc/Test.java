@@ -1,35 +1,30 @@
-//package juc;
-//
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.context.annotation.Bean;
-//import org.springframework.core.env.Environment;
-//
-//import java.time.LocalDateTime;
-//import java.time.format.DateTimeFormatter;
-//import java.util.HashMap;
-//import java.util.Map;
-//
-///**
-// * @description:
-// * @author:xiaoyige
-// * @createTime:2022/4/18 20:50
-// * @version:1.0
-// */
-//public class Test {
-//
-//    @Autowired
-//    Environment env;
-//
-//    public static void main(String[] args) {
-//        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-//        LocalDateTime localDateTime = LocalDateTime.parse("2022-05-03 14:09:34", df);
-////        LocalDateTime localDateTime=LocalDateTime.now();
-//
-//        System.out.println(localDateTime);
-//
-//        System.out.println(localDateTime.plusNanos(754927277000L));
-//    }
-//
+package juc;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * @description:
+ * @author:xiaoyige
+ * @createTime:2022/4/18 20:50
+ * @version:1.0
+ */
+public class Test {
+
+    @Autowired
+    Environment env;
+
+    public static void main(String[] args) {
+       Cb cb=new Cc();
+       cb.a();
+    }
+
 //    public Map<String, Object> xxxConsumerConfig() {
 //        Map<String, Object> props = new HashMap<>();
 //        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, env.getProperty("spring.kafka.bootstrap-servers"));
@@ -49,16 +44,16 @@
 //        return props;
 //    }
 //
-///**
-// *batchFactory.
-// *@return KafkaListenerContainerFactory
-// *
-// **/
+//    /**
+//     * batchFactory.
+//     *
+//     * @return KafkaListenerContainerFactory
+//     **/
 //    @Bean
-//    public KafkaListenerContainerFactory<?>highPerformanceBatchFactory() {
-//        ConcurrentKafkalistenerContainerFactory<String, String > factory = new ConcurrentKafkalistenerContainerFactory<>();
+//    public KafkaListenerContainerFactory<?> highPerformanceBatchFactory() {
+//        ConcurrentKafkalistenerContainerFactory<String, String> factory = new ConcurrentKafkalistenerContainerFactory<>();
 //        factory.setConsumerFactory(highPerformanceConsumerFactory());
-//        factory.setConcurrency(Integer.parseInt(env.getProperty("spring.kafka.template.concurrency","1")));
+//        factory.setConcurrency(Integer.parseInt(env.getProperty("spring.kafka.template.concurrency", "1")));
 //        factory.setBatchListener(true);//设置为批量消费，每个批次数量在Kafka配置参数中设置
 //
 //        //设置提交偏移量的方式
@@ -67,5 +62,6 @@
 //        return factory;
 //
 //    }
-//
-//
+}
+
+

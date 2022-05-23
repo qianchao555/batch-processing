@@ -1520,11 +1520,33 @@ kafka如何保证顺序传输？
 
 
 
+## KafkaTemplate
+
+生产用的
+
+项目中可以注入多个KafkaTemplate实例，例如配置k-v序列化方式不同时，采用泛型依赖注入。 
+
+底层依赖于DefaultKafkaProducerFactory，采用工厂方式生成Producer
+
+~~~java
+@Autowired
+KafkaTemplate<String,String> kafkaTemplate1;
+
+@Autowired
+KafkaTemplate<byte[],byte[]> kafkaTemplate2;
+~~~
+
+kafkaTemplate底层实现：send方法发送消息给kafka，底层都会调用doSend方法，消息发送完会进行callback回调并关闭生产者，刷新缓存
+
+底层用Sender线程来跑的
+
 
 
 
 
 ## @KafkaListener
+
+消费用的
 
 spring-kafka项目进行了集成kafka
 
@@ -1595,6 +1617,8 @@ public ConsumerFactory<Object,Object> xxxxConsumerFactory(){
         return props;
     }
 ~~~
+
+
 
 
 
