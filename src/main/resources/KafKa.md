@@ -23,7 +23,7 @@ MQ是一种常见的上下游 "逻辑解耦+物理解耦"的消息通信分为�
 #### 点对点模式
 
 1. 在点对点的消息系统中，消息保留在队列中，一个或者多个消费者可以消费队列中的消息，但是消息最多只能被一个消费者消费，一旦有一个消费者将其消费掉，消息就从该队列中消失
-1. ![image-20220424221006967](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204242212370.png)
+1. ![image-20220424221006967](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204242212370.png)
 
 #### 发布/订阅模式
 
@@ -32,7 +32,7 @@ MQ是一种常见的上下游 "逻辑解耦+物理解耦"的消息通信分为�
 4. 这种模式下有两种消费方式
    - 消费者主动消费消息  ：kafka采用此种方式poll
    - 消息队列主动推送给消费者
-5. ![image-20220424221235289](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204242212437.png)
+5. ![image-20220424221235289](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204242212437.png)
 
 ---
 
@@ -57,7 +57,7 @@ Kafka支持低延迟消息传递，并在出现机器故障时提供对容错的
 
 ### 体系结构
 
-![image-20220505161011733](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/image-20220505161011733.png)
+![image-20220505161011733](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/image-20220505161011733.png)
 
 ### 术语
 
@@ -65,7 +65,7 @@ Kafka支持低延迟消息传递，并在出现机器故障时提供对容错的
 
 1. 消息的发送者叫Producer，消息的使用者/接收者是Consumer
 2. 生产者将数据发送到Kafka集群中，消费者从中获取消息进行业务的处理
-3. ![image-20220504223114695](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205042231879.png)
+3. ![image-20220504223114695](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205042231879.png)
 
 #### broker
 
@@ -512,7 +512,7 @@ kafka默认保证同一个分区内的消息是有序的，则生产者可以在
 
 多分区时，分区与分区间无序
 
-![image-20220505230242650](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205052302719.png)
+![image-20220505230242650](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205052302719.png)
 
 
 
@@ -627,7 +627,7 @@ index和log文件以当前segment的第一条消息的offset命名
 1. 根据目标offset定位segment文件
 2. 找到小于等于目标offset的最大offset对应的索引项
 
-![image-20220426212527332](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204262125861.png)
+![image-20220426212527332](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204262125861.png)
 
 
 
@@ -658,7 +658,7 @@ kafka提供的日志清理策略有delete和compact
 4. 页缓存+零拷贝技术
    - 零拷贝：kafka的数据加工处理操作交由kafka生产者和kafka消费者处理，kafka broker应用层不关心存储的数据，所以不用走应用层，传输效率高
    - PageCache页缓存：kafka重度依赖底层操作系统提高的pagecache功能。当上层有写操作时，操作系统只是将数据写入pagecache，当读操作发生时，先从pagecache查找，如果找不到，再去磁盘中读取。
-   - ![image-20220427205334342](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272053956.png)
+   - ![image-20220427205334342](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272053956.png)
 
 
 
@@ -692,7 +692,7 @@ kafka没有采用这种方式，因为：这种方式是由broker决定消息发
 
 kafka  consumer采用从broker中主动拉取数据。kafka采用这种方式，根据consumer的消费能力以适当的速率消费消息
 
-![image-20220427205659931](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272057175.png)
+![image-20220427205659931](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272057175.png)
 
 缺点：如果kafka没有数据，那么消费者可能会陷入循环中，一直返回空的数据。针对这点不足，kafka的消费者可以在消费数据时，传入一个时长参数timeout，如果当前没有数据可供消费，consumer则会等待一段时间后再返回
 
@@ -700,7 +700,7 @@ kafka  consumer采用从broker中主动拉取数据。kafka采用这种方式，
 
 ### 消费者工作流程
 
-![image-20220427210633676](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272106921.png)
+![image-20220427210633676](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272106921.png)
 
 offset放在zookeeper 的consumer节点中
 
@@ -717,19 +717,19 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 1. 消费者组内每个消费者负责消费不同分区的数据，一个主题的分区只能由一个组内的消费者消费
 2. 消费者组之间互不影响
 
-![image-20220427211607003](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272116428.png)
+![image-20220427211607003](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272116428.png)
 
 
 
 
 
-![image-20220427211716358](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272117602.png)
+![image-20220427211716358](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272117602.png)
 
 
 
 ### 消费者组初始化流程
 
-![image-20220427215200765](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272152197.png)
+![image-20220427215200765](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272152197.png)
 
 
 
@@ -737,7 +737,7 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 ### 消费者组消费流程
 
-![image-20220427215650700](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272156995.png)
+![image-20220427215650700](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272156995.png)
 
 
 
@@ -806,7 +806,7 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 
 
-![image-20220427225649493](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272256859.png)
+![image-20220427225649493](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272256859.png)
 
 
 
@@ -814,11 +814,11 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 range时候的再平衡：有消费者挂了，它的任务交给其他consumer
 
-![image-20220427230004999](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272300268.png)
+![image-20220427230004999](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272300268.png)
 
 
 
-![image-20220427230018304](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204272300542.png)
+![image-20220427230018304](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272300542.png)
 
 Range范围分区的弊端：如上图，随着topic的数量增多，那么C0消费者会出现多消费n个分区，导致部分消费者过载
 
@@ -833,7 +833,7 @@ Range范围分区的弊端：如上图，随着topic的数量增多，那么C0�
 1. 同一消费组内所有消费者订阅的topic都是相同的
 2. 同一消费者组内的消费者订阅的消息有不相同的
 
-![image-20220428201322929](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282013691.png)
+![image-20220428201322929](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282013691.png)
 
 
 
@@ -859,7 +859,7 @@ Range范围分区的弊端：如上图，随着topic的数量增多，那么C0�
 
 ### 消费者位移提交方式
 
-![image-20220428201925433](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282019003.png)
+![image-20220428201925433](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282019003.png)
 
 
 
@@ -871,7 +871,7 @@ _consumer_offsets主题里面采用k-v的方式存储数据。key是group.id+top
 
 消费过程中会产生offset存放在这个系统主题中
 
-![image-20220428203023561](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282030761.png)
+![image-20220428203023561](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282030761.png)
 
 
 
@@ -923,7 +923,7 @@ public class MyConsumer1 {
 
 ##### 自动提交offset实现原理
 
-![image-20220428203358834](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282033218.png)
+![image-20220428203358834](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282033218.png)
 
 
 
@@ -931,7 +931,7 @@ public class MyConsumer1 {
 
 虽然自动提交offset方便，但是是基于时间提交的，开发人员难以把握offset提交的时机，因此可以通过手动提交offset
 
-![image-20220428205244851](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282052076.png)
+![image-20220428205244851](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282052076.png)
 
 两种方式
 
@@ -1069,7 +1069,7 @@ kafka consumer在poll()方法返回之前，会先调用拦截器的onConsume()�
 
 ### 漏消费和重复消费
 
-![image-20220428215121984](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282151370.png)
+![image-20220428215121984](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282151370.png)
 
 
 
@@ -1081,7 +1081,7 @@ kafka的消费者事务和数据库的ACID不是同一类东西
 
 kafka事务指的是：一系列的生产者生产消息，和消费者提交偏移量的操作在一个事务中，或者说是一个原子操作，生产消息和提交偏移量同时成功和失败
 
-![image-20220428215447661](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282154017.png)
+![image-20220428215447661](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282154017.png)
 
 ---
 
@@ -1091,7 +1091,7 @@ kafka事务指的是：一系列的生产者生产消息，和消费者提交偏
 
 消费者如何提高吞吐量 问题
 
-![image-20220428215818999](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282158353.png)
+![image-20220428215818999](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282158353.png)
 
 
 
@@ -1113,7 +1113,7 @@ kafka-eagle.org   最新名字：efak
 
 kafka2.8x后
 
-![image-20220428221103795](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282211144.png)
+![image-20220428221103795](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282211144.png)
 
 
 
@@ -1123,7 +1123,7 @@ kafka2.8x后
 
 
 
-![image-20220428221642033](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202204282216342.png)
+![image-20220428221642033](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282216342.png)
 
 
 
@@ -1238,13 +1238,13 @@ A系统发送个数据到BCD三个系统，接口调用发送，那如果E系统
 
 不用mq的场景：
 
-![image-20220503150927971](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031509395.png)
+![image-20220503150927971](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031509395.png)
 
 面试技巧：需要去考虑一下你负责的系统中是否有类似的场景，就是一个系统或者一个模块，调用了多个系统或者模块，互相之间的调用很复杂，维护起来很麻烦。但是其实这个调用是不需要直接同步调用接口的，如果用MQ给他异步化解耦，也是可以的，你就需要去考虑在你的项目里，是不是可以运用这个MQ去进行系统的解耦。在简历中体现出来这块东西，用MQ作解耦
 
  使用mq之后：
 
-![image-20220503151953898](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031519126.png)
+![image-20220503151953898](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031519126.png)
 
 
 
@@ -1252,7 +1252,7 @@ A系统发送个数据到BCD三个系统，接口调用发送，那如果E系统
 
 不用mq的同步高延时请求场景
 
-![image-20220503152644584](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031526803.png)
+![image-20220503152644584](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031526803.png)
 
 A系统接收一个请求，需要在自己本地写库，还需要在BCD三个系统写库，自己本地写库要3ms，BCD三个系统分别写库要300ms、450ms、200ms。最终请求总延时是3 + 300 + 450 + 200 = 953ms，接近1s，用户感觉搞个什么东西，太慢了
 
@@ -1260,7 +1260,7 @@ A系统接收一个请求，需要在自己本地写库，还需要在BCD三个�
 
 使用mq后进行异步化之后：
 
-![image-20220503160632232](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031606430.png)
+![image-20220503160632232](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031606430.png)
 
 
 
@@ -1268,13 +1268,13 @@ A系统接收一个请求，需要在自己本地写库，还需要在BCD三个�
 
 没有mq的时候，高峰期系统被打死场景：
 
-![image-20220503161848712](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031618932.png)
+![image-20220503161848712](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031618932.png)
 
 每天0点到11点，A系统风平浪静，每秒并发请求数量就100个。结果每次一到11点~1点，每秒并发请求数量突然会暴增到1万条。但是系统最大的处理能力就只能是每秒钟处理1000个请求啊。。。尴尬了，系统会死
 
 使用mq后：
 
-![image-20220503163046599](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031630784.png)
+![image-20220503163046599](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031630784.png)
 
 ---
 
@@ -1286,7 +1286,7 @@ A系统接收一个请求，需要在自己本地写库，还需要在BCD三个�
 
 缺点：
 
-![image-20220503164555603](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205031645871.png)
+![image-20220503164555603](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205031645871.png)
 
 1. 系统可用性降低：系统引入的外部依赖越多，越容易挂掉，本来你就是A系统调用BCD三个系统的接口就好了，现在ABCD四个系统好好的，没啥问题，但是加入的MQ万一MQ挂了咋整？MQ挂了，整套系统崩溃了，你不就完了么。
 2. 系统复杂性提高：硬生生加个MQ进来，你怎么保证消息没有重复消费？怎么处理消息丢失的情况？怎么保证消息传递的顺序性？头大头大，问题一大堆，痛苦不已
@@ -1354,7 +1354,7 @@ Rabbitmq不是分布式的，有三种模式：单机、普通集群、镜像集
 
 kafka是分布式架构的mq
 
-![image-20220503205204699](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205032052899.png)
+![image-20220503205204699](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205032052899.png)
 
 
 
@@ -1384,7 +1384,7 @@ kafka 0.8以前，是没有HA(高可用)机制的，就是任何一个broker宕�
 
 #### 如何保证消息不被重复消费？(如何保证消费的时候的幂等)
 
-![image-20220503214357393](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205032143663.png)
+![image-20220503214357393](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205032143663.png)
 
 kafka有个offset的概念，就是每个消息写进去，都有一个offset，代表他的序号，然后consumer消费了数据之后，每隔一段时间，会把自己消费过的消息的offset提交一下，代表我已经消费过了，下次我要是重启啥的，你就让我继续从上次消费到的offset来继续消费吧。
 
@@ -1408,7 +1408,7 @@ kafka有个offset的概念，就是每个消息写进去，都有一个offset，
 
 还有比如基于数据库的唯一键来保证重复数据不会重复插入多条，我们之前线上系统就有这个问题，就是拿到数据的时候，每次重启可能会有重复，因为kafka消费者还没来得及提交offset，重复数据拿到了以后我们插入的时候，因为有唯一键约束了，所以重复数据只会插入报错，不会导致数据库中出现脏数据
 
-![image-20220503215808037](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205032158231.png)
+![image-20220503215808037](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205032158231.png)
 
 ---
 
@@ -1426,7 +1426,7 @@ kafka而言：
    - 还有一种情况：就是kafka消费者消费到了数据之后是写到一个内存的queue里先缓冲一下，结果有的时候，你刚把消息写入内存queue，然后消费者会自动提交offset。然后此时我们重启了系统，就会导致内存queue里还没来得及处理的数据就丢失了
 2. kafka丢失了数据
    - 比较常见的场景：某个leader收到数据后，还没有进行数据同步，此时leader挂了，导致新选举的follower变为leader，但是此时数据并没有同步过来导致数据丢失
-   - ![image-20220504165124796](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205041651988.png)
+   - ![image-20220504165124796](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205041651988.png)
    - 解决方案：4个参数的设置
      1. 这个topic设置replication.factor参数，必须大于1。也就是每个partition必须拥有2个副本以上
      2. 服务端设置：min.insync.replicas参数，必须大于1。这个是要求一个leader至少感知到有至少一个follower还跟自己保持联系，没掉队，这样才能确保leader挂了还有一个follower
@@ -1451,7 +1451,7 @@ kafka：一个topic，一个partition，一个consumer，内部多线程导致�
 
 
 
-![image-20220504201135687](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205042011857.png)
+![image-20220504201135687](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205042011857.png)
 
 
 
@@ -1461,7 +1461,7 @@ kafka如何保证顺序传输？
 
 一个topic，一个partition，一个consumer，内部单线程消费，写N个内存queue，然后N个线程分别消费一个内存queue即可
 
-![image-20220504202608347](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205042026706.png)
+![image-20220504202608347](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205042026706.png)
 
 ---
 
@@ -1482,7 +1482,7 @@ kafka如何保证顺序传输？
 5. 这种做法相当于是临时将queue资源和consumer资源扩大10倍，以正常的10倍速度来消费数据
 6. 等快速消费完积压数据之后，得恢复原先部署架构，重新用原先的consumer机器来消费消息
 
-![image-20220504204021818](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205042040994.png)
+![image-20220504204021818](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205042040994.png)
 
 ---
 
@@ -1566,7 +1566,7 @@ containerFactory 监听容器工厂，当监听时需要区分单数据还是多
 
 公司实现了批量消费
 
-![image-20220507222340054](https://gitee.com/qianchao_repo/pic-typora/raw/master/kafka_img/202205072231174.png)
+![image-20220507222340054](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205072231174.png)
 
 
 

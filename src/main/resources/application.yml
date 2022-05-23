@@ -6,9 +6,11 @@ spring:
     name: redis
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
+#    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/nowcodersql?useSSL=false&serverTimezone=UTC
     username: root
     password: 919550ab
 
-
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
 

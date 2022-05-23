@@ -2090,7 +2090,7 @@ latch.countDown();
 
 ### zk分布式锁
 
-![image-20220511205617605](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205112056393.png)
+![image-20220511205617605](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205112056393.png)
 
 
 
@@ -2104,9 +2104,9 @@ latch.countDown();
 
 1. 提高性能
    - 把一些负责操作耗时的查询出结果后，若后面有很多请求都需要读取，那么可以将结果放进缓存，后面的请求读取缓存就可以了
-   - ![image-20220508203048601](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082030789.png)
+   - ![image-20220508203048601](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082030789.png)
 2. 提高并发
-   - ![image-20220508203132273](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082031397.png)
+   - ![image-20220508203132273](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082031397.png)
 
 #### 不用行不行
 
@@ -2146,7 +2146,7 @@ latch.countDown();
    - 接着redis这边准备好了给客户端的响应数据之后，就会将socket的AE_WRITABLE事件跟命令回复处理器关联起来，当客户端这边准备好读取响应数据时，就会在socket上产生一个AE_WRITABLE事件，会由对应的命令回复处理器来处理，就是将准备好的响应数据写入socket，供客户端来读取。
    - 命令回复处理器写完之后，就会删除这个socket的AE_WRITABLE事件和命令回复处理器的关联关系。
 
-![image-20220508205702299](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082057463.png)
+![image-20220508205702299](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082057463.png)
 
 
 
@@ -2248,7 +2248,7 @@ redis是支撑高并发架构里面，非常重要的，
 
 单机的reids瓶颈
 
-![image-20220508225817298](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082258459.png)
+![image-20220508225817298](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082258459.png)
 
 #### 如果redis要支撑超过10w+
 
@@ -2262,7 +2262,7 @@ redis是支撑高并发架构里面，非常重要的，
 
 主从架构->读写分离->支撑10w+读QPS的架构
 
-![image-20220508230358292](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082303428.png)
+![image-20220508230358292](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082303428.png)
 
 
 
@@ -2315,7 +2315,7 @@ master节点，必须要使用持久化机制
 
 主从复制原理：
 
-![image-20220508231943564](https://gitee.com/qianchao_repo/pic-typora/raw/master/redis_img/202205082319699.png)
+![image-20220508231943564](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082319699.png)
 
 1 主从架构的核心原理
 

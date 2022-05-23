@@ -4,7 +4,7 @@
 
 ### SpringMvc流程
 
-![image-20220330153933034](https://gitee.com/qianchao_repo/pic-typora/raw/master/springmvc_img/image-20220330153933034.png)
+![image-20220330153933034](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springmvc_img/image-20220330153933034.png)
 
 
 

@@ -58,7 +58,7 @@ public interface FactoryBean<T> {
 
 
 
-![image-20220330222504591](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/202203302225742.png)
+![image-20220330222504591](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202203302225742.png)
 
 ~~~java
 //代表这个bean本身就是一个工厂，可以生产其他bean实例，例如：这里生产了teacherBean
@@ -114,7 +114,7 @@ public class Demo1 {
 
 1. 最为典型是则是创建Aop的代理对象，这个对象在Spring中就是ProxyFactoryBean
 
-   ![image-20220330215722491](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/202203302157931.png)
+   ![image-20220330215722491](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202203302157931.png)
 
 2. Mybatis中的SqlSessionFactoryBean
 
@@ -266,7 +266,7 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
 6. 如果 Bean 实现了 BeanPostProcessor 接口，则 Spring 调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作(在对象创建后，对对象进行修改操作)。此处非常重要，Spring 的 AOP 就是利用它实现的。
    - 在before或者after方法里面对对象进行判断，看是否需要进行代理，需要则生成代理对象并把代理对象放入容器中
    -  SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference：解决循环依赖，获取一个拓展好的半成品的对象。解决循环依赖用三级工厂的原因，就是需要遇到注入AOP Bean的时候，通过这个地方解决代理
-   - ![image-20220401171420361](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/image-20220401171420361.png)
+   - ![image-20220401171420361](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/image-20220401171420361.png)
 7. 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。
 8. 如果在配置文件中通过 init-method 属性指定了初始化方法，则调用该初始化方法。
 9. 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的初始化方法 postProcessAfterInitialization()。此时，Bean 已经可以被应用系统使用了。
@@ -375,7 +375,7 @@ Spring整合了AspectJ使得可以使用aspectj语法来实现Aop
    - 类加载后织入：指的是在类加载的时候进行织入。常见几种方法：自定义类加载器，在被织入类加载到JVM前对它进行加载；jvm启动的时候知道AspectJ提供的agent：-javaagent:xxx/xxx/aspectjweaver.jar
 2. 可以做SpringAop做不了的事情，它是Aop编程的完全解决方案
 3. SpringAop在容器启动的时候需要生成代理实例，在方法调用上也会增加栈的深度，使得SpringAop性能远不如AspectJ那么好
-4. ![image-20220401135239914](https://gitee.com/qianchao_repo/pic-typora/raw/master/spring_img/image-20220401135239914.png)
+4. ![image-20220401135239914](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/image-20220401135239914.png)
 
 
 
