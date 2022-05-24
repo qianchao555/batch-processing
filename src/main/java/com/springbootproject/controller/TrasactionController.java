@@ -92,4 +92,13 @@ public class TrasactionController {
 
     }
 
+
+    @ResponseBody
+    @RequestMapping("/acca")
+    public void acca() throws Exception {
+
+        userService.accaTest();
+
+    }
+
 }

@@ -15,4 +15,8 @@ public interface UserMapper {
 
     int insertUser(String id);
 
+    int updateUser(String id,String name,String addr);
+
+    int updateUserIdName(String id,String name);
+
 }
