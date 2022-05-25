@@ -6,4 +6,12 @@
     insert into  test_user (id, name)
     values (#{id},"qc")
   </insert>
+
+    <update id="updateUser" parameterType="java.lang.String">
+        update  test_user set name=#{name}, addr=#{addr} where id=#{id}
+  </update>
+
+    <update id="updateUserIdName" parameterType="java.lang.String">
+        update  test_user set name=#{name}  where id=#{id}
+  </update>
 </mapper>

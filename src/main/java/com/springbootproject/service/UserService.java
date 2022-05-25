@@ -181,4 +181,23 @@ public class UserService {
         return "事务方法调用另一个类的非事务方法，非事务方法报错且捕获异常";
     }
 
+
+
+
+
+
+    /**
+     *
+     * @return
+     */
+    public void accaTest()   {
+
+        userService2.accaTest2();
+
+        log.info("test2返回test了");
+
+//        userMapper.updateUser("accatest","qcTest2->1");
+
+    }
+
 }
