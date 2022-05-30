@@ -1,5 +1,6 @@
 package com.springbootproject.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
@@ -9,7 +10,10 @@ import lombok.Data;
  * @version:1.0
  */
 @Data
+@TableName("test_user")
 public class User {
     private  String id;
     private String name;
+    private String addr;
+    private Integer age;
 }
