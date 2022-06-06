@@ -30,10 +30,13 @@ public class UserServiceUpdateById {
      */
     @Transactional
     public void test1()  {
-        User user=userDao.selectById("2") ;
-        user.setName("name2");
+        try {
+
         userServiceUpdateById2.test();
-        userDao.updateById(user);
+        }catch (Exception ex){
+            log.info("捕获异常：{}",ex.getMessage());
+        }
+        userDao.insert(new User("12","name12","程度",12));
     }
 
 

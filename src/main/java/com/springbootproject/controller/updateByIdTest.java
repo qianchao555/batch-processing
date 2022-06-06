@@ -1,6 +1,6 @@
 package com.springbootproject.controller;
 
-import com.springbootproject.service.UserServiceUpdateById;
+import com.springbootproject.service.UserServiceTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,13 +17,13 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @RequestMapping("/testUpdateById")
 public class updateByIdTest {
     @Autowired
-    UserServiceUpdateById userServiceUpdateById;
+    UserServiceTest userServiceTest;
 
     @ResponseBody
     @RequestMapping("/test1")
     public void toRegisterSuccess() {
 
-         userServiceUpdateById.test1();
+         userServiceTest.test();
 
     }
 }
