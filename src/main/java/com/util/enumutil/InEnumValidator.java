@@ -10,7 +10,7 @@ import java.lang.annotation.Annotation;
  * @ClassName InEnumValidator
  * @Author qianchao
  * @Date 2022/6/8
- * @Version OPRA V1.0
+ * @Version   V1.0
  **/
 public class InEnumValidator implements ConstraintValidator<InEnum,Object> {
     private InEnum inEnumAnnotation;
