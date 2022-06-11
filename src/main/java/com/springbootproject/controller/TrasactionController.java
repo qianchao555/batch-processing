@@ -94,10 +94,10 @@
 //
 //
 //    @ResponseBody
-//    @RequestMapping("/acca")
-//    public void acca() throws Exception {
+//    @RequestMapping("/myUpdate")
+//    public void myUpdate() throws Exception {
 //
-//        userService.accaTest();
+//        userService.myUpdateTest();
 //
 //    }
 //

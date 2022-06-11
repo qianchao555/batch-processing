@@ -190,13 +190,13 @@
 //     *
 //     * @return
 //     */
-//    public void accaTest()   {
+//    public void myUpdateTest()   {
 //
-//        userService2.accaTest2();
+//        userService2.myUpdateTest2();
 //
 //        log.info("test2返回test了");
 //
-////        userMapper.updateUser("accatest","qcTest2->1");
+////        userMapper.updateUser("myUpdatetest","qcTest2->1");
 //
 //    }
 //
