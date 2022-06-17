@@ -104,7 +104,7 @@ Greenplum会创建若干数据库进程来处理查询的工作。在Master上�
 
 为查询计划的同一个切片工作但位于不同Segment上的相关进程被称作*团伙*。随着部分工作的完成，元组会从一个进程团伙流向查询计划中的下一个团伙。这种Segment之间的进程间通信被称作Greenplum数据库的*Interconnect*组件。
 
-[图 4](http://docs-cn.greenplum.org/v5/admin_guide/query/topics/parallel-proc.html#topic4__iy141495)展示了[图 3](http://docs-cn.greenplum.org/v5/admin_guide/query/topics/parallel-proc.html#topic3__iy140224)所示查询计划在Master和两个Segment实例上的查询工作者进行
+[图 4]展示了[图 3]所示查询计划在Master和两个Segment实例上的查询工作者进行情况
 
 ![image-20220617171325585](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/pg_gp_base_img/202206171713725.png)
 
