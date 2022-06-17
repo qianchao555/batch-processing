@@ -43,14 +43,14 @@
 //
 //
 //    @Transactional(rollbackFor = Exception.class)
-//    public void accaTest2()  {
+//    public void myUpdateTest2()  {
 //        log.info("进入test2了");
 //
-//        accaTest3();
+//        myUpdateTest3();
 //
 //        log.info("test3->返回到test2了");
 //
-//        userMapper.updateUserIdName("accatest","qcTest2");
+//        userMapper.updateUserIdName("myUpdatetest","qcTest2");
 //
 //    }
 //

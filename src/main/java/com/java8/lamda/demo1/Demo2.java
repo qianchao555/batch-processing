@@ -59,7 +59,7 @@ public class Demo2 {
      */
     @Test
     public void hhh(){
-        String sss="uplReportSabCsv";
+        String sss="stringReportSabCsv";
         String s = sss.replaceAll("[A-Z]", "_$0");
         System.out.println("S:"+s);
         String[] s1 = s.split("_");

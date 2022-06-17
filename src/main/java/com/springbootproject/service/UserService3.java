@@ -21,9 +21,9 @@
 //
 //
 ////    @Transactional(propagation = Propagation.REQUIRES_NEW )
-//    protected void accaTest3()  {
+//    protected void myUpdateTest3()  {
 //        log.info("进入test3了,它的add为：test3->4成都");
-//        userMapper.updateUser("accatest","qcTest3","test4成都");
+//        userMapper.updateUser("myUpdatetest","qcTest3","test4成都");
 ////
 //        try{
 //            int i=10/0;
