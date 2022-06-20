@@ -874,5 +874,237 @@ ES支持一些基于脚本(生成运行时的字段)的复杂的动态聚合
 
 
 
+---
+
+### ES聚合-Pipline
+
+管道聚合：让上一步的聚合结果成为下一个聚合的输入，这就是管道
+
+管道聚合有很多不同**类型**，每种类型都与其他聚合计算不同的信息，但是可以将这些类型分为两类
+
+1. 父级：父级聚合的输出提供了一组管道聚合，它可以计算新的存储桶或新的聚合以添加到现有存储桶中
+2. 兄弟：同级聚合的输出提供的管道聚合，并且能够计算与该同级聚合处于同一级别的新聚合
+
+前置聚合可能是Bucket聚合，后置的可能是基于Metric聚合，那么它就可以成为一类管道，进而引出了：`xxx bucket`
+
+- Bucket聚合->metric聚合：bucket聚合的结果，成为下一步metric聚合的输入
+  - Average bucket
+  - Min bucket
+  - Max bucket
+  - Sum bucket
+  - Stats bucket
+  - Extended stats bucket
+
+
+
+---
+
+### ES原理初步认识
+
+集群中，一个白正方形代表一个节点-Node，节点之间多个绿色小方块组成一个ES索引，一个ES索引本质是一个Lucene Index
+
+一个索引下，分布在多个Node中的绿色方块为一个分片-Shard
+
+即Shard=Lucene Index
+
+![image-20220620211959189](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202120849.png)
+
+![image-20220620212355322](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202123427.png)
+
+Lucene是一个全文搜索库，ES建立在Lucene之上
+
+
+
+#### Lucene
+
+在Lucene里面有很多的segment，我们可以把它们看成Lucene内部的mini-index
+
+![image-20220620212718856](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202127950.png)
+
+
+
+segment内部有很多数据结构
+
+1. **Inverted index**
+
+   - 最为重要
+
+   - ![image-20220620213016476](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202130604.png)
+
+   - 主要包括两个部分
+
+     - 有序的数据字段dictionary(包括单词term和它出现的频率)
+     - 与单词term对应的postings(即存在这个单词的文件)
+
+   - 当进行搜索时，首先将搜索的内容分解，然后再字典里找到对应的term，从而查找到与搜索相关的文件内容
+
+   - ![image-20220620213310255](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202133361.png)
+
+   - 查询 the fury
+
+   - ![image-20220620213409957](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202134032.png)
+
+     
+
+2. Stored Fields
+
+   - stored fields是一个简单的键值对，默认情况下ES会存储整个文件的Json source
+
+   - 例如查找包含特定标题内容的文件时
+
+   - ![image-20220620213753421](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202137520.png)
+
+     
+
+3. Document values
+
+   - 上述两种结构无法解决排序、聚合等问题，所有提出了document values
+   - 本质上是一个列式的存储，它高度优化了具有相同类型的数据的存储结构
+   - ![image-20220620214013344](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202140445.png)
+
+4. cache
+
+
+
+搜索时，Lucene会搜索所有的segment，然后将每个segment的搜索结果返回，最后合并呈现给用户
+
+Lucene的一些特性在这个过程中非常重要
+
+1. segment是不可变的
+   - delete：当删除发生时，Lucene做的只是将其标志位置为删除，但是文件还是会在它原来的地方，不会发生改变
+   - update：所以对于更新来说，本质上它做的工作是：先删除，然后重新索引（Re-index
+2. 随处可见的压缩
+   - Lucene非常擅长压缩数据，基本上所有教科书上的压缩方式，都能在Lucene中找到
+3. 缓存所有的数据
+   - Lucene也会将所有的信息做缓存，这大大提高了它的查询效率
+
+
+
+当ES搜索一个文件时，会为文件建立相应的缓存，并且会定期(每秒)刷新这些数据，然后这些文件就可以被搜索到
+
+![image-20220620214547223](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202145321.png)
+
+所有ES会将这些Segment合并，这个过程中segment最终会被删除掉，生成一个新的segment，这就是为什么添加文件可能会使索引所占空间变小，它会发生merge，从而可能会有更多的压缩
+
+![image-20220620214739766](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202215396.png)
+
+
+
+路由routing
+
+每个节点都保留一份路由表，当请求到达任何一个节点时，ES都有能力将请求转发的期望的节点shard上进一步处理
+
+#### ES整体结构
+
+![image-20220620231634563](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202316667.png)
+
+1. 一个ES集群模式下，有多个Node组成，每个节点就是ES的一个实例
+2. 每个节点有多个分片，p0、p1是主分片，R0、R1是副本分片
+3. 每个分片对应一个Lucene Index(底层索引文件)
+4. Lucene Index是一个统称
+   - 由多个segment组成(就是倒排索引)，每个segment存储着doc文档
+   - commit point记录了索引segment的信息
+
+#### Lucene索引结构
+
+![image-20220620231950382](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202319532.png)
+
+![image-20220620232007170](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202320315.png)
+
+#### Lucene处理流程
+
+![image-20220620231120127](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202311241.png)
+
+创建索引过程
+
+1. 准备待索引的原文档，数据来源可能是文件、数据库、网络等等
+2. 对文档内容进行分词处理，形成一些列term
+3. 索引组件对文档和term处理，形成字典和倒排表
+
+搜索索引过程
+
+1. 对查询语句进行分词处理，形成一系列term
+2. 根据倒排索引表查找出包含term的文档，并进行合并形成文档结果集
+3. 比对查询语句与各个文档相关性得分，按照得分高低返回
+
+
+
+
+
+#### ES分析器
+
+分析过程
+
+1. 将一块文本分成适合于倒排索引的独立词条
+2. 将这些词条统一化为标准格式，以提高它们的可搜索性
+
+分析器实际上是将三个功能封装到了一起
+
+1. 字符过滤器
+   - 字符串按照顺序通过每个字符过滤器
+   - 字符过滤器的任务是在分词前整理字符串
+2. 分词器
+   - 字符串被分词器分为单个的词条
+3. Token过滤器
+   - 词条按照顺序通过tokent过滤器
+   - 这个过程可能会改变词条(例如：小写化)、删除词条(例如：a、and、the这些无用词)
+
+ES提供了开箱即用的字符过滤器、分词器和tokent过滤器，这些可以组合起来形成自定义的分析器用于不同的目的
+
+#### 内置分析器
+
+```sh
+#字符串
+"Set the shape to semi-transparent by calling set_trans(5)"
+```
+
+##### 标准分析器
+
+ES默认的分析器，它根据Unicode定义的**单词边界**划分文本，删除大部分标点，最后将词条小写
+
+~~~sh
+#分析结果词条为
+set, the, shape, to, semi, transparent, by, calling, set_trans, 5
+~~~
+
+##### 简单分析器
+
+在任何不是字母的地方分隔文本，将词条小写
+
+~~~sh
+#分析结果为：
+set, the, shape, to, semi, transparent, by, calling, set, trans
+~~~
+
+##### 空格分析器
+
+在空格的地方分隔文本
+
+~~~sh
+Set, the, shape, to, semi-transparent, by, calling, set_trans(5)
+~~~
+
+##### 语言分析器
+
+可用于多种语言，它们可以考虑指定语言的特点。例如：英语分析器附带了一组英语无用词(例如and the，它们对相对性没有影响)，它们会被删除
+
+英语分词器产生的结果
+
+~~~sh
+set, shape, semi, transpar, call, set_tran, 5
+~~~
+
+
+
+
+
+---
+
+### ES原理-索引文档流程
+
+
+
+
+
 
 
