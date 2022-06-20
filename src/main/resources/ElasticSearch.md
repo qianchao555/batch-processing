@@ -428,5 +428,451 @@ Delete /test-index-users
 
 ### 索引模板
 
+后续继续学习，这次暂且了解
+
 批量和脚本化是提供一种模板方式快速构建和管理索引的方式，索引模板，它是一种告诉ES在创建索引时如何配置索引的方法，为了更好的复用性，7.8版本开始引入了组件模板
+
+索引模板是告诉ES在创建索引时，如何配置索引的方法。在创建索引之前可以先配置模板，这样在创建索引(手动或文档建立索引)时，模板设置将用作创建索引的基础
+
+#### 模板类型
+
+##### 组件模板
+
+是可重用的构建块，用于配置映射，设置和别名；它们不会直接应用于一组索引
+
+##### 索引模板
+
+可以包含组件模板的集合，也可以直接指定设置，映射和别名
+
+#### 索引模板中的优先级
+
+1. 可组合模板优先于旧模板。如果没有可组合模板匹配给定索引，则旧版模板可能仍匹配并被应用
+2. 如果使用显式设置创建索引并且该索引也与索引模板匹配，则创建索引请求中的设置将优先于索引模板及其组件模板中指定的设置
+3. 如果新数据流或索引与多个索引模板匹配，则使用优先级最高的索引模板
+
+
+
+#### 内置索引模板
+
+ES具有内置索引模板，每个索引模板的优先级为100，适用于以下索引模式
+
+1. logs-* -*
+2. metrics-* -*
+3. synthetics-* -*
+
+在涉及内建索引模板时，要避免索引模式冲突
+
+
+
+---
+
+### ES查询-复合查询
+
+ES的查询基于JSON风格的DSL来实现的，DSL:Domain Specific Language
+
+常用的查询类型包括
+
+1. 查询所有：查询出所有的数据，一般测试用。例如：match_all
+2. 全文检索：利用分词器对用户输入内容分词，然后去倒排索引库中匹配。例如： match_query ; multi_match_query
+3. 精确查询：根据精确词条值查找数据，一般是查找keyword、数值、日前、boolean等类型字段。例如：ids ；range; term
+4. 复合查询
+5. 地理查询
+
+在查询中会有多种条件组合的查询，在ES中叫做复合查询。它提供了5钟复合查询方式
+
+#### bool query
+
+布尔查询，通过布尔逻辑将较小的查询组合成较大的查询，只要一个子查询条件不匹配那么搜索的数据就不会出现
+
+bool查询包含4种操作符，它们均是一种数组，数组里面是对应的判断条件
+
+1. must：必须匹配，贡献算分
+2. must_not：过滤子句，必须不能匹配，但不贡献算分
+3. should：选择性匹配，至少满足一条，贡献算分
+4. filter：过滤子句，必须匹配，不贡献算分
+
+#### boosting query
+
+提高查询：降低了显示的权重/优先级(即score)
+
+比如搜索逻辑是 name = 'apple' and type ='fruit'，对于只满足部分条件的数据，不是不显示，而是降低显示的优先级（即score)
+
+例如：
+
+~~~sh
+#创建数据
+POST /test-dsl-boosting/_bulk
+{ "index": { "_id": 1 }}
+{ "content":"Apple Mac" }
+{ "index": { "_id": 2 }}
+{ "content":"Apple Fruit" }
+{ "index": { "_id": 3 }}
+{ "content":"Apple employee like Apple Pie and Apple Juice" }
+~~~
+
+
+
+~~~sh
+#对pie进行降级
+GET /test-dsl-boosting/_search
+{
+  "query": {
+    "boosting": {
+      "positive": {
+        "term": {
+          "content": "apple"
+        }
+      },
+      "negative": {
+        "term": {
+          "content": "pie"
+        }
+      },
+      "negative_boost": 0.5
+    }
+  }
+}
+~~~
+
+![image-20220620115153981](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201152867.png)
+
+#### constant_score
+
+固定分数查询：查询某个条件时，固定的返回指定的score，显然当不需要计算score时，只需要filter条件即可，因为filter忽略分数
+
+例如：score为1.2
+
+~~~sh
+GET /test-dsl-constant/_search
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "term": { "content": "apple" }
+      },
+      "boost": 1.2
+    }
+  }
+}
+~~~
+
+
+
+#### dis_max
+
+disjunction max query：分离最大化查询，指的是，将任何与任意查询匹配的文档作为结果返回，但只将**最佳匹配的评分作为查询的评分结果返回** 。
+
+最佳匹配查询
+
+分离的意思是 或 or
+
+~~~sh
+GET /test-dsl-dis-max/_search
+{
+    "query": {
+        "dis_max": {
+            "queries": [
+                { "match": { "title": "Brown fox" }},
+                { "match": { "body":  "Brown fox" }}
+            ],
+            "tie_breaker": 0
+        }
+    }
+}
+~~~
+
+
+
+#### function_score
+
+函数查询：自定义函数的方式计算score
+
+ES的自定义函数：
+
+1. script_score：使用自定义的脚本来完全控制分值计算逻辑。如果需要预定义函数之外的功能，可以根据需要通过脚本进行实现
+2. weight：对每份文档使用一个简单的提升，且该提升不会被归约。当weight为2时，结果为2 * _score
+3. random_score：使用一致性随机分值计算来对每个用户采用不同的结果排序方式，对相同用户仍然使用相同的排序方式。
+4. field_value_factor：使用文档中某个字段的值来改变_score，比如将受欢迎程度或者投票数量考虑在内
+5. 衰减函数(decay function)：linear，exp，gauss
+
+
+
+---
+
+### ES查询-全文搜索
+
+DSL查询极为常用的是对文本进行搜索，即全文搜索
+
+#### Match类型
+
+数据如下：
+
+~~~sh
+PUT /test-dsl-match
+{ "settings": { "number_of_shards": 1 }} 
+
+POST /test-dsl-match/_bulk
+{ "index": { "_id": 1 }}
+{ "title": "The quick brown fox" }
+{ "index": { "_id": 2 }}
+{ "title": "The quick brown fox jumps over the lazy dog" }
+{ "index": { "_id": 3 }}
+{ "title": "The quick brown fox jumps over the quick dog" }
+{ "index": { "_id": 4 }}
+{ "title": "Brown fox brown dog" }
+~~~
+
+##### Match单个词
+
+查询数据：
+
+~~~sh
+GET /test-dsl-match/_search
+{
+    "query": {
+        "match": {
+            "title": "QUICK!"
+        }
+    }
+}
+~~~
+
+
+
+match查询步骤：
+
+1. 检查字段类型
+2. 分析查询字符串
+   - 将查询字符串quick传入标准分析器中，输出项的结果是单个项quick。因为只有一个单词项，所以match查询执行的是单个底层term查询
+3. 查找匹配文档
+   - 用 term 查询在倒排索引中查找 quick 然后获取一组包含该项的文档，本例的结果是文档：1、2 和 3 
+4. 为每个文档评分
+   - 用 term 查询计算每个文档相关度评分 _score ，这是种将词频（term frequency，即词 quick 在相关文档的 title 字段中出现的频率）和反向文档频率（inverse document frequency，即词 quick 在所有文档的 title 字段中出现的频率），以及字段的长度（即字段越短相关度越高）相结合的计算方式
+
+##### Match多个词
+
+~~~sh
+GET /test-dsl-match/_search
+{
+    "query": {
+        "match": {
+            "title": "BROWN DOG"
+        }
+    }
+}
+~~~
+
+**match多个词的本质**
+
+它在内部实际上先执行两次term查询，然后将两次查询的结果合并作为最终结果输出。为了做到这点，它将两个term查询合并到了一个bool查询中
+
+~~~sh
+GET /test-dsl-match/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+        {
+          "term": {
+            "title": "brown"
+          }
+        },
+        {
+          "term": {
+            "title": "dog"
+          }
+        }
+      ]
+    }
+  }
+}
+~~~
+
+should：任意一个满足，是因为match有一个operator参数，默认是or，所以对应的是should
+
+等同于：
+
+~~~sh
+GET /test-dsl-match/_search
+{
+  "query": {
+    "match": {
+      "title": {
+        "query": "BROWN DOG",
+        "operator": "or"
+      }
+    }
+  }
+}
+~~~
+
+
+
+#### query_string类型
+
+使用具有严格语法的解析器提供的查找字符串返回文档
+
+此查询使用一种语法根据运算符（and or）来解析和拆分提供的查询字符串，然后，查询在返回匹配文档之前，独立分析每个拆分文本
+
+可以使用`query_string`查询来创建包含通配符、跨多个字段的搜索等复杂搜索。 虽然用途广泛，但查询很严格，如果查询字符串包含任何无效语法，则会返回错误
+
+#### Intervals类型
+
+Intervals：时间间隔，本质上是将多个规则按照顺序匹配
+
+
+
+---
+
+### ES查询-Term
+
+DSL查询另一种极为常用的是对词项进行搜索，官方称为term level查询
+
+![image-20220620155926112](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201559600.png)
+
+单个分词匹配term
+
+~~~sh
+GET /test-dsl-term-level/_search
+{
+  "query": {
+    "term": {
+      "programming_languages": "php"
+    }
+  }
+}
+~~~
+
+
+
+多个分词匹配terms
+
+按照单个分词匹配，它们之间是or关系
+
+~~~sh
+GET /test-dsl-term-level/_search
+{
+  "query": {
+    "terms": {
+      "programming_languages": ["php","c++"]
+    }
+  }
+}
+~~~
+
+
+
+
+
+---
+
+### ES聚合-聚合查询Bucket
+
+除了查询之外，最常用的就是聚合了。ES提供了三种聚合方式：桶聚合、指标聚合、管道聚合
+
+ES中桶的概念类似于SQL中的分组，而指标类似于count、sum、max等统计方法
+
+Buckets：满足特定条件的文档的集合
+
+Metrics：指标，对桶内的文档进行统计计算
+
+指标聚合与桶聚合大多数情况组合在一起使用，桶聚合本质上是一种特殊的指标聚合，它的聚合指标就是数据的条数(count)
+
+![image-20220620163557154](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201635557.png)
+
+
+
+#### 标准的聚合
+
+~~~sh
+GET /test-agg-cars/_search
+{
+    "size" : 0,
+    "aggs" : { 
+        "popular_colors" : { 
+            "terms" : { 
+              "field" : "color.keyword"
+            }
+        }
+    }
+}
+#--------------
+聚合操作被置于顶层参数aggs下
+popular_colors：聚合的名称
+terms：桶的类型
+~~~
+
+
+
+#### 多个聚合
+
+~~~sh
+GET /test-agg-cars/_search
+{
+    "size" : 0,
+    "aggs" : { 
+        "popular_colors" : { 
+            "terms" : { 
+              "field" : "color.keyword"
+            }
+        },
+        "make_by" : { 
+            "terms" : { 
+              "field" : "make.keyword"
+            }
+        }
+    }
+}
+~~~
+
+![image-20220620165554791](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201655354.png)
+
+
+
+#### 聚合的嵌套
+
+这个新的聚合层让我们可以将 avg 度量嵌套置于 terms 桶内。实际上，这就为每个颜色生成了平均价格
+
+~~~sh
+GET /test-agg-cars/_search
+{
+   "size" : 0,
+   "aggs": {
+      "colors": {
+         "terms": {
+            "field": "color.keyword"
+         },
+         "aggs": { 
+            "avg_price": { 
+               "avg": {
+                  "field": "price" 
+               }
+            }
+         }
+      }
+   }
+}
+~~~
+
+![image-20220620165933604](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201659248.png)
+
+
+
+#### 动态脚本的聚合
+
+ES支持一些基于脚本(生成运行时的字段)的复杂的动态聚合
+
+
+
+---
+
+### ES聚合-Metrics
+
+指标聚合Metrics Aggregation
+
+
+
+
+
+
 
