@@ -1046,8 +1046,8 @@ Lucene的一些特性在这个过程中非常重要
    - 字符过滤器的任务是在分词前整理字符串
 2. 分词器
    - 字符串被分词器分为单个的词条
-3. Token过滤器
-   - 词条按照顺序通过tokent过滤器
+3. Token(分词、词条)过滤器
+   - 词条按照顺序通过tokent(分词)过滤器
    - 这个过程可能会改变词条(例如：小写化)、删除词条(例如：a、and、the这些无用词)
 
 ES提供了开箱即用的字符过滤器、分词器和tokent过滤器，这些可以组合起来形成自定义的分析器用于不同的目的
@@ -1602,31 +1602,160 @@ update Api结合了读取和写入模式
 
 
 
+---
+
+### 映射与分析
+
+#### 映射
+
+为了能够将时间域视为时间，数字域视为数字，字符串域视为全文或精确值字符串， Elasticsearch 需要知道每个域中数据的类型。这个信息包含在映射中
+
+索引中每个文档都有类型，每种类型都有自己的映射，映射定义了类型中的域，每个域的数据类型，以及Elasticsearch如何处理这些域。映射也用于配置与类型有关的元数据
+
+#### ES简单域类型
+
+- 字符串: `string`
+- 整数 : `byte`, `short`, `integer`, `long`
+- 浮点数: `float`, `double`
+- 布尔型: `boolean`
+- 日期: `date`
+
+你索引一个包含新域的文档—之前未曾出现-- Elasticsearch 会使用 [*动态映射*](https://www.elastic.co/guide/cn/elasticsearch/guide/current/dynamic-mapping.html) ，通过JSON中基本数据类型，尝试猜测域类型
+
+| **JSON type**                  | **域 type** |
+| ------------------------------ | ----------- |
+| 布尔型: `true` 或者 `false`    | `boolean`   |
+| 整数: `123`                    | `long`      |
+| 浮点数: `123.45`               | `double`    |
+| 字符串，有效日期: `2014-09-15` | `date`      |
+| 字符串: `foo bar`              | `string`    |
+
+#### 查看映射
+
+例如：查看gb索引中类型为tweet的映射
+
+~~~json
+GET /index/_mapping/type
+GET /gb/_mapping/tweet
+~~~
+
+ES根据索引的文档，为域(属性)动态生成映射
+
+~~~json
+{
+   "gb": {
+      "mappings": {
+         "tweet": {
+            "properties": {
+               "date": {
+                  "type": "date",
+                  "format": "strict_date_optional_time||epoch_millis"
+               },
+               "name": {
+                  "type": "string"
+               },
+               "tweet": {
+                  "type": "string"
+               },
+               "user_id": {
+                  "type": "long"
+               }
+            }
+         }
+      }
+   }
+}
+~~~
 
 
 
+#### 自定义映射
+
+自定义映射允许你执行下面的操作：
+
+- 全文字符串域和精确值字符串域的区别
+- 使用特定语言分析器
+- 优化域以适应部分匹配
+- 指定自定义数据格式
+- 还有更多
+
+域最重要的属性是 `type` 。对于不是 `string` 的域，你一般只需要设置 `type`
 
 
 
+---
 
+### 排序与相关性
 
+默认情况下，返回的结果是按照 *相关性* 进行排序的，即最相关的文档排在最前
 
+#### 排序
 
+为了按照相关性来排序，需要将相关性表示为一个数值。在 Elasticsearch 中， *相关性得分* 由一个浮点数进行表示，并在搜索结果中通过 `_score` 参数返回， 默认排序是 `_score` 降序
 
+#### 相关性
 
+每个文档都有相关性评分，用一个正浮点数字段 `_score` 来表示 。 `_score` 的评分越高，相关性越高
 
+ES中的相似度算法定义为检索词频、反向文档频率、TF/IDF
 
+1. 检索词频
+   - 检索词在该字段出现的频率，出现频率越高，相关性也越高。 字段中出现过 5 次要比只出现过 1 次的相关性高
+2. 反向文档频率
+   - 每个检索词在索引中出现的频率，频率越高，相关性越低。检索词出现在多数文档中会比出现在少数文档中的权重更低
+3. TF/IDF
+   - 字段的长度是多少，长度越长，相关性越低。 检索词出现在一个短的 title 要比同样的词出现在一个长的 content 字段权重更大
 
+##### 评分标准
 
+ES在 每个查询语句中都有一个 explain 参数，将 `explain` 设为 `true` 就可以得到更详细的信息。explain可以让返回结果添加一个_score评分的得来依据。explain的输出结果代价是相当昂贵的，只能用作调试工具，不能用于生产环境
 
+~~~json
+GET /_search?explain 
+{
+   "query"   : { 
+       "match" : {
+           "tweet" : "honeymoon" 
+       }
+   }
+}
+~~~
 
+每个入口都包含一个 `description` 、 `value` 、 `details` 字段，它分别告诉你计算的类型、计算结果和任何我们需要的计算细节
 
-
-
-
-
-
-
+~~~json
+"_explanation": { 
+   "description": "weight(tweet:honeymoon in 0)
+                  [PerFieldSimilarity], result of:",
+   "value":       0.076713204,
+   "details": [
+      {
+         "description": "fieldWeight in 0, product of:",
+         "value":       0.076713204,
+         "details": [
+            {  
+               "description": "tf(freq=1.0), with freq of:",
+               "value":       1,
+               "details": [
+                  {
+                     "description": "termFreq=1.0",
+                     "value":       1
+                  }
+               ]
+            },
+            { 
+               "description": "idf(docFreq=1, maxDocs=1)",
+               "value":       0.30685282
+            },
+            { 
+               "description": "fieldNorm(doc=0)",
+               "value":        0.25,
+            }
+         ]
+      }
+   ]
+}
+~~~
 
 
 
