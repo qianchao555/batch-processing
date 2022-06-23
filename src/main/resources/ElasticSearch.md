@@ -14,7 +14,9 @@ Lucene是当下最先进、高性能、全功能的搜索引擎库，但是 Luce
 
 Elasticsearch 也是使用 Java 编写的，它的内部使用 Lucene 做索引与搜索，但是它的目的是使全文检索变得简单，**通过隐藏 Lucene 的复杂性，取而代之的提供一套简单一致的 Restful API**
 
+#### lucene实现全文索引流程
 
+![image-20220623212318865](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206232123692.png)
 
 ---
 
@@ -56,6 +58,14 @@ Elasticsearch 也是使用 Java 编写的，它的内部使用 Lucene 做索引�
 #### Type类型
 
 指在一个索引中，可以索引不同类型的文档，如用户数据、博客数据。从6.0.0 版本起已废弃，一个索引中只存放一类数据
+
+#### 字段
+
+相当于数据表的字段，对文档数据根据不同属性进行分类的标识
+
+#### 映射
+
+是处理数据的方式和规则方面做一些限制，如某个字段的数据类型、默认值、分析器、是否被索引等等，这些都是映射里面可以设置的，其它就是处理es里面数据的一些使用规则设置也叫做映射，按着最优规则处理数据对性能提高很大，因此才需要建立映射，并且需要思考如何建立映射才能对性能更好
 
 #### Document文档
 
@@ -99,10 +109,19 @@ Logstash是**动态数据收集管道**，拥有可扩展的插件生态系统�
 
 它具有如下特性：
 
+1. 几乎可以访问任何数据
 1. 实时解析和转换数据
 2. 可扩展，具有200多个插件
 3. 可靠性、安全性。Logstash会通过持久化队列来保证至少将运行中的事件送达一次，同时将数据进行传输加密
 4. 监控
+
+主要组成部分：
+
+1. Shipper—发送日志数据
+2. Broker—收集数据，缺省内置Redis
+3. Indexer—数据写入
+
+Logstash提供了很多功能强大的滤网以满足你的各种应用场景。是一个input | filter | output 的数据流
 
 #### ElasticSearch
 
@@ -117,6 +136,21 @@ ElasticSearch对数据进行**搜索、分析和存储**，其是基于JSON的�
 #### Kibana
 
 Kibana实现**数据可视化**，其作用就是在ElasticSearch中进行展示。Kibana能够以图表的形式呈现数据，并且具有可扩展的用户界面，可以全方位的配置和管理ElasticSearch
+
+---
+
+### ES架构
+
+![image-20220623213234829](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206232132945.png)
+
+1. Gateway是ES用来存储索引的文件系统，支持多种类型
+2. Gateway的上层是一个分布式的lucene框架。
+3. Lucene之上是ES的模块，包括：索引模块、搜索模块、映射解析模块等
+4. ES模块之上是 Discovery、Scripting和第三方插件。
+5. Discovery是ES的节点发现模块，不同机器上的ES节点要组成集群需要进行消息通信，集群内部需要选举master节点，这些工作都是由Discovery模块完成。支持多种发现机制，如 Zen 、EC2、gce、Azure。
+6. Scripting用来支持在查询语句中插入javascript、python等脚本语言，scripting模块负责解析这些脚本，使用脚本语句性能稍低。ES也支持多种第三方插件。
+7. 再上层是ES的传输模块和JMX.传输模块支持多种传输协议，如 Thrift、memecached、http，默认使用http。JMX是java的管理框架，用来管理ES应用。
+8. 最上层是ES提供给用户的接口，可以通过RESTful接口和ES集群进行交互
 
 
 
