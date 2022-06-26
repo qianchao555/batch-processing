@@ -9,7 +9,14 @@ spring:
 #    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
     url: jdbc:mysql://localhost:3306/nowcodersql?useSSL=false&serverTimezone=UTC
     username: root
-    password: 919550ab
+    password:
+#password: 9+ab
+
+  elasticsearch:
+    rest:
+      uris: 主机ip:9200
+      connection-timeout: 2000           #---连接超时时间(默认1s)
+      read-timeout: 6000
 
 mybatis:
   mapper-locations: classpath*:mapper/*.xml
@@ -18,3 +25,8 @@ mybatisPlus:
   mapper-locations: classpath*:mapper/*.xml
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+#这里的配置会覆盖logback-spring中的日志打印级别
+logging:
+  level:
+    root: info

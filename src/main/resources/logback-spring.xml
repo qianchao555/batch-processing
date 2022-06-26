@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <!--定义变量-->
+    <property name="log_pattern" value="%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n%ex"/>
+
+    <!-- 控制台输出-->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+        <encoder>
+            <pattern>${log_pattern}</pattern>
+        </encoder>
+    </appender>
+
+    <!--配置logstash-->
+    <!--    主机ip:端口，此端口非logstash端口，而是logstash配置文件中input中设置的监听端口-->
+    <appender name="logstash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>主机ip:4560</destination>
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <pattern>
+                    <pattern>
+                        {
+                        "severity": "%level",
+                        "service": "${springAppName:-}",
+                        "trace": "%X{X-B3-TraceId:-}",
+                        "span": "%X{X-B3-SpanId:-}",
+                        "exportable": "%X{X-Span-Export:-}",
+                        "pid": "${PID:-}",
+                        "thread": "%thread",
+<!--                        "class": "%logger{40}",-->
+                        "message": "%message"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!--设置某一个包或类的日志级别-->
+    <!--
+        addtivity默认为true,是否向上传递日志打印信息。
+        logger对象呈现一个树的结构，根logger是树的顶端
+        下面的子logger的addtivity属性如果设置为true则会向上传递打印信息，出现日志重复打印的现象；
+    -->
+<!--    <logger name="java.sql" level="debug" addtivity="false">-->
+<!--        <appender-ref ref="CONSOLE"/>-->
+<!--    </logger>-->
+
+    <!--
+        root也是logger元素，不过它是根logger
+        当一个类中的logger对象进行打印请求时，如果配置文件中没有为该类单独指定日志对象(即logger中没有指定appender)，那么都会交给root根日志对象来完成
+    -->
+    <root level="info">
+        <appender-ref ref="logstash"/>
+    </root>
+
+
+</configuration>
