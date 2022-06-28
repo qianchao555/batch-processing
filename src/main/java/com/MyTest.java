@@ -10,8 +10,13 @@ import java.util.Arrays;
  * @Date 2022/6/17
  * @Version  V1.0
  **/
-public class Test {
+public class MyTest {
+    final int i;
+    public MyTest(){
+        i=0;
+    }
     public static void main(String[] args) {
+        final int i=10;
         String[] split = "UData,OWData,Sc,IData".split(",");
 
         if(ArrayUtils.contains(split,"ABC")){
@@ -20,18 +25,11 @@ public class Test {
             System.out.println("ABC不在："+Arrays.toString(split)+"数组中");
         }
 
-        if(ArrayUtils.contains(split,null)){
-            System.out.println("空串在"+ Arrays.toString(split)+"数组中");
-        }else {
-            System.out.println("空串不在："+Arrays.toString(split)+"数组中");
-        }
 
-        if(ArrayUtils.contains(split,"IData")){
-            System.out.println("IData在："+ Arrays.toString(split)+"数组中");
-        }else {
-            System.out.println("IData不在："+Arrays.toString(split)+"数组中");
-        }
+
 
     }
+
+
 
 }

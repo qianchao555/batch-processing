@@ -501,6 +501,92 @@ condition接口提供了类似Object的监视器方法，与Lock接口配合可�
 
 
 
+---
+
+### Volatile
+
+解决可见性和有序性问题，不能保证原子性
+
+#### volatile保证可见性
+
+一个线程修改了共享变量的值，另一个线程能看见
+
+原理：基于内存屏障实现
+
+1. 内存屏障：又称内存栅栏，是一个CPU指令
+2. 在程序运行时，为了提高执行性能，编译器和处理器会对指令进行重排序，JMM 为了保证在不同的编译器和 CPU 上有相同的结果，通过插入特定类型的内存屏障来禁止+ 特定类型的编译器重排序和处理器重排序，插入一条内存屏障会告诉编译器和 CPU：不管什么指令都不能和这条 Memory Barrier 指令重排序
+
+#### volatile实现有序性
+
+原理：happens-before规则
+
+
+
+---
+
+### Final关键字
+
+修饰类：该类不能被继承，类中的方法都隐式为final
+
+接口中：所有变量隐式为final
+
+final类如何扩展？例如String，现在有一个MyString想要复写所有String的方法，同时增加自己的toMyStrin()方法
+
+~~~java
+//因为不能继承，所有采用组合的方式实现
+class MyString{
+
+    private String innerString;
+
+   // 支持老的方法
+    public int length(){
+        return innerString.length(); // 通过innerString调用老的方法
+    }
+    
+     // ..其他方法类似
+
+    // 添加新方法
+    public String toMyString(){
+        //...
+    }
+}
+~~~
+
+修饰方法：final方法可以被重载，但是不能被继承也即不能重写；private是隐式的final
+
+修饰参数：方法的参数列表中将参数指明为final，意味着不能在方法中更改参数所指向的对象。这一特性主要用来向匿名内部类传递数据
+
+修饰变量：并非所有final修饰的字段都是编译期常量
+
+例如：
+
+~~~java
+public class Test {
+    //编译期常量
+    final int i = 1;
+    final static int J = 1;
+    final int[] a = {1,2,3,4};
+    //非编译期常量
+    Random r = new Random();
+    final int k = r.nextInt();
+    //方法...
+}
+k的值由随机数对象决定，所以不是所有的final修饰的字段都是编译期常量，只是k的值在被初始化后无法被更改
+~~~
+
+static final：占据一段不能改变的存储空间，必须在定义的时候进行赋值，否则编译器将不予通过
+
+#### final域重排序规则
+
+1. 写final域禁止重排序到构造函数之外
+   - 因此写final域可以保证在对象引用为任意线程可见之前，对象的final域已经正确初始化了，而普通域没有这个保证
+2. 读final域重排序规则：在一个线程中，初次读对象引用和初次读该对象包含的final域，JMM会禁止这两个操作的重排序
+   - final域读操作限定了在读之前，已经读到了该对象的引用
+3. 以上针对final基本数据类型
+4. final引用类型
+   - 额外增加约束
+   - 禁止在构造函数对一个final修饰的对象的成员域的写入与随后将这个被构造的对象的引用赋值给引用变量 重排序
+
 
 
 ---
