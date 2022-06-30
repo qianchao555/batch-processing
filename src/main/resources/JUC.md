@@ -688,6 +688,25 @@ static final：占据一段不能改变的存储空间，必须在定义的时�
 
 
 
+
+
+---
+
+### happens-before
+
+happens-before是JMM中最核心的概念，核心目标是找到一个平衡点：
+
+1. 一方面，为程序员提供足够强的内存可见性保证
+2. 另一方面，对编译器和处理器的限制要尽可能地放松
+
+JSR(Java Specification Requests)：Java规范提案 
+
+JSR-133使用 happens-before 的概念来指定两个操作之间的执行顺序。由于这两个操作可以在一个线程之内，也可以是在不同线程间。因此，JMM 可以通过 happens-before 关系向程序员提供跨线程的内存可见性保证（如果 A 线程的写操作 a 与 B 线程的读操作 b 之间存在 happens-before 关系，尽管 a 操作和 b 操作在不同的线程中执行，但JMM 向程序员保证 a 操作将对 b 操作可见
+
+
+
+
+
 ---
 
 ### Java中的读写锁
