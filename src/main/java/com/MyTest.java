@@ -3,6 +3,9 @@ package com;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @ClassName Test
@@ -25,8 +28,10 @@ public class MyTest {
             System.out.println("ABC不在："+Arrays.toString(split)+"数组中");
         }
 
-
-
+        List<Integer> collect = Stream.of("UData","OWData","Sc","IData")
+                .map(String::length)
+                .collect(Collectors.toList());
+        System.out.println(collect);
 
     }
 
