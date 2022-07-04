@@ -1,5 +1,8 @@
 package com.juc.reentrantlock;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.DelayQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.*;
 
@@ -24,6 +27,10 @@ public class ReentrantLockTest{
         condition.signal();
         AtomicInteger a=new AtomicInteger(1);
         a.incrementAndGet();
+
+        ConcurrentHashMap c=new ConcurrentHashMap();
+        ArrayBlockingQueue queue=new ArrayBlockingQueue(100);
+        DelayQueue delayQueue=new DelayQueue();
     }
 
 

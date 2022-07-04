@@ -1044,13 +1044,19 @@ Condition拥有首尾节点，新增节点只需要将原有的尾节点nextWait
 
 Condition 的 signalAll()方法，相当于对等待队列中的每个节点均执行一次 signal()方法，效果就是将等待队列中所有节点全部移动到同步队列中，并唤醒每个节点的线程
 
+
+
+
+
 ---
 
 ### Java并发容器和框架
 
 #### ConcurrentHashMap
 
-线程安全的HashMap
+HashMap多线程下是线程不安全的，HashTable线程安全，但是效率低下，因为是对每个方法进行synchronized
+
+concurrentHashMap：采用锁分段技术有效提升并发访问率
 
 ##### 实现原理
 
@@ -1060,15 +1066,13 @@ concurrentHashMap采用锁分段技术，首先将数据分为一段一段的存
 
 ![image-20220414225538803](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204142255782.png)
 
-由Segment数组结构和HashEntry数组构成
-
-Segment是一个可重入锁，在concurrentHashMap里面扮演锁的角色，HashEntry则用于蹭饭键值对数据
+由Segment数组结构和HashEntry数组构成。Segment是一个可重入锁，在concurrentHashMap里面扮演锁的角色，HashEntry则用于存储键值对数据
 
 一个ConcurrentHashMap中包含一个Segment数组，Segment的结构和HashMap类似，是一种数组和链表结构。一个Segment里面包含一个HashEntry数组，每个HashEntry是一个链表的元素。每个Segment拥有一个锁，当对HashEntry数组的数据进行修改时，必须先获得对应的Segment锁
 
+segment：每一个segment用有一把锁，其继承自ReentrantLock
+
 ##### ConcurrentHashMap主要参数
-
-
 
 segment数组：2的n 次方。原因：保证能够通过按位与的散列算法来定位到segments数组的索引。默认segment数组大小为16
 
@@ -1161,19 +1165,31 @@ private static int hash (int h){
 
 #### ConcurrentLinkedQueue
 
-非阻塞的线程安全的队列，采用循环的cas算法实现
+要实现一个线程安全的队列的两种方式
 
-它是一个基于链接节点的无界线程安全队列，采用先进先出的规则对节点进行排序，添加元素时，添加到队列的尾部，获取元素时，它会返回队列头部的元素
+1. 使用阻塞算法(入队和出队用一把锁，或者入队和出队用不同的锁)
+2. 使用非阻塞算法（使用循环/自选的CAS方式实现）
+
+concurrentLinkedQueue：非阻塞的线程安全的队列，采用循环的cas算法实现
+
+它是一个基于链接节点的**无界线程安全队列**，采用先进先出的规则对节点进行排序，添加元素时，添加到队列的尾部，获取元素时，它会返回队列头部的元素。它采用了“wait-free”算法（即 CAS 算法）来实现，该算法在 Michael&Scott 算法上进行了一些修改
 
 ##### 数据结构
 
 由head节点和tail节点组成，每个节点Node由节点元素和指向下一个节点的引用组成，节点与节点之间通过这个next关联起来，从而组成一张链表结构的队列
 
+![image-20220704115451741](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207041155883.png)
+
 ![image-20220418212146272](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204182121424.png)
+
+
+
+concurrentQueue由head和tail节点组成，每个节点由节点元素和指向下一个节点的引用组成，节点之间通过next关联起来从而构成一张链表结构的队列
 
 默认情况下head节点存储的元素为空，tail节点等于head节点
 
 ~~~java
+private transient volatile Node<E> tail=head;
 public ConcurrentLinkedQueue() {
       head = tail = new Node<E>(null);
 }
@@ -1182,6 +1198,8 @@ public ConcurrentLinkedQueue() {
 
 
 ##### 入队列
+
+将入队节点添加到队列的尾部
 
 1. 通过cas算法入队列
 2. 定位尾节点
@@ -1201,17 +1219,21 @@ public ConcurrentLinkedQueue() {
 
 ##### 什么是阻塞队列
 
-阻塞队列：支持阻塞插入和阻塞移除(获取)方法
+Blocking Queue：是一个支持两个附加操作的队列，附加操作为：支持阻塞的插入和删除(获取)方法
 
-当队列满时，队列会阻塞插入元素的线程，直到队列不满
+阻塞的插入：当队列满时，队列会阻塞插入元素的线程，直到队列不满
 
-当队列空时，获取元素的线程会阻塞等待队列变为非空
+阻塞的移除(获取)：当队列空时，获取元素的线程会阻塞等待队列变为非空
+
+
 
 ##### 使用场景：生产者消费者场景
 
+阻塞队列用于生产者存放元素，消费者用来获取元素的容器
 
 
-##### 阻塞队列的4种处理方式
+
+在阻塞队列不可用时，这两个附加操作提供了4种处理方式：抛出异常、返回特殊值、一直阻塞、超时退出
 
 ![image-20220418213120686](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204182131837.png)
 
@@ -1220,58 +1242,146 @@ public ConcurrentLinkedQueue() {
 3. 一直阻塞：当阻塞队列满时，如果生产者线程往队列里 put 元素，队列会一直阻塞生产者线程，直到队列可用或者响应中断退出。当队列空时，消费者线程试图从队列里 take 元素，队列也会阻塞消费者线程，直到队列不为空
 4. 超时退出：当阻塞队列满时，队列会阻塞生产者线程一段时间，如果超过一定的时间，生产者线程就会退出
 
-##### 分类
+如果是无界队列，则队列不可能出现满的情况，所以使用put或offer插入元素的时候永远不会被阻塞，并且使用offer时，该方法永远返回true
 
-**ArrayBlockingQueue** ：一个由数组结构组成的有界阻塞队列。
+##### 阻塞队列的分类
 
-- 队列按照先进先出的原则对元素进行排序
+###### **ArrayBlockingQueue** 
 
-- 默认不保证线程公平的访问队列
+一个由**数组结构组成的有界**阻塞队列。
 
-- 公平的阻塞队列采用可重入锁实现
+1. 队列按照先进先出的原则对元素进行排序
 
-- ~~~java
-  public ArrayBlockingQueue(int capacity,boolean fair){
-      if(capacity<=0){
-          throw new IllegalArgumentException();
-      }
-      this.items=new Object(capacity);
-      lock=new ReentrantLock(fair);
-      notEmpty=lock.newCondition();
-      notFull=lock.newCondition();
-  }
-  ~~~
+2. 默认不保证线程公平的访问队列
 
-  
+   - 公平访问队列是指阻塞的线程，可以按照阻塞的先后顺序访问队列，即先阻塞线程先访问队列
 
-**LinkedBlockingQueue** ：一个由链表结构组成的有界阻塞队列。
+   - 非公平性是对先等待的线程是非公平的，当队列可用时，阻塞的线程都可以争夺访问队列的资格，有可能先阻塞的
 
-- 链表长度默认为Integer.Max_Value
-- 按照先进先出的原则对元素进行排序
+     线程最后才访问队列
 
-PriorityBlockingQueue ：一个支持优先级排序的无界阻塞队列。
+3. 公平的访问阻塞队列
 
-DelayQueue：一个使用优先级队列实现的无界阻塞队列。
+   - 为了保证公平性，会降低吞吐量，因为：加入了同步队列中当前节点是否有前驱节点的判断
+   - ArraryBlockingQueue fairQueue=new ArrayBlockingQueue(1000,true)；
 
-**SynchronousQueue**：一个不存储元素的阻塞队列。
+4. 访问者的公平性是通过重入锁ReentrantLock实现的
 
-- 不存储元素的阻塞队列
-- 每一个put操作必须等待一个take操作，否则不能继续添加元素
-- 适用与传递性的场景
-
-LinkedTransferQueue：一个由链表结构组成的无界阻塞队列。
-
-LinkedBlockingDeque：一个由链表结构组成的双向阻塞队列
+   ~~~java
+   /**
+   *实现方式，采用了ReentrantLock，通过condition+LockSupport实现阻塞与唤醒线程
+   */
+   public ArrayBlockingQueue(int capacity,boolean fair){
+       if(capacity<=0){
+           throw new IllegalArgumentException();
+       }
+       this.items=new Object(capacity);
+       lock=new ReentrantLock(fair);
+       notEmpty=lock.newCondition();
+       notFull=lock.newCondition();
+   }
+   ~~~
 
 
 
-##### 实现原理
+###### **LinkedBlockingQueue** 
+
+一个由**链表结构组成的有界**阻塞队列
+
+- 链表长度默认和最大长度为Integer.Max_Value，可以当作无界队列来看待
+- 此阻塞队列按照先进先出的原则对元素进行排序
+
+
+
+###### PriorityBlockingQueue 
+
+一个**支持优先级排序**的无界阻塞队列
+
+- 默认情况下：元素采用自然顺序升序
+- 可以自定义类实现compareTo()来指定元素排序规则
+
+
+
+###### DelayQueue
+
+是一个支持优先级的延时获取元素的无界阻塞队列
+
+1. 该队列使用PriorityQueue来实现
+2. 队列中的元素必须实现Delayed接口，在创建元素时可以指定多久才能从队列中获取当前元素
+3. 只有在延迟期满时才能从队列中提前元素
+4. 应用场景
+   - 缓存系统的设计：用DelayQueue保存缓存元素的有效期，使用一个线程循环查询DelayQueue，一旦从队列中获取元素时，表示缓存有效期到了
+   - 定时任务调度：使用 DelayQueue 保存当天将会执行的任务和执行时间，一旦从DelayQueue 中获取到任务就开始执行，比如 TimerQueue 就是使用 DelayQueue实现的
+
+如何实现Delayed接口，参考ScheduledThreadPoolExecutor 里 ScheduledFutureTask 类的实现
+
+1. 对象创建时，初始化基本数据
+2. 实现getDelay()方法
+3. 实现compareTo()方法来指定元素的顺序
+
+如何实现延时阻塞队列
+
+当消费者线程从队列获取元素时，如果元素没有达到延时时间，就阻塞当前线程
+
+
+
+###### SynchronousQueue
+
+一个不存储元素的阻塞队列，每一个put操作必须等待一个take操作，否则不能继续添加元素
+
+可以看成是一个传球手，负责把生产者线程处理的数据直接传递给消费者线程
+
+队列本身并不存储任何元素，非常适合传递性场景
+
+LinkedTransferQueue：一个由**链表结构组成的无界**阻塞队列。
+
+LinkedBlockingDeque：一个由**链表结构组成的双向**阻塞队列
+
+
+
+##### 阻塞队列实现原理
 
 原理：Lock锁的多条件等待/通知模式实现
 
 通知模式：当生产者往满的队列里添加元素时，会阻塞生产者，当消费者消费了队列里面的元素后，会通知生产者当前队列可用
 
-例如ArryBlockingQueue采用了ReentantLock+Condition的等待/通知（await/signal）来实现
+例如ArryBlockingQueue采用了ReentantLock+Condition的等待/通知（await/signal）+LockSupport类 来实现
+
+例如：队列插入一个元素时，如果队列不可用，那么阻塞生产者。主要通过LockSupport.park(this)->调用unsafe.park 这个native方法来实现阻塞
+
+线程被阻塞队列阻塞时，线程会进入等待状态Waiting
+
+被阻塞的当前线程在以下4种情况下发生时，该方法会返回
+
+1. 与park对于的unpark执行
+2. 线程被中断时
+3. 等待完time参数指定的毫秒数时
+4. 异常现象发生时
+
+
+
+---
+
+### Java中的13个原子操作类
+
+JDK1.5开始提供了juc包下atomic包，这个包中的原子操作类提供了一种用法简单、性能高效、线程安全地更新一个变量的方式
+
+因为变量的类型有很多种，所以在 Atomic 包里一共提供了 13 个类，属于 4 种类型的原子更新方式，分别是原子更新基本类型、原子更新数组、原子更新引用和原子更新属性（字段）
+
+Atomic 包里的类基本都是使用 Unsafe 实现的包装类
+
+#### 原子更新基本类型
+
+1. AtomicBoolean、AtomicInteger、AtomicLong
+   - 这3个类提供的方法几乎一模一样
+
+#### 原子更新数组
+
+#### 原子更新引用类型
+
+#### 原子更新字段类
+
+
 
 
 
