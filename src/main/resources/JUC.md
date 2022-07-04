@@ -1374,14 +1374,43 @@ Atomic 包里的类基本都是使用 Unsafe 实现的包装类
 
 1. AtomicBoolean、AtomicInteger、AtomicLong
    - 这3个类提供的方法几乎一模一样
+   - 底层为unsafe.compareAndSwapxxx实现
 
 #### 原子更新数组
 
+AtomicIntegerArray：原子更新整型数组里的元素
+
+AtomicLongArray：原子更新长整型数组里的元素
+
+AtomicReferenceArray：原子更新引用类型数组里的元素
+
+AtomicIntegerArray 类主要是提供原子的方式更新数组里的整型，其常用方法
+
+这几个类提供的方法几乎一摸一样
+
+底层实现也是unsafe.compareAndSwapxxx实现
+
 #### 原子更新引用类型
 
-#### 原子更新字段类
+原子更新基本类型的 AtomicInteger，只能更新一个变量，如果要原子更新多个变量，就需要使用这个原子更新引用类型提供的类
 
+AtomicReference：原子更新引用类型
 
+AtomicReferenceFieldUpdater：原子更新引用类型里的字段AtomicMarkableReference：原子更新带有标记位的引用类型。可以原子更新一个布尔类型的标记位和引用类型
+
+这几个类提供的方法几乎一摸一样
+
+#### 原子更新字段
+
+如果需原子地更新某个类里的某个字段时，就需要使用原子更新字段类
+
+ 
+
+AtomicIntegerFieldUpdater：原子更新整型的字段的更新器
+
+ AtomicLongFieldUpdater：原子更新长整型字段的更新器
+
+ AtomicStampedReference：原子更新带有版本号的引用类型。该类将整数值与引用关联起来，可用于原子的更新数据和数据的版本号，可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题
 
 
 
@@ -1389,16 +1418,18 @@ Atomic 包里的类基本都是使用 Unsafe 实现的包装类
 
 ### Java中的并发工具类
 
+countDownLatch、CyclicBarrier、Semaphore、Exchanger
+
 前三者用于并发流量的控制、第四个为在线程间交换数据的一种手段
 
 #### CountDownLatch
 
 它允许一个或多个线程等待其他线程完成操作后，再执行。例如：应用程序的主线程希望在负责启动框架访问的线程已经启动所有服务框架后再启动
 
-内部为Sync继承自AQS的内部类
+内部为Sync继承自AQS的内部类，主要还是在AQS那一套东西上修改而来
 
 ~~~java
-//构造器传入int类型参数，作为计数器使用，这个值是赋值给了AQS的state变量
+//构造器传入int类型参数，作为计数器使用，这个值是赋值给了AQS的state变量，主要还是维护这个变量
 //每调用一次countdown()后count会减一
 public CountDownLatch(int count) {
         if (count < 0) throw new IllegalArgumentException("count < 0");
@@ -1429,15 +1460,35 @@ public CountDownLatch(int count) {
 
 
 
+
+
 #### CyclicBarrier
 
+同步屏障/栅栏：让一组线程到达一个屏障(同步点)时被阻塞，直到最后一个线程到达屏障时，屏障才会开门，所有被屏障拦截的线程才会继续运行
 
+CyclicBarrier(int parties)：参数代表屏障拦截的线程数量
+
+每个线程调用await()表示告诉CyclicBarrier当前线程已经到达屏障，然后当前线程被阻塞
+
+CyclicBarrier 还提供一个更高级的构造函数 CyclicBarrier（int parties，Runnable barrierAction），用于在线程到达屏障时，优先执行barrierAction，方便处理更复杂的业务场景
+
+实现阻塞原理：组合了ReentrantLock
+
+典型应用场景：多线程计算数据，最后合并计算结果的场景
+
+#### CyclicBarrier、CountDownLatch区别
+
+1. countdownlatch计数器只能使用一次、cyclicBarrier可以使用reset()进行重置
+
+2. cyclicBarrier可以处理更复杂的业务场景，例如：计算发生错误，可以重置计数器，并让线程重新执行一次
+
+   
 
 #### Semaphore
 
-用于控制同时访问特定资源的线程数量，用于控制并发线程的数量
+用于控制同时访问特定资源的线程数量，用于控制并发线程的数量，它通过协调各个线程，以保证合理的使用公共资源
 
-应用场景：流量控制
+应用场景：流量控制，特别是公用资源有限的应用场景，例如：数据库连接
 
 底层还是Sync内部类继承AQS
 
@@ -1445,5 +1496,16 @@ public CountDownLatch(int count) {
 
 #### Exchanger
 
+线程间交换数据
 
+Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger 用于进行线程间的数据交换
 
+它提供一个同步点，在这个同步点，两个线程可以交换彼此的数据
+
+这两个线程通过 exchange 方法交换数据，如果第一个线程先执行 exchange()方法，它会一直等待第二个线程也执行 exchange 方法，当两个线程都到达同步点时，这两个线程就可以交换数据，将本线程生产出来的数据传递给对方
+
+应用场景：遗传算法、校对工作
+
+比如我们需要将纸制银行流水通过人工的方式录入成电子银行流水，为了避免错误，采用 AB 岗两人进行录入，录入到 Excel 之后，系统需要加载这两个 Excel，并对两个Excel 数据进行校对，看看是否录入一致
+
+如果两个线程有一个没有执行 exchange()方法，则会一直等待，如果担心有特殊情况发生，避免一直等待，可以使用 exchange（V x，longtimeout，TimeUnit unit）设置最大等待时长
