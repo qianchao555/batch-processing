@@ -10,6 +10,8 @@
 
 
 
+----
+
 ### 创建线程的方式
 
 4种
@@ -25,6 +27,8 @@
 
 #### 采用线程池
 
+
+
 ---
 
 ### 线程状态(生命周期)
@@ -39,141 +43,7 @@
 4. 阻塞态Blocked：线程由于某种原因放弃了cpu的使用权，直到线程进入可运行态，才有机会再次获得cpu时间片进入到运行态
 5. 死亡态Dead：线程run()、main()方法执行结束，或者异常退出了，则该线程结束生命周期
 
----
 
-
-
-### 线程池
-
-高并发情况下，频繁的创建线程会大大降低系统的效率，因为频繁创建和销毁线程需要时间，所以引入了线程池技术
-
-假设一个服务器完成一项任务所需时间为：创建线程时间T1 ，在线程中执行任务的时间T2 ， 销毁线程时间T3。如果：T1 + T3 远大于 T2，则可以采用线程池，以提高服务器性能
-
-线程池：即一个存放线程的容器，调用线程池去执行并发任务时，从线程池中取出线程去执行任务，每个线程执行完任务后，并不被销毁，而是被线程池回收，下一次继续执行任务
-
-#### 线程池基本组成部分
-
-1. 线程池管理器ThreadPool：用于创建并管理线程池，包括创建线程池、销毁线程池、添加新任务等等
-2. 工作线程PoolWorker：线程池中的线程，在没有任务时，处于等待状态，可以循环的执行任务
-3. 任务接口Task：每个任务必须实现的接口，以供工作线程调度任务的执行
-4. 任务队列taskQueue：存放没有处理的任务。提供一种缓冲机制
-
-#### 线程池的实现原理
-
-当向线程池中提交一个任务后，线程池是如何处理这个任务的呢？线程池处理流程如下：
-
-即execute(Runnable r)流程
-
-1. 线程池判断 当前工作线程数(worker)是否小于核心线程数
-   - 如果是则创建一个工作线程来执行任务（Worker里面创建，由ThreadFactory创建线程）
-   - 如果不小于，则转到第二步
-2. 判断线程池是否处于运行状态，并且判断任务是否可以加入任务队列
-   - 任务队列没有满则将这个任务存储在工作队列里面
-   - 满了则进入第三步
-3. 线程池判断当前工作线程数是否小于最大线程数
-   - 小于则创建一个线程来执行队列里面的任务，此任务放入队列里面
-   - 如果最大线程池里面线程数量已经满了则交给饱和策略来处理这个任务
-
-#### 如何优雅关闭线程池
-
-shuwdown: 不接收新任务, 中断空闲线程, 继续处理完线程池中的任务
-
-shutdownNow: 不接收新任务, 中断运行线程, 空闲线程和处理完正在运行的任务的线程会退出
-
-使用shutdownNow方法，可能会引起报错，使用shutdown方法可能会导致线程关闭不了。所以当我们使用shutdownNow方法关闭线程池时，一定要对任务里进行异常捕获。
-
-当我们使用shuwdown方法关闭线程池时，一定要确保任务里不会有永久阻塞等待的逻辑，否则线程池就关闭不了
-
-shutdown()/  shutdownNow()+awaitTermination()
-
-#### 线程池队列满了，还有任务来怎么办？
-
-https://blog.csdn.net/weixin_38336658/article/details/119907919?spm=1001.2101.3001.6650.5&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-5.pc_relevant_default&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-5.pc_relevant_default&utm_relevant_index=8
-
-无非就是从队列入手，增加消费者、增加消费者的处理效率；限制生产者生成速度
-
-1. 首选：通过自定义实现拒绝策略RejectedExecutionHandler
-
-   - ~~~java
-     //采用put方法，会阻塞生产者
-     public class BlockWhenQueueFullHandler implements RejectedExecutionHandler {
-     
-         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-             pool.getQueue().put(new FutureTask(r));
-         }
-     }
-     ~~~
-
-   - 用sleep达到阻塞的目的
-
-   - 把线程池无法执行的任务信息持久化写入数据库去，后台专门启动一个线程，后续等待线程池的工作负载降低了，这个后台线程就可以慢慢的从磁盘里读取之前持久化的任务重新提交到线程池
-
-   - 在拒绝策略里面添加一个延迟任务队列，延迟任务重新投向线程池
-
-2. 修改默认拒绝策略为：CallerRunsPolicy该策略队列满时，会把任务放在调用者线程中运行
-
-
-
-#### 工具类
-
-##### Executors
-
-1. newFixedThreadPool：一池固定线程数，底层ThreadPoolExcutor，数据结构采用LinkedBlockingQueue<Runnable>
-2. newSingleThreadPool：一池一线程，底层为LinkedBlockingQueue<Runnable>
-3. newCacheThreadPool：一池多线程，底层为SynchronusQueue<Runnable>
-
-
-
-#### 核心
-
-##### Executor中的ThreadPoolExecutor
-
-构造器四大组件：ThreadPoolExecutor(corePool，maxImumPool，BlockingQueue，RejectExceptiionHandler)
-
-构造器七大参数：
-
-1. corePoolSize：核心线程数量
-2. MaximumPoolSize：能容纳最大线程数
-3. keepAliveTime：多余的空闲线程等待新任务的最长时间，超过这个时间后多余的线程被终止
-4. TimeUnit：keepAliveTime的单位
-5. BlockingQueue：暂存任务的工作队列
-   - 一般采用以下几种阻塞队列
-   - ArrayBlockingQueue
-   - LinkedBlockingQueue
-   - SynchronousQueue
-6. ThreadFactory：用于创建线程的工厂
-7. RejectExceptionHandler：拒绝处理任务时的策略，当工作队列已满时，并且线程池创建的线程数量达到了设置的最大线程数时，触发拒绝策略
-   - AbortPolicy：默认策略，该策略会直接抛出异常，组织系统正常工作
-   - CallerRunsPolicy：该策略会把任务队列中的任务放在调用者线程中运行
-   - DiscardOledestPolice：该策略会丢弃任务队列中最老的一个任务
-   - DiscardPolice：该策略会丢弃无法处理的任务，不予任务处理
-   - 可以自定义拒绝策略：实现RejectedExecutionHandler 
-
-![image-20220411213851879](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204112139305.png)
-
-
-
-如果任务量不大，可以采用无界队列，如果任务量非常大，需要采用有界队列，防止OOM
-
-如果任务量大，还要求任务都处理成功，则要对提交的任务进行阻塞提交，并且重写拒绝策略，改为阻塞提交。保证不抛弃任何一个任务
-
-
-
-#### 如何合理设置线程池容量大小
-
-如何设置：首先根据主机cpu来判断，在考虑具体场景
-
-##### CPU密集型
-
-此时需要大量的计算，在消耗cpu，例如：while操作
-
-此时需要的线程池大小为：cpu核心数+1 即可
-
-##### IO密集型
-
-证明此时需要大量的阻塞，所以需要的线程数量更多
-
-线程池大小一般为：cpu核心数*2 或cpu核心数量/1-阻塞系数(0.8~0.9)
 
 ---
 
@@ -1446,6 +1316,7 @@ public CountDownLatch(int count) {
    - 一个典型应用场景就是启动一个服务时，主线程需要等待多个组件加载完毕，之后再继续执行
 2. 实现多个线程开始执行任务的最大并行性
    - 注意是并行性，不是并发，强调的是多个线程在某一时刻同时开始执行。类似于赛跑，将多个线程放到起点，等待发令枪响，然后同时开跑。做法是初始化一个共享的CountDownLatch(1)，将其计数器初始化为1，多个线程在开始执行任务前首先 coundownlatch.await()，当主线程调用 countDown() 时，计数器变为0，多个线程同时被唤醒。
+3. 工作中的用法：定义两个countdownlatch
 
 ##### 实现原理
 
@@ -1509,3 +1380,199 @@ Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger �
 比如我们需要将纸制银行流水通过人工的方式录入成电子银行流水，为了避免错误，采用 AB 岗两人进行录入，录入到 Excel 之后，系统需要加载这两个 Excel，并对两个Excel 数据进行校对，看看是否录入一致
 
 如果两个线程有一个没有执行 exchange()方法，则会一直等待，如果担心有特殊情况发生，避免一直等待，可以使用 exchange（V x，longtimeout，TimeUnit unit）设置最大等待时长
+
+
+
+---
+
+### 线程池
+
+几乎所有需要异步或并发执行任务的程序都可以使用线程池
+
+高并发情况下，频繁的创建线程会大大降低系统的效率，因为频繁创建和销毁线程需要时间，所以引入了线程池技术
+
+假设一个服务器完成一项任务所需时间为：创建线程时间T1 ，在线程中执行任务的时间T2 ， 销毁线程时间T3。如果：T1 + T3 远大于 T2，则可以采用线程池，以提高服务器性能
+
+线程池：即一个存放线程的容器，调用线程池去执行并发任务时，从线程池中取出线程去执行任务，每个线程执行完任务后，并不被销毁，而是被线程池回收，下一次继续执行任务
+
+#### 使用线程池带来的好处
+
+1. 降低资源消耗：重复利用已创建的线程降低线程创建和销毁造成的消耗
+2. 提高响应速度：当任务到达时，任务可以不需要等到线程创建就能立即执行
+3. 提高线程的可管理性：线程是稀缺资源，如果无限制地创建，不仅会消耗系统资源，还会降低系统的稳定性，使用线程池可以进行统一分配、调优和监控
+
+#### 线程池基本组成部分
+
+1. 线程池管理器ThreadPool：用于创建并管理线程池，包括创建线程池、销毁线程池、添加新任务等等
+2. 工作线程PoolWorker：线程池中的线程，在没有任务时，处于等待状态，可以循环的执行任务
+3. 任务接口Task：每个任务必须实现的接口，以供工作线程调度任务的执行
+4. 任务队列taskQueue：存放没有处理的任务。提供一种缓冲机制
+
+#### 线程池的实现原理
+
+当向线程池中提交一个任务后，线程池是如何处理这个任务的呢？线程池处理流程如下
+
+ThreadPoolExcutor执行execute(Runnable r)流程如下：
+
+![image-20220705163327727](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207051633883.png)
+
+
+
+![image-20220705165413340](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207051654066.png)
+
+
+
+
+
+1. 线程池判断 当前工作线程数(worker)是否小于核心线程数
+   - 如果是则创建一个工作线程来执行任务（Worker里面创建，由ThreadFactory创建线程）
+   - 如果不小于，则转到第二步
+2. 判断线程池是否处于运行状态，并且判断任务是否可以加入任务队列
+   - 任务队列没有满则将这个任务存储在工作队列里面
+   - 满了则进入第三步
+3. 线程池判断当前工作线程数是否小于最大线程数
+   - （小于则创建一个线程来执行队列里面的任务，此任务放入队列里面）这两个待确认
+   - 小于则创建一个线程来执行任务
+   - 如果最大线程池里面线程数量已经满了则交给饱和策略来处理这个任务
+
+工作线程：线程池创建线程时，会将线程封装成Worker，Worker在执行完任务后，会循环获取工作队列里的任务来执行。工作队列是一个阻塞队列
+
+
+
+#### 向线程池提交任务
+
+execute()和submit()
+
+1. execute方法用于提交不需要返回值的任务，所有无法判断任务是否被线程池执行成功
+   - execute()方法参数为Runnable r
+2. submit
+   - 用于提交需要返回值的任务
+   - 线程池会返回一个Future对象，通过这个Future可以判断任务是否执行成功，并且通过future的get()可以获取返回值，get()方法会阻塞当前线程直到任务完成。get(long timeout，TimeUnit unit)方法会阻塞当前线程一段时间后立即返回，这时候任务可能没有执行完
+
+
+
+#### 如何优雅关闭线程池
+
+shuwdown: 不接收新任务, 中断空闲线程, 继续处理完线程池中的任务
+
+- 将线程状态设置为Shutdown，然后中断所有没有正在执行任务的线程
+
+shutdownNow: 不接收新任务, 中断运行线程, 空闲线程和处理完正在运行的任务的线程会退出
+
+- 将线程池状态设置为Stop，然后尝试停止所有的线程，并返回等待执行任务的列表
+
+只要调用了这两个关闭方法中的任意一个，isShutdown 方法就会返回 true。当所有的任务都已关闭后，才表示线程池关闭成功，这时调用 isTerminaed 方法会返回 true
+
+
+
+使用shutdownNow方法，可能会引起报错，使用shutdown方法可能会导致线程关闭不了。所以当我们使用shutdownNow方法关闭线程池时，一定要对任务里进行异常捕获。
+
+当我们使用shuwdown方法关闭线程池时，一定要确保任务里不会有永久阻塞等待的逻辑，否则线程池就关闭不了
+
+shutdown()/  shutdownNow()+awaitTermination()
+
+
+
+#### 如何合理设置线程池容量大小
+
+如何设置：首先根据主机cpu来判断，在考虑具体场景
+
+##### CPU密集型
+
+此时需要大量的计算，在消耗cpu，例如：while操作
+
+此时需要的线程池大小为：cpu核心数+1 即可
+
+##### IO密集型
+
+证明此时需要大量的阻塞，所以需要的线程数量更多
+
+线程池大小一般为：cpu核心数*2 或cpu核心数量/1-阻塞系数(0.8~0.9)
+
+##### 任务的优先级
+
+优先级高、中、低
+
+优先级不同的任务可以放在优先级队列PriorityBlockingQueue里面处理
+
+
+
+#### 线程池队列满了，还有任务来怎么办？
+
+https://blog.csdn.net/weixin_38336658/article/details/119907919?spm=1001.2101.3001.6650.5&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-5.pc_relevant_default&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-5.pc_relevant_default&utm_relevant_index=8
+
+无非就是从队列入手，增加消费者、增加消费者的处理效率；限制生产者生成速度
+
+1. 首选：通过自定义实现拒绝策略RejectedExecutionHandler
+
+   - ~~~java
+     //采用put方法，会阻塞生产者
+     public class BlockWhenQueueFullHandler implements RejectedExecutionHandler {
+     
+         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+             pool.getQueue().put(new FutureTask(r));
+         }
+     }
+     ~~~
+
+   - 用sleep达到阻塞的目的
+
+   - 把线程池无法执行的任务信息持久化写入数据库去，后台专门启动一个线程，后续等待线程池的工作负载降低了，这个后台线程就可以慢慢的从磁盘里读取之前持久化的任务重新提交到线程池
+
+   - 在拒绝策略里面添加一个延迟任务队列，延迟任务重新投向线程池
+
+2. 修改默认拒绝策略为：CallerRunsPolicy该策略队列满时，会把任务放在调用者线程中运行
+
+
+
+
+
+#### 核心
+
+##### Executor中的ThreadPoolExecutor
+
+构造器四大组件：ThreadPoolExecutor(corePool，maxImumPool，BlockingQueue，RejectExceptiionHandler)
+
+构造器七大参数：
+
+1. corePoolSize：核心线程数量
+2. MaximumPoolSize：能容纳最大线程数
+3. keepAliveTime：多余的空闲线程等待新任务的最长时间，超过这个时间后多余的线程被终止
+4. TimeUnit：keepAliveTime的单位
+5. BlockingQueue：暂存任务的工作队列
+   - 一般采用以下几种阻塞队列
+   - ArrayBlockingQueue
+   - LinkedBlockingQueue
+   - SynchronousQueue
+6. ThreadFactory：用于创建线程的工厂
+7. RejectExceptionHandler：拒绝处理任务时的策略，当工作队列已满时，并且线程池创建的线程数量达到了设置的最大线程数时，触发拒绝策略
+   - AbortPolicy：默认策略，该策略会直接抛出异常，组织系统正常工作
+   - CallerRunsPolicy：该策略会把任务队列中的任务放在调用者线程中运行
+   - DiscardOledestPolice：该策略会丢弃任务队列中最老的一个任务
+   - DiscardPolice：该策略会丢弃无法处理的任务，不予任务处理
+   - 可以自定义拒绝策略：实现RejectedExecutionHandler 
+
+![image-20220411213851879](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204112139305.png)
+
+
+
+如果任务量不大，可以采用无界队列，如果任务量非常大，需要采用有界队列，防止OOM
+
+如果任务量大，还要求任务都处理成功，则要对提交的任务进行阻塞提交，并且重写拒绝策略，改为阻塞提交。保证不抛弃任何一个任务
+
+
+
+
+
+
+
+---
+
+### Executor框架
+
+1. newFixedThreadPool：一池固定线程数，底层ThreadPoolExcutor，数据结构采用LinkedBlockingQueue<Runnable>
+2. newSingleThreadPool：一池一线程，底层为LinkedBlockingQueue<Runnable>
+3. newCacheThreadPool：一池多线程，底层为SynchronusQueue<Runnable>
+
+
+
