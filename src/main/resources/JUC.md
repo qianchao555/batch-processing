@@ -1495,7 +1495,34 @@ shutdown()/  shutdownNow()+awaitTermination()
 
 优先级不同的任务可以放在优先级队列PriorityBlockingQueue里面处理
 
+##### 任务执行的时间
 
+执行时间不同的任务可以交给不同规模的线程池来处理，或者使用优先级队列，让执行时间短的任务先执行
+
+##### 任务的依赖性
+
+是否依赖其他系统资源，比如：数据库连接
+
+依赖于数据库连接池的任务，因为线程提交SQL后需要等待数据库返回结果，等待的时间越长则CPU空闲时间就越长，那么此时线程数应该设置的越大，这样才能更好地利用cpu
+
+
+
+#### 线程池的监控
+
+如果在系统中大量使用线程池，则有必要对线程池进行监控，方便在出现问题时，可以根据线程池的使用状况快速定位问题
+
+可以通过线程池提供的参数进行监控，在监控线程池的时候可以使用以下属性
+
+1. taskCount：线程池需要执行的任务数量
+2. getPoolSize：线程池的线程数量
+3. getActiveCount：获取活动的线程数
+4. largestPoolSize：线程池里曾经创建过的最大线程数量。通过这个数据可以知道线程池是否曾经满过。如该数值等于线程池的最大大小，则表示线程池曾经满过
+
+可以通过扩展线程池进行监控
+
+1. 通过继承线程池来自定义线程池，重新线程池的beforeExecute、afterExecute、terminated方法，这几个方法在线程池里是空方法，即没有方法体
+2. 也可以在任务执行前、后和线程池关闭前执行一些代码来进行监控
+   - 例如：监控任务的平均执行时间、最大执行时间、最小执行时间等等
 
 #### 线程池队列满了，还有任务来怎么办？
 
@@ -1525,13 +1552,113 @@ https://blog.csdn.net/weixin_38336658/article/details/119907919?spm=1001.2101.30
 
 
 
+---
+
+### Executor框架
+
+Java的线程即是工作单元，也是执行机制。从JDK5开始，把工作单元于执行机制分离开来
+
+工作单元包括：Runnable、Callable
+
+执行机制由Executor框架提供
+
+#### Excutor框架的两级调度模型
+
+在 HotSpot VM 的线程模型中，Java 线程（java.lang.Thread）被一对一映射为本地操作系统线程。Java 线程启动时会创建一个本地操作系统线程；当该 Java 线程终止时，这个操作系统线程也会被回收。操作系统会调度所有线程并将它们分配给可用的 CPU
+
+在上层，Java 多线程程序通常把应用分解为若干个任务，然后使用用户级的调度器（Executor 框架）将这些任务映射为固定数量的线程；在底层，操作系统内核将这些线程映射到硬件处理器上
+
+两级调度模型如图所示，Executor框架控制上层的调度，下层的调度由操作系统内核控制，下层的调度不受应用程序的控制
+
+![image-20220705203750837](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052038128.png)
 
 
-#### 核心
 
-##### Executor中的ThreadPoolExecutor
+#### Executor框架的结构
 
-构造器四大组件：ThreadPoolExecutor(corePool，maxImumPool，BlockingQueue，RejectExceptiionHandler)
+主要由3大部分组成
+
+1. 任务
+   - 包括被执行任务需要实现的接口：Runnable接口、Callable接口
+   - 即一个类实现了这个接口复写run或call方法，这个类即将理解为一个任务
+2. 任务的执行
+   - 包括任务执行机制的核心接口Executor，以及继承自Executor得ExecutorService接口
+   - Executor框架有两个关键类实现了ExecutorService接口：ThreadPoolExecutor、ScheduledThreadPoolExecutor
+3. 异步计算的结果
+   - Future接口、Future接口实现类FutureTask
+
+Executor类与接口示意图：
+
+![image-20220705214122243](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052141415.png)
+
+Executor框架使用示意图：
+
+![image-20220705213818512](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052138986.png)
+
+主线程可以执行get来阻塞获取结果，也可以cancel()来取消任务的执行
+
+
+
+#### Executor框架成员
+
+Executor框架主要成员有：ThreadPoolExecutor、ScheduledThreadPoolExecutor、Future接口、Runnable接口、Callable接口和Executors
+
+##### ThreadPoolExecutor
+
+ThreadPoolExecutor通常由工厂类Executors来创建，Executors可以创建3中类型的ThreadPoolExecutor
+
+1. FiexdThreadPool：创建固定的线程数
+   - 适用于为了满足资源管理的需求而需要现在当前线程数量的应用场景
+   - 一般适用于负载比较重的服务器
+2. SingleThreadExecutor：创建单个线程
+   - 适用于需要保证顺序地执行各个任务，并且在任意时间点，不会有多个线程是活动的应用场景
+3. CachedThreadPoll：根据需要创建新的线程
+
+##### ScheduledThreadPoolExecutor
+
+ThreadPoolExecutor通常由工厂类Executors来创建，Executors可以创建2种类型的ThreadPoolExecutor
+
+1. ScheduledThreadPoolExecutor：包含若干个线程
+
+   - 适用于需要多个线程执行周期性任务，同时满足需要限制线程数量的应用场景
+
+2. SingleThreadScheduledPoolExecutor：只包含一个线程
+
+   - 适用于单个线程执行周期性任务，同时需要保证顺序地执行各个任务的应用场景
+
+   ---
+
+##### Future接口
+
+Future接口和实现Future接口的FutureTask类用来表示异步计算的结果
+
+当我们把Runnable接口、Callable接口的实现类提交给ThreadPoolExecutor时，其会给我们返回一个FutureTask对象
+
+
+
+##### Runnable和Callable
+
+Runnable不会返回结果，Callable可以返回结果
+
+可以利用工厂里Executors把一个Runnable包装成一个Callable
+
+~~~java
+public static Callable<Object> callable(Runnable task)
+~~~
+
+也可以利用Executors把一个Runnable和一个带饭回的结果包装成一个Callable
+
+~~~java
+public static <T> Callable<T> callable(Runnable task, T result)
+~~~
+
+
+
+#### ThreadPoolExecutor
+
+Executor框架中最核心的类，它是线程池的实现类
+
+主要由4个组件构成，构造器四大主要组件：ThreadPoolExecutor(corePool，maxImumPool，BlockingQueue，RejectExceptiionHandler)
 
 构造器七大参数：
 
@@ -1562,17 +1689,92 @@ https://blog.csdn.net/weixin_38336658/article/details/119907919?spm=1001.2101.30
 
 
 
+##### ScheduledThreadPoolExecutor详解
 
+其继承自ThreadPoolExecutro，主要用来在给定延迟之后运行任务或者定期执行任务
 
+DelayQueue是一个无界队列，所有最大线程池数量没啥效果
 
+ScheduledThreadPoolExecutor的执行主要分为两大部分
+
+1. 调用其scheduledAtFixedRate()或scheduleWithFixedDelay，会向队列里面添加实现了RunnableScheduledFuture接口的ScheduledFutureTask任务
+2. 线程池中的线程从DelayQueue中获取任务，然后执行任务
+
+![image-20220705222506561](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052225487.png)
+
+ScheduledThreadPoolExecutor为了实现周期性任务，对ThreadPoolExecutor做了如下修改
+
+1. 使用DelayQueue阻塞队列作为任务队列
+2. 获取任务的方式不同
+3. 执行周期任务后，增加了额外的处理
 
 ---
 
-### Executor框架
+#### FutureTask
 
-1. newFixedThreadPool：一池固定线程数，底层ThreadPoolExcutor，数据结构采用LinkedBlockingQueue<Runnable>
-2. newSingleThreadPool：一池一线程，底层为LinkedBlockingQueue<Runnable>
-3. newCacheThreadPool：一池多线程，底层为SynchronusQueue<Runnable>
+Future接口和实现类FutureTask，代表异步计算的结果
+
+FutureTask实现了RunnableFuture，RunnableFuture继承自Runnable、Future。即FutureTask实现了Runnable与Future接口，因此FutureTask可以交给Executor执行，也可以由调用线程之间执行(FutureTask.run)
+
+##### FutureTask的状态
+
+根据FutureTask.run方法被执行的时机，FutureTask可以处于下面3种状态
+
+1. 未启动：FutureTask.run方法还没有被执行之前
+2. 已启动：FutureTask.run方法被执行的过程中
+3. 已完成：FutureTask.run方法执行完后正常退出，或被取消(FutureTask.cancel)，或抛出异常而异常结束
+
+FutureTask的状态迁移示意图：
+
+![image-20220705230852940](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052308134.png)
 
 
 
+当 FutureTask 处于未启动或已启动状态时，执行 FutureTask.get()方法将导致调用线程阻塞
+
+当 FutureTask 处于已完成状态时，执行 FutureTask.get()方法将导致调用线程立即返回结果或抛出异常
+
+
+
+FutureTask的get和cancel方法执行示意图
+
+![image-20220705231054820](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052310964.png)
+
+
+
+##### FutureTask使用
+
+当一个线程需要等待另一个线程把某个任务执行完后它才能继续执行，此时可以使用 FutureTask
+
+项目中使用：主线程等待多个线程计算完成后，统计计算结果
+
+
+
+##### FutureTask的实现
+
+FutureTask的实现基于AQS，基于AQS的有：ReentrantLock、Semaphore、ReentrantWriteLock、CountDownLatch、FutureTask等等
+
+本质：AQS对FutureTask状态的控制，原理与ReentrantLock阻塞、唤醒类似
+
+每一个基于AQS实现的同步器都会包含两种类型的操作
+
+1. 至少一个acquire操作
+
+   - 这个操作阻塞调用线程，除非/直到AQS的状态允许这个线程执行
+   - FutureTask的acquire操作为get()/get(long timeout，TimeUnit unit)
+
+2. 至少一个release操作
+
+   - 这个操作改变 AQS 的状态，改变后的状态可允许一个或
+
+     多个阻塞线程被解除阻塞
+
+   - FutureTask 的 release 操作包括 run()方法和 cancel(…)方法
+
+当执行 FutureTask.get()方法时，如果 FutureTask 不是处于执行完成状态 RAN 或已取消状态 CANCELLED，当前执行线程将到 AQS 的线程等待队列中等待（见下图的线程A、B、C 和 D）。当某个线程执行 FutureTask.run()方法或 FutureTask.cancel（...）方法时，会唤醒线程等待队列的第一个线程
+
+![image-20220705234621981](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052346112.png)
+
+假设开始时 FutureTask 处于未启动状态或已启动状态，等待队列中已经有 3 个线程（A、B 和 C）在等待。此时，线程 D 执行 get()方法将导致线程 D 也到等待队列中去等待。
+
+当线程 E 执行 run()方法时，会唤醒队列中的第一个线程 A。线程 A 被唤醒后，首先把自己从队列中删除，然后唤醒它的后继线程 B，最后线程 A 从 get()方法返回。线程B、C 和 D 重复 A 线程的处理流程。最终，在队列中等待的所有线程都被级联唤醒并从get()方法返回
