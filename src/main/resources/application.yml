@@ -14,7 +14,7 @@ spring:
 
   elasticsearch:
     rest:
-      uris: 101.35.51.33:9200
+      uris: 主机Ip:9200
       connection-timeout: 2000           #---连接超时时间(默认1s)
       read-timeout: 6000
 

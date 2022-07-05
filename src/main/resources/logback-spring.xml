@@ -19,7 +19,7 @@
     <!--配置logstash-->
     <!--    主机ip:端口，此端口非logstash端口，而是logstash配置文件中input中设置的监听端口-->
     <appender name="logstash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>101.35.51.33:4560</destination>
+        <destination>主机ip:4560</destination>
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
                 <timestamp>
