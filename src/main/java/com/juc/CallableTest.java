@@ -1,6 +1,5 @@
 package com.juc;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -13,23 +12,35 @@ import java.util.concurrent.*;
  **/
 public class CallableTest {
     static ThreadPoolExecutor  executor= (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
-
+   static  CountDownLatch countDownLatch=null;
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         List<Integer> list=new ArrayList<>();
-        for(int i=0;i<100000;i++){
+        for(int i=0;i<10;i++){
             list.add(i);
         }
+        countDownLatch=new CountDownLatch(list.size());
         List<Future<Integer>> list1=new ArrayList<>();
         list.forEach(o->{
             Callable<Integer> callable = new Callable<Integer>() {
 
                 @Override
                 public Integer call() throws Exception {
-                    return o + 1;
+                    try {
+                        //模拟耗时
+                        Thread.sleep(2000);
+                        return o + 1;
+                    }finally {
+                        countDownLatch.countDown();
+                    }
+
                 }
+
             };
             list1.add(executor.submit(callable));
         });
+        System.out.println("主线程等待其他线程执行完毕");
+        countDownLatch.await();
+        System.out.println("for循环处理结束");
         int sum=0;
         for (int i = 0; i < list.size(); i++) {
             sum+=list1.get(i).get();
