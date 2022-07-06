@@ -21,8 +21,6 @@ public class Test {
     Environment env;
 
     public static void main(String[] args) {
-       Cb cb=new Cc();
-       cb.a();
     }
 
 //    public Map<String, Object> xxxConsumerConfig() {

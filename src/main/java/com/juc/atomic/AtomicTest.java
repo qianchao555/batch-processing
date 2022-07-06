@@ -1,8 +1,12 @@
 package com.juc.atomic;
 
+import com.baomidou.mybatisplus.extension.api.R;
 import com.google.common.util.concurrent.AtomicDouble;
 import com.google.common.util.concurrent.AtomicDoubleArray;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.*;
 
 /**
@@ -25,6 +29,7 @@ public class AtomicTest {
         AtomicReferenceArray atomicReferenceArray;
 
         AtomicReference atomicReference;
+        BlockingQueue<Future<R>> queue=new LinkedBlockingQueue<>();
     }
 
 }
