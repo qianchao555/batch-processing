@@ -1901,9 +1901,37 @@ ps：好像IDEA可以配置连接到远程环境，不过配置比较繁琐，�
 
 
 
+### ThreadLocal
 
+线程安全的解决思路
 
+1. 互斥同步：synchronized、Lock
+2. 非阻塞同步：CAS、atomic包
+3. 无同步方案：ThreadLocal(本地存储)、栈封闭、可重入代码
+   - 线程隔离是通过副本保证线程访问资源安全性，他不保证线程之间还存在共享关系的狭义上的安全
 
+ThreadLocal：在每个线程中，对共享变量会创建一个副本，即每个线程内部都会有一个该变量，且在线程内部任何地方都可以使用，线程之间互不影响，这样就不存在线程安全问题，也不会严重影响程序性能
+
+是一个以Thread
+
+#### 如何实现线程隔离(原理)
+
+主要是用到了一个ThreadLocalMap类型的变量threadLocals，负责存储当前线程
+
+##### ThreadLocalMap
+
+1. ThreadLocal的一个静态内部类
+2. ThreadLocalMap的Entry实现继承了WeakReference<ThreadLocal<?>>
+3. 用一个Entry数组来存储k-v，Entry不是链表形式，而是每个bucket里面放一个Entry
+4. 
+
+#### 应用场景
+
+1. 每个线程维护一个序列号
+   - 例如：希望某个类将状态(例如用户id、事务id等)与线程关联起来
+2. Session的管理
+   - 经典例子：mybatis的session
+3. 
 
 
 
