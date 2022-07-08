@@ -11,11 +11,11 @@ import java.util.concurrent.*;
  * @Version OPRA V1.0
  **/
 public class CallableTest {
-    static ThreadPoolExecutor  executor= (ThreadPoolExecutor) Executors.newFixedThreadPool(3);
+    static ThreadPoolExecutor  executor= (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
    static  CountDownLatch countDownLatch=null;
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         List<Integer> list=new ArrayList<>();
-        for(int i=0;i<10;i++){
+        for(int i=0;i<100;i++){
             list.add(i);
         }
         countDownLatch=new CountDownLatch(list.size());
@@ -27,7 +27,8 @@ public class CallableTest {
                 public Integer call() throws Exception {
                     try {
                         //模拟耗时
-                        Thread.sleep(2000);
+                        System.out.println("每个线程处理的数据："+o);
+                        Thread.sleep(2200);
                         return o + 1;
                     }finally {
                         countDownLatch.countDown();
@@ -46,6 +47,14 @@ public class CallableTest {
             sum+=list1.get(i).get();
         }
         System.out.println(sum);
+        executor.shutdown();
+        executor.shutdownNow();
+        while (true){
+            if(executor.isTerminated()){
+                System.out.println("线程池已经关闭了！");
+                break;
+            }
+        }
     }
 
 }
