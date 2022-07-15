@@ -390,7 +390,7 @@ Ribbon本地负载均衡，在调用微服务接口时候，会在注册中心�
 
 
 
-Ribbon核心组件：IRule
+Ribbon核心组件：IRule 里面的choose方法
 
 SpringCloud Ribbon 提供了一个IRule接口，该接口主要用来定义负载均衡策略，他有7个默认实现类，每一个实现类都是一个负载均衡策略
 
@@ -1873,3 +1873,4 @@ SocketChannel(用于TCP)
 
 
 
+k
