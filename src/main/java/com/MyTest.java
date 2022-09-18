@@ -14,6 +14,7 @@ import java.util.stream.Stream;
  * @Version  V1.0
  **/
 public class MyTest {
+    public static String ss=null;
     final int i;
     public MyTest(){
         i=0;
@@ -33,6 +34,13 @@ public class MyTest {
                 .collect(Collectors.toList());
         System.out.println(collect);
 
+        MyTest myTest=new MyTest();
+        myTest.tttAb();
+
+    }
+    public void tttAb(){
+        ss="abc";
+        System.out.println(ss);
     }
 
 

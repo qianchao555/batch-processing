@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
+import java.security.Principal;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,6 +41,7 @@ public class PreventDuplicationAspect {
         PreventDuplication preventDuplication = AnnotatedElementUtils.findMergedAnnotation(method, PreventDuplication.class);
 
         if (preventDuplication == null) {
+            //允许进行重复提交
             return p.proceed();
         }
 
@@ -50,6 +52,7 @@ public class PreventDuplicationAspect {
         if (redisTemplate.hasKey(redisCacheKey)) {
             throw new RuntimeException("数据已经提交，请等待！");
         } else {
+            //设置防止重复操作 限时标记（前置通知）
             redisTemplate.opsForValue().set(redisCacheKey, "testUser", preventDuplication.expireSecond(), TimeUnit.SECONDS);
         }
 
@@ -57,10 +60,12 @@ public class PreventDuplicationAspect {
         try {
             return p.proceed();
         } catch (Exception e) {
-            //确保方法执行异常时，释放限时标记
+            //确保方法执行异常时，释放限时标记（后置通知）
             redisTemplate.delete(redisCacheKey);
+            log.error("当前方法为{}.{},参数为：{}，错误信息：{},",p.getTarget().getClass(),method.getName(),p.getArgs(),e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
-        return null;
+//        return null;
 
     }
 

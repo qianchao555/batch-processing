@@ -29,8 +29,8 @@ public class Log4jLogstashController {
         return "ok";
 
     }
-    @GetMapping("/testES")
-    public void testEs(){
-        log4jLogstashService.testEs();
-    }
+//    @GetMapping("/testES")
+//    public void testEs(){
+//        log4jLogstashService.testEs();
+//    }
 }

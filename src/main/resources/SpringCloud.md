@@ -135,9 +135,12 @@ Spring Cloud Config：分布式统一配置管理中心
 
 ### Eureka
 
+![image-20220713142819372](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202207131429772.png)
+
 #### 什么是Eureka
 
 1. 作为springcloud的服务注册服务器，它是服务注册中心，系统中的其他服务使用Eureka的客户端将其注册到Eureka Service中，并且保持心跳
+1. 提供了完整的服务注册服务发现
 2. 可以通过Eureka Service来监控各个微服务是否运行正常
 
 #### Eureka两大组件
@@ -149,6 +152,20 @@ Eureka采用C/S架构。
 
 #### 服务注册和发现是什么
 
+1. 服务注册register
+
+   - Eureka客户端通过Rest请求向Eureka服务端注册自己的服务，提供自身的元数据，例如：服务的ip地址、端口、运行状况等等
+
+   - Eureka服务端接收到注册信息后，会把这些元数据信息存储在一个两层的Map中，第一层是appName，第二层是InstanceInfoId
+
+   - ~~~java
+     ConcurrentHashMap<String,Map<String,Lease<InstanceInfo>>> registry
+     ~~~
+
+Eureka Server通过服务名和InstanceInfoId来区分一个服务实例
+
+
+
 所有服务都在Eureka服务器上注册并通过调用Eureka服务器完成服务查找发现
 
 主启动类上添加@EnableEurekaServer开启服务
@@ -156,6 +173,8 @@ Eureka采用C/S架构。
 
 
 #### Eureka心跳及自我保护机制
+
+即：服务续约(renew)，服务注册后，Eurek客户端会维护一个心跳来持续通知Eureka服务器，说明服务一直处于可以状态，防止被剔除。
 
 1. 应用服务启动后，各节点会像Eureka Server发送心跳，默认周期为30s，如果Eureka Server在多个心跳周期(默认90s）没有收到某个节点的心跳，Eureka Server将会从服务注册列表中把这个服务节点移除。
 
@@ -170,6 +189,8 @@ Eureka采用C/S架构。
    
 4. 自我保护机制
 
+   - Eureka Server会定时剔除超时没有续约的服务，那就有可能出现一种场景，网络一段时间内发生了异常，所有的服务都没能够进行续约，Eureka Server就把所有的服务都剔除了，这样显然不太合理
+   - 所以有了自我保护机制，当短时间内，统计续约失败的比例，达到一定的阈值就触发自我保护机制，该机制下不会剔除任何服务，等到正常后退出自我保护机制
    - Eureka Server在运行期间会去统计心跳成功的比例在15分钟之内是否低于85% , 如果低于85%， Eureka Server会认为当前实例的客户端与自己的心跳连接出现了网络故障，那么Eureka Server会把这些实例(节点)保护起来，让这些实例不会过期导致实例剔除。
    - 这样做就是为了防止Eureka Client可以正常运行, 但是与Eureka Server网络不通情况下， Eureka Server不会立刻将Eureka Client服务剔除
    - 自我保护模式下，Eureka Service会保护服务注册表中的信息，不再删除注册表中的数据，当网络故障恢复后，Eureka Service节点会自动退出自我保护模式
@@ -182,9 +203,37 @@ Eureka采用C/S架构。
      	enable-selt-preservation: false
    ~~~
 
-#### DiscoverClient作用
+
+
+#### 获取服务(get registry)
+
+1. 服务消费者在启动的时候，会发送Rest请求给Eureka服务端，获取上面注册的服务清单，并且缓存在Eureka客户端本地，默认缓存30s
+2. 为了性能Eureka服务端会维护一份只读的服务清单缓存，该缓存每隔30s刷新一次
+
+##### DiscoverClient作用
 
 可以从注册中心根据服务名 获取注册在Eureka上的服务的信息
+
+
+
+#### 服务调用
+
+1. 服务消费者在获取到服务清单后，根据清单中的服务列表信息查找到其他服务的地址，从而进行远程调用
+2. Eureka有个Region和Zone的概念，一个Region包含多个Zone，在进行服务调用时，优先访问处于同一个Zone中的访问提供者
+   - 提供了Region和Zone两个概念来进行分区，region可以理解为地理上的不同，比如亚洲、中国、深圳等等
+   - zone：可以理解为具体的机房，比如region为深圳，然后深圳有两个机房zone1、zone2
+
+
+
+#### 服务下线(cancel)
+
+1. 当Eureka客户端需要关闭或重启时，这段时间内不希望有请求进来，所以需要提前发送Rest请求和Eureka服务端，告诉Eureka服务端自己要下线了
+2. Eureka收到请求后，会把该服务状态设置为下线(Down)，并把该下线事件传播出去
+
+#### 服务剔除(evict)
+
+1. 服务实例可能因为网络故障等原因导致不能提供服务，而且此时该实例也没有发送请求给Eureka服务端来进行服务下线，所以此时需要服务的剔除机制
+2. Eureka服务端在启动时，会创建一个定时任务，每隔一段时间(默认60s)，从当前服务清单中把超时(90s)没有续约的服务剔除
 
 
 
@@ -192,11 +241,13 @@ Eureka采用C/S架构。
 
 Eureka Server各个节点都是平等的，几个节点挂掉不会影响正常节点的工作，剩余的节点依然可以提供注册和查找发现服务，客户端向某个Eureka服务端注册或查询服务时，如果发现连接失败，则会自动切换到其他可用服务节点，只要有一台服务可用，就能保证服务的可用性。只不过查到的可能不是最新的(不保证强一致性)，即消费者可能获取到过期的服务列表
 
+Eureka Client 会拉取、更新和缓存 Eureka Server 中的信息。因此当所有的 Eureka Server 节点都宕掉，服务消费者依然可以使用缓存中的信息找到服务提供者，但是当服务有更改的时候会出现信息不一致
+
 
 
 #### Eureka如何实现高可用
 
-Eureka Server集群，相互注册
+Eureka Server集群，相互注册，不同Eureka Server之间进行访问同步，用来保证访问信息的一致性
 
 
 
@@ -215,6 +266,19 @@ Eureka Server集群，相互注册
 Eureka Server集群采用对等复制即Peer to Peer模式，节点通过彼此相互注册来提高可用性
 
 Server每当自己的信息变更后，就会把自己的最新信息通知给其他Eureka Server保持数据同步
+
+#### Eureka工作流程
+
+1. Eureka Server 启动成功，等待服务端注册。在启动过程中如果配置了集群，集群之间定时通过 Replicate 同步注册表，每个 Eureka Server 都存在独立完整的服务注册表信息
+2. Eureka Client 启动时根据配置的 Eureka Server 地址去注册中心注册服务
+3. Eureka Client 会每 30s 向 Eureka Server 发送一次心跳请求，证明客户端服务正常
+4. 当 Eureka Server 90s 内没有收到 Eureka Client 的心跳，注册中心则认为该节点失效，会注销该实例
+5. 单位时间内 Eureka Server 统计到有大量的 Eureka Client 没有上送心跳，则认为可能为网络异常，进入自我保护机制，不再剔除没有上送心跳的客户端
+6. 当 Eureka Client 心跳请求恢复正常之后，Eureka Server 自动退出自我保护模式
+7. Eureka Client 定时全量或者增量从注册中心获取服务注册表，并且将获取到的信息缓存到本地
+8. 服务调用时，Eureka Client 会先从本地缓存找寻调取的服务。如果获取不到，先从注册中心刷新注册表，再同步到本地缓存
+9. Eureka Client 获取到目标服务器信息，发起服务调用
+10. Eureka Client 程序关闭时向 Eureka Server 发送取消请求，Eureka Server 将实例从注册表中删除 
 
 
 
@@ -307,7 +371,10 @@ feign:
 由于ribbon的重试次数为RetryCount = (maxAutoRetries + 1) * (maxAutoRetriesNextServer + 1)，因此必须保证(maxAutoRetries + 1) * (maxAutoRetriesNextServer + 1)*（ConnectTimeout+ReadTimeout）< timeoutInMilliseconds，因为如果小于超时时间, 那就熔断了, 没有机会重试了
 ~~~
 
+为什么要设置请求超时、连接超时等等？
 
+1. 如果不设置超时时间，用户操作相关接口时，将会出现长时间的无响应，严重影响用户体验
+2. 负载很高的系统：大量调用耗时长的接口，导致性能急剧下降，从而影响其他正常的业务
 
 
 
@@ -323,7 +390,7 @@ Ribbon本地负载均衡，在调用微服务接口时候，会在注册中心�
 
 
 
-Ribbon核心组件：IRule
+Ribbon核心组件：IRule 里面的choose方法
 
 SpringCloud Ribbon 提供了一个IRule接口，该接口主要用来定义负载均衡策略，他有7个默认实现类，每一个实现类都是一个负载均衡策略
 
@@ -434,8 +501,8 @@ RestTemplate+ribbon
 
 ~~~yaml
 ribbon:
-  ReadTimeout: 6000 #建立连接所用的时间，适用于网络状况正常的情况下，两端连接所用的时间
-  ConnectionTimeout: 6000 #建立连接后，服务器读取到可用资源的时间
+  ReadTimeout: 6000  #建立连接后，服务器读取到可用资源的时间 
+  ConnectionTimeout: 6000  #建立连接所用的时间，适用于网络状况正常的情况下，两端连接所用的时间
 ~~~
 
 
@@ -452,11 +519,14 @@ ribbon:
 
 它是 Spring 官方推出的一种声明式服务调用与负载均衡组件，它的出现就是为了替代进入停更维护状态的 Feign
 
+核心作用：为Http形式的RestAPI提供了简洁高效的RPC调用方式，像调用一个本地方法一样，调用远端的RestApi接口，完全是RPC形式
+
 1. 里面集成了ribbon、feign的封装、hystrix
 1. feign不支持SpringMvc注解，所有OpenFeign在Feign的基础上支持SpringMvc的注解，例如@RequestMapping等等
 1. @FeignClient可以解析SpringMVC的@RequestMapping注解下的接口，并通过动态代理的方式产生实现类，实现类中做负载均衡并调用其他服务
 2. 其服务调用以及负载均衡是依靠底层Ribbon实现的，因此超时控制通过Ribbon来设置
 3. OpenFeign里面默认没有开启Hystrix
+3. 底层是对http调用组件的封装，底层为okhttp、httpclient等等
 
 #### 常用注解
 
@@ -467,6 +537,20 @@ ribbon:
 @FeignClient
 
 该注解用于通知OpenFeign组件对@RequestMapping注解下的接口进行解析，并通过动态代理的方式产生实现类，实现负载均衡和服务调用
+
+#### 工作原理
+
+1. @FeignClient如何根据接口生成实现（代理)类
+   - openFeign使用JDK动态代理
+2. 生成的实现（代理）类如何适配各种Http组件？
+   - FeignAutoConfiguration的条件注解
+3. 生成的实现/代理类如何实现Http请求应答序列化和反序列化
+   - Feign提供了Decoder和Encoder两个接口
+4. 生成的实现/代理类如何注入Spring容器
+   - @EnableFeignClients
+   - 扫描@FeignClient，给这些接口创建代理对象，并将代理对象注入Spring容器，再使用时候其实是对代理对象的使用
+
+当请求发生时，对接口的调用，被统一转发到Feign实现的InvacationHandler中，由其负责将接口中的入参等信息转换为http形式，发送到服务器，最后再解析Http响应，将结果转换为对象后返回
 
 ---
 
@@ -1789,3 +1873,4 @@ SocketChannel(用于TCP)
 
 
 
+k
