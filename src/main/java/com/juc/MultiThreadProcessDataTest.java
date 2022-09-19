@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutionException;
  * @ClassName MultiThreadProcessDataTest
  * @Author qianchao
  * @Date 2022/7/6
- * @Version OPRA V1.0
+ * @Version   V1.0
  **/
 public class MultiThreadProcessDataTest {
     public static void main(String[] args) {

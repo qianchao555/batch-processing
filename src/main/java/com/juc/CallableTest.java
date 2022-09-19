@@ -8,7 +8,7 @@ import java.util.concurrent.*;
  * @ClassName CallableTest
  * @Author qianchao
  * @Date 2022/7/6
- * @Version OPRA V1.0
+ * @Version   V1.0
  **/
 public class CallableTest {
     static ThreadPoolExecutor  executor= (ThreadPoolExecutor) Executors.newFixedThreadPool(5);

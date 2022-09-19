@@ -1,9 +1,12 @@
 package com.boot;
 
 import com.boot.containers.RedisContainer;
+import com.boot.listener.DataSetExecutionListener;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -13,6 +16,8 @@ import org.springframework.web.context.WebApplicationContext;
  * @Author qianchao
  * @Date 2022/9/5
  **/
+@Slf4j
+@TestExecutionListeners(DataSetExecutionListener.class)
 public abstract class BaseContainerTest {
 
     @Autowired
@@ -21,6 +26,8 @@ public abstract class BaseContainerTest {
     protected MockMvc mockMvc;
 
     static {
+        log.info("BBBBBBBB");
+        log.info("AAAAAAAAAAAA");
         //做一些默认设置
     }
 
@@ -35,7 +42,7 @@ public abstract class BaseContainerTest {
     /**
      * 容器的启动,若需要其他容器也是类似添加即可，例如kafka,es等等
      */
-    @ClassRule
-    public static RedisContainer redisContainer=new RedisContainer("redis:5.0.0");
+//    @ClassRule
+//    public static RedisContainer redisContainer=new RedisContainer("redis:5.0.0");
 
 }

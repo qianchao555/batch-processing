@@ -5,9 +5,15 @@ spring:
   application:
     name: redis
   datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+#    url: jdbc:postgresql://localhost:5432/test
+#    dbType: postgresql
+#    username: postgres
+#    password: postgres
+#    driver-class-name: org.postgresql.Driver
+
     driver-class-name: com.mysql.cj.jdbc.Driver
-#    url: jdbc:mysql://localhost:3306/springbatch?useSSL=false&serverTimezone=UTC
-    url: jdbc:mysql://localhost:3306/nowcodersql?useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/test?useSSL=false&serverTimezone=UTC
     username: root
     password: 919550ab
 #password: 9+ab
@@ -25,6 +31,17 @@ mybatisPlus:
   mapper-locations: classpath*:mapper/*.xml
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+
+#datasource:
+#  name: test
+#  type: com.alibaba.druid.pool.DruidDataSource
+#  url: jdbc:h2:mem:test;MODE=Postgresql
+#  dbType: postgresql
+#  username: postgres
+#  password: postgres
+#  driver-class-name: org.postgresql.Driver
+
 
 #这里的配置会覆盖logback-spring中的日志打印级别
 logging:
