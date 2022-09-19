@@ -15,6 +15,11 @@ public class Demo {
         List<String> list = Collections.singletonList(s);
         System.out.println(list);
         System.out.println(list.size());
+        //language=JSON
+        String sss="{\"name\": \"qc\",\"age\": 18,\"add\": \"chengdu\"}";
+        String sss2="{\"yhc\": \"ganni\"}";
+        System.out.println(sss);
+        System.out.println(sss2);
     }
 
 }
