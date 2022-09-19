@@ -1,6 +1,7 @@
 package com.boot.containers;
 
 import org.junit.rules.ExternalResource;
+import org.testcontainers.containers.GenericContainer;
 
 /**
  * 模拟redis容器，暴露6379端口

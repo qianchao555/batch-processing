@@ -184,6 +184,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!--qq邮箱测试-->
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+
+
 
     </dependencies>
 
