@@ -25,9 +25,11 @@ public class QqEmailTest {
      * @return
      */
     private static Session createProperties() {
+        //设置邮件服务器
         Properties properties = new Properties();
         properties.setProperty("mail.host", "smtp.qq.com");
         properties.setProperty("mail.transport.protocol", "smtp");
+        //需要验证身份
         properties.setProperty("mail.smtp.auth", "true");
         properties.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
         properties.setProperty("mail.smtp.port", "465");
@@ -50,7 +52,7 @@ public class QqEmailTest {
         mimeMessage.addRecipients(Message.RecipientType.TO, "1376656873@qq.com");
         //抄送
         mimeMessage.addRecipients(Message.RecipientType.CC, "222@qq.com");
-        InternetAddress address = new InternetAddress("1376656873@qq.com");
+        InternetAddress address = new InternetAddress("xiaoyigedl@163.com");
         //邮件发送人
 //        Address address = new Address() {
 //            @Override
