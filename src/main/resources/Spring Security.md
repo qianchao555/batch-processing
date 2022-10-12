@@ -8,9 +8,13 @@
 
 
 
-### Spring Security架构
+### 1、Spring Security架构
 
-### 核心功能
+---
+
+
+
+### 2、核心功能
 
 认证和授权，Spring Security中，认证(Authentication)和授权(Authorization)是分开的
 
@@ -132,19 +136,11 @@ SpringSecurity支持多种用户定义方式，自定义用户其实就是使用
 
 这四种方式都异曲同工，只是数据的存储方式不同而已，其他的执行流程都是一样的
 
----
-
-#### 基本原理
-
-Spring Security核心就是一组过滤器链，采用责任链模式，项目启动后将会自动配置，将这组过滤链，加入到原生web过滤链中
-
-
-
 
 
 ---
 
-### Spring Security认证流程分析
+### 3、Spring Security认证流程分析
 
 #### 登录流程分析
 
@@ -218,7 +214,7 @@ SpringSecurity过滤器链中的一环，它可以用来处理任何提交给它
 
 
 
-##### 认证配置多数据源
+#### 认证配置多数据源
 
 多个数据源：指的是同一个系统中，用户数据来自不同的表，认证时，若第一张表没有找到用户，则在其他表中查找
 
@@ -226,14 +222,14 @@ SpringSecurity过滤器链中的一环，它可以用来处理任何提交给它
 
 
 
-##### 添加登录验证码
+#### 添加登录验证码
 
 登录时候使用验证码是常见的需求，但是SpringSecurity没有提供自动化配置方案，需要开发者自行定义
 
 常用实现登录验证码的两种思路：
 
-1. 自定义过滤器
-2. 自定义认证逻辑（推荐）：也即自定义AuthehticationProvider
+1. 自定义过滤器（实现起来更容易些）：定义过滤器，将其放在UsernamePasswordAuthenticationFilter之前
+2. 自定义认证逻辑：也即自定义AuthehticationProvider
 
 生成验证码：Google开源库工具kaptcha
 
@@ -243,15 +239,21 @@ SpringSecurity过滤器链中的一环，它可以用来处理任何提交给它
 
 
 
-### 过滤器链分析
+### 4、过滤器链分析
 
 
 
-##### 初始化流程分析
+#### 基本原理
+
+Spring Security核心就是过滤器，这些过滤器组成一个完整的过滤器链，采用责任链模式，项目启动后将会自动配置，将这组过滤链，加入到原生web过滤链中
+
+
+
+#### Spring Security 初始化流程分析
 
 1. **ObjectPostProcessor**
 
-它是SpringSecurity中使用频率最高的组件之一，它是一个后置处理器，也就是当一个对象创建成功后，如果还需要一些额外的事情补充，则可以通过ObjectPostProcessor来进行处理，这个接口默认只有一个postProceess方法，该方法用来完成对对象的二次处理
+它是SpringSecurity中使用频率最高的组件之一，它是一个对象后置处理器，也就是当一个对象创建成功后，如果还需要一些额外的事情补充，则可以通过ObjectPostProcessor来进行处理，这个接口默认只有一个postProceess方法，该方法用来完成对对象的二次处理
 
 ![image-20220928214342403](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202209282143538.png)
 
@@ -265,7 +267,9 @@ Spring Security中，可以灵活配置需要哪些SpringSecurity过滤器，选
 
 2. **SecurityFilterChain**
 
-   就是Spring Security中过滤器链对象
+   就是Spring Security中过滤器链对象，里面包含过滤器集合
+
+   
 
 3. **SecurityBuilder**
 
@@ -273,29 +277,58 @@ Spring Security中，可以灵活配置需要哪些SpringSecurity过滤器，选
 
    不同的SecurityBuilder会构建出不同的对象，例如AuthenticationManagerBuilder用于构建AuthenticationManager对象
 
-4. WebSecurity
+   
 
-   是一在更大的层面取构建过滤器，一个HttpSecurity对象可以构建一个过滤器链，也就是一个DefaultSecurityFilterChain对象，而一个项目中可以存在多个HttpSecurity对象，也就可以构建多个DSFC过滤器链
+4. HttpSecurity
 
-   最终由它返回一个filterChainProxy对象，这个对象是最终构建出来的代理过滤器链，通过Spring提供的DelegatingFilterProxy将其嵌入到原生Web Filter中
-
-5. FilterChainProxy
-
-   SpringSecurity中的过滤器链中的最终执行，就是在FilterChainProxy中
+   主要作用：构建一条过滤器链，反应在代码上，也就是构建一个DefaultSecurityFilterChain对象。一个DefaultSecurityFilterChain对象包含一个路径匹配器和多个Spring Security过滤器，HttpSecurity中通过收集各种各类的xxxConfigurer，将过滤器链对应的配置类收集起来，在后续的构建过程中，将这些xxxConfigurer构建为具体的Spring Security过滤器，同时添加到HttpSecurity的filters对象中
 
    
+
+5. WebSecurity
+
+   相对于HttpSecurity，它是一在更大的层面取构建过滤器，一个HttpSecurity对象可以构建一个过滤器链，也就是一个DefaultSecurityFilterChain对象，而一个项目中可以存在多个HttpSecurity对象，也就可以构建多个DSFC过滤器链。最终由它返回一个filterChainProxy对象
+
+   
+
+6. FilterChainProxy
+
+   FilterChainProxy是最终构建出来的代理过滤器链，通过Spring提供的DelegatingFilterProxy，将FilterChainProxy对象嵌入到原生过滤器链（Web Filter）中，DelegatingFilterProxy作为一个代理对象，它不承载具体的业务
+
+   ![image-20221012113502142](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210121136543.png)
+
+
 
 ##### SecurityConfigurer接口
 
 核心方法init、configure，一个完成配置类的初始化操作，一个进行配置类的配置
 
+WebSecurityConfigurer
+
+是一个空接口，可以通过它来自定义WebSecurity，其只有一个实现类WebSecurityConfigurerAdapter，大多数情况下，开发者通过继承WebSecurityConfigurerAdapter来实现对WebSecurity的自定义配置
+
+WebSecurityConfigurerAdapter
 
 
 
+#### ObjectPostProcessor
+
+所有的过滤器都由对应的配置类来负责创建，配置类将过滤器创建成功之后，会调用父类的postProcess方法。默认情况下，CompositeObjectPostProcessor对象中所维护的List集合中只有一个对象，那就是AutowireBeanFactoryObjectPostProcessor，调用该类的postProcess方法可以将对象注册到Spring容器
+
+自定义ObjectPostProcessor，比较典型的场景是**动态权限配置**
 
 
 
-#### 多个过滤器链
+#### 多种用户定义方式
+
+自定义用户两种方式：
+
+1. 重写configure(AuthenticationManagerBuilder)
+2. 直接向Spring容器中注入UserDetailsService对象
+
+
+
+Spring Security中存在两种类型的AuthenticationManager
 
 全局AuthenticationManager、局部AuthenticationManager
 
@@ -303,13 +336,42 @@ Spring Security中，可以灵活配置需要哪些SpringSecurity过滤器，选
 
 
 
+1. 全局的AuthenticationManager
+   - 不用配置，系统会默认提供一个全局的AuthenticationManager对象
+   - 也可以通过重写configure(AuthenticationManagerBuilder)方法进行全局配置
+   - 默认的全局AuthenticationManager在配置时，会从Spring容器中找UserDetailsService实例，所以针对全局AuthenticationManager配置用户，只需要往Spring容器中注入一个UserDetailsService实例即可
+2. 局部的AuthenticationManager
+
+当用户进行验证时，首先通过局部的AuthenticationManager对象进行验证，若失败，则会调用其parent也就是全局的AuthenticationManager再次进行验证
+
+
+
+#### AuthenticationManager
+
+获取AuthenticationManager实例时，有两种不同的方式
+
+1. 重写父类的authenticationManager
+   - 获取的是全局的AuthenticationManager实例
+2. 重写父类的authenticationManagerBean()
+   - 获取的是局部的AuthenticationManager实例
+
+
+
+
+
+#### 多个过滤器链
+
 Spring Security中可以同时存在多个过滤器链，一个WebSecurityConfigurerAdapter的实例就可以配置一条过滤器链
 
 比如/bar/xxx 、/foo/xxx分别为这种请求构建过滤链，是/bar/xx走自己的过滤器链中进行处理
 
+设置了多个过滤器链，需要使用@Order注解来标记不同配置的优先级，数字越大优先级越低，会按照过滤器链的优先级从高到低，依次进行匹配
 
 
-##### 静态资源过滤
+
+
+
+#### 静态资源过滤
 
 实际项目中，并非所有的请求都要经过SpringSecurity过滤器，例如静态资源一般不需要经过过滤器链，用户如果访问这些静态资源，直接返回对应的资源即可
 
@@ -317,21 +379,31 @@ WebSecurity中有一个ignoredRequests变量，里面记录的就是所有需要
 
 
 
-##### 使用Json格式登录
+
+
+#### 使用Json格式登录
 
 SpringSecurity默认登录参数传递格式是k-v格式，也就是表单登录，实际项目中，一般使用Json格式来传递登录参数，这就需要自定义过滤器来实现
 
+登录参数的提取是在UsernamePasswordAuthenticationFilter过滤器中完成的，若要使用JSON格式登录，只需要模仿该过滤器定义自己的过滤器，再将自定义的过滤器放到该过滤器之前即可
+
+
+
+
+
+
+
 ---
 
-### 密码加密
+### 5、密码加密
 
 实际项目中，密码等重要信息都会采用密文进行存储，若用明文存储会带来极高的安全风险。企业级应用中，密码不仅要加密还会采用加盐来保证密码的安全性
 
 传统加密方式：将明文进行Hash运算(例如：SHA-256等等)得到密文进行存储
 
-##### 彩虹表
+#### 彩虹表
 
-是一个用于对加密Hash函数逆运算的表，通常用于破解加密过的Hash字符串，为了降低彩虹表对系统安全性的影响，人们又发明了密码加盐，即：对明文加密后，再添加一个随机数(即盐)和密文再混合在一起进行加密，这样即使明文相同，生成的加密字符串也是不同的，当然这个随机数也需要以明文方式和密文一起存放数据库的
+是一个用于对加密Hash函数逆运算的表，**通常用于破解加密过的Hash字符串**，为了降低彩虹表对系统安全性的影响，人们又发明了**密码加盐**，即：**对明文加密后，再添加一个随机数(即盐)和密文再混合在一起进行加密**，这样即使明文相同，生成的加密字符串也是不同的，当然这个随机数也需要以明文方式和密文一起存放数据库的
 
 用户登录：将输入的明文和存储再数据库中的盐一起进行Hash，再将运算结果和存储在数据库中的密文进行比较，进而确定用户的登录信息是否有效
 
@@ -345,7 +417,7 @@ SpringSecurity中可以通过bcrypt、PBKDF2、scrypt等自适应单向函数进
 
 
 
-##### PasswordEncoder
+#### PasswordEncoder
 
 常见实现类：BCryptPasswordEncoder、SCryptPasswordEncoder、PbkdfPasswordEncoder、Argon2PasswordEncoder
 
@@ -355,11 +427,13 @@ DelegatingPasswordEncoder：SpringSecrity5.0之后，默认的密码加密方案
 
 ---
 
-### RememberMe（下次自动登录）
+### 6、RememberMe（下次自动登录）
 
 记住我功能：并不是将用户名/密码用Cookie保存在浏览器中，这是一种服务器端的行为。
 
 传统的登录方式是基于Session会话，一旦用户关闭浏览器重新打开，就要再次登录，这样过于繁琐。考虑这样一种机制：用户关闭后并重新打开浏览器之后，还能继续保存认证状态，就会方便很多，RememberMe就是为了解决这一需求而生的。即：成功认证一次之后在一定的时间内我可以不用再输入用户名和密码进行登录了，系统会自动给我登录
+
+例如：一些购物网站、博客等，发现网站即使关闭浏览器后，重写打开浏览器访问该网站，登录状态依然有效，这个功能的实现就是RememberMe
 
 
 
@@ -379,7 +453,7 @@ DelegatingPasswordEncoder：SpringSecrity5.0之后，默认的密码加密方案
 
 ---
 
-### 会话管理
+### 7、会话管理
 
 用户通过浏览器登录成功后，用户和系统之间就会保持一个会话(Session)，通过这个会话，系统可以确定出访问用户的身份，Spring Securtity中和会话相关的功能由SessionManagementFilter和SessionAuthticationStrategy接口来处理
 
@@ -397,7 +471,7 @@ sessionManagement().maximumSessions(n)
 
 ---
 
-### HttpFirewall
+### 8、HttpFirewall
 
 是Spring Security提供的Http防火墙，它可以用于拒绝潜在的危险请求或包装这些请求进而控制其行为，通过HttpFirewall可以对各种非法请求提前进行拦截并处理，降低损失
 
@@ -405,7 +479,7 @@ sessionManagement().maximumSessions(n)
 
 ---
 
-### 漏洞保护
+### 9、漏洞保护
 
 
 
@@ -467,7 +541,7 @@ Http响应头中的许多属性都可以用来提高Web安全
 
 ---
 
-### HTTP认证
+### 10、HTTP认证
 
 Http提供了一个用于认证和权限控制的通用方式，这种认证方式通过Http请求头来提供认证信息，而不是通过表单登录
 
@@ -501,7 +575,7 @@ Http摘要认证使用的也不多。。。
 
 ---
 
-### 跨域问题
+### 11、跨域问题
 
 跨域是一个非常常见的需求，Spring框架中对跨域有好几种方案，引入Spring Security后跨域方案又增加了
 
@@ -546,7 +620,7 @@ SpringSecurity跨域问题的处理：根据开发者提供的CorsConfigurationS
 
 ---
 
-### Spring Security异常处理
+### 12、Spring Security异常处理
 
 Security种主要分为认证异常处理、权限异常处理，除此之外的异常则抛出，交由Spring去处理
 
@@ -564,7 +638,7 @@ Spring Security异常处理主要由ExceptionTranslationFilter过滤器中完成
 
 ---
 
-### 权限管理
+### 13、权限管理
 
 认证和授权是Spring Security的两大核心功能，授权就是我们日常说的权限管理
 
