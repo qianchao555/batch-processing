@@ -441,11 +441,27 @@ DelegatingPasswordEncoder：SpringSecrity5.0之后，默认的密码加密方案
 
 解决：通过持久化令牌以及二次校验来降低RememberMe所带来的安全风险
 
+#### 持久化令牌
+
+使用持久化令牌实现RememberMe的体验和使用普通令牌的登录体验是一样的，不同的是服务端所做的事情变了
+
+持久化令牌在普通令牌的基础上，新增了series和token两个校验参数，当用户使用用户名/密码方式登录时，series才会自动更新；一旦有了新的会话，token会重新生成。所有，如果令牌被盗用一旦对方基于RememberMe登录成功后，就会生成新的token，你自己的登录令牌会失效，这样就能及时发现帐户泄漏并作出处理
+
+
+
+#### 二次校验
+
 二次校验就是将系统中的资源分为敏感和不敏感的，若用户使用了RememberMe的方式登录，则在访问敏感资源的时候会自动跳转到登录页面，登录后才能访问这些敏感资源，这就是在一定程度上牺牲了用户体验，但是换取了系统的安全性
 
+例如：
 
+1. /hello接口：认证后才能访问，无论通过什么认证方式
+2. /hello2接口：认证才能访问，但是必须通过用户名/密码的方式认证
+3. /hello3接口：认证后才能访问，当时必须通过RememberMe方式认证
 
+#### 原理分析
 
+具体使用时候再去学习
 
 对应的过滤器：RememberMeAuthenticationFilter
 
@@ -455,17 +471,56 @@ DelegatingPasswordEncoder：SpringSecrity5.0之后，默认的密码加密方案
 
 ### 7、会话管理
 
-用户通过浏览器登录成功后，用户和系统之间就会保持一个会话(Session)，通过这个会话，系统可以确定出访问用户的身份，Spring Securtity中和会话相关的功能由SessionManagementFilter和SessionAuthticationStrategy接口来处理
+用户通过浏览器登录成功后，用户和系统之间就会保持一个会话(Session)，通过这个会话，系统可以确定出访问用户的身份，Spring Securtity中和会话相关的功能由SessionManagementFilter和SessionAuthticationStrategy接口来处理，过滤器委托该接口对会话进行处理，典型用法：防止会话固定攻击、配置会话并发数等等
 
- 
+####  会话
 
-##### 会话并发管理
+当浏览器调用登录接口登录成功后，服务端和浏览器之间便建立了一个会话（Session)，浏览器每次发送请求时都会携带一个SessionId，服务端则根据这个SessionId来判断用户身份
+
+当浏览器关闭后，服务端的Session不会自动销毁，需要开发者手动在服务端调用Session的销毁方法或者等Session过期时间到了之后自动销毁
+
+SpringSecurity中，与HttpSession相关的功能由SessionManagementFilter和SessionAuthenticationStrategy接口处理，SessionManagementFilter过滤器将Session相关操作委托给SessionAuthenticationStrategy接口去完成
+
+
+
+#### 会话并发管理
 
 会话并发管理：当前系统中，同一个用户可以同时创建多个会话，例如一台设备对应一个会话的话，简单理解就是为同一个用户可以同时在多台设备上进行登录，默认同一个用户没有设置多少设备登录没做限制，不过可以在SpringSecurity中进行配置
 
-提供一个httpSessionEventPublisher实例
+提供一个httpSessionEventPublisher实例，
 
-sessionManagement().maximumSessions(n)
+配置： sessionManagement().maximumSessions(n)
+
+
+
+#### Session共享
+
+针对有状态登录、集群环境下会话管理方案
+
+session共享：将不同服务的会话统一放在一个地方，所有的服务共享一个会话。一般使用一些k-v数据库存储Session，常见方案是使用Redis存储，Session共享方案由于其简便性与稳定性，目前使用较多
+
+目前使用较多方案：Spring-session，利用spring-session可以方便地失效Session的管理
+
+![image-20221013215545159](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210132208223.png)
+
+##### 有状态登录
+
+即：服务端需要记录每次会话的客户端信息，从而识别客户端身份
+
+典型设计：Tomcat的Session
+
+例如：用户登录后，把用户的信息保存在服务端的Session中，并且给用户一个Cookie值，记录对应的Session，下次请求，用户携带cookie(浏览器自动完成)请求，服务端能识别到对应的Session，从而找到用户的信息
+
+缺陷：服务端保存大量数据，增加服务端压力；服务端保存用户状态，不支持集群化部署
+
+##### 无状态登录
+
+1. 客户端登录到服务端认证
+2. 服务端返回token
+3. 客户端每次携带token访问资源
+4. 服务端校验token，判断是否有权访问
+
+
 
 
 
@@ -477,19 +532,21 @@ sessionManagement().maximumSessions(n)
 
 代码层面：HttpFirewall被注入到FilterChainProxy中，并在Spring Security过滤链执行前被触发
 
+实际项目中：一般不使用
+
 ---
 
 ### 9、漏洞保护
 
+SpringSecurity优势之一：为各种可能存在的漏洞提供了保护机制，这些保护机制默认是开启的，即：不用开发者考虑太多的事情，就可以开发出一套安全的权限管理系统
 
+#### CSRF攻击与防御
 
-##### CSRF攻击与防御
+CSRF：Cross-Site Request Forgery **跨站请求伪造**，也称为“一键式攻击”，通常缩写为CSRF、XSRF
 
-CSRF：Cross-Site Request Forgery 跨站请求伪造，也称为“一键式攻击”，通常缩写为CSRF、XSRF
+CSRF是一种**挟持用户在当前已经登录的浏览器上发送恶意请求的攻击行为**，CSRF是利用网站对用户网页浏览器的信任
 
-CSRF是一种挟持用户在当前已经登录的浏览器上发送恶意请求的攻击行为，CSRF是利用网站对用户网页浏览器的新任
-
-SpringSecurity默认是开启了csrf的防护的
+SpringSecurity默认是开启了csrf的防护的，但是一般都会禁用（见下令牌同步模式），因为启用后的规则很多
 
 
 
@@ -510,25 +567,82 @@ Spring提供了两种机制来防御CSRF攻击
 
 ###### 令牌同步模式
 
+目前主流的csrf攻击预防方案
+
 每个Http请求中，除了默认自动携带的Cookie参数之外，再提供一个额外安全的字符串称为Csrf令牌，这个令牌由服务端生成，生成后在HttpSession中保存一份
 
-当请求到达后，请求携带CSRF令牌信息和服务端保存的令牌进行对比，若令牌不一致则拒绝该Http请求
+当前端请求到达后，请求携带CSRF令牌信息和服务端保存的令牌进行对比，若令牌不一致则拒绝该Http请求
+
+SpringSecurity中，默认不会对Get、Head、Options、Trance请求进行csrf令牌校验
+
+post请求时候，开启csrf防御，请求中会包含一些隐藏域（_csrf），所以一般会禁用csrf防御功能
+
+![image-20221013222830443](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210132228585.png)
 
 
 
-##### HTTP响应头处理
+#### HTTP响应头处理
 
 Http响应头中的许多属性都可以用来提高Web安全
 
 ![image-20220929215829796](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202209292158902.png)
 
+前三个与缓存相关
+
+这些响应头都是在HeaderWriterFilter中添加的，默认情况下，该过滤器会添加到Spring Security过滤链中，HeaderWriterFilter是通过HeadersConfigurer进行配置的
+
+##### 缓存控制
+
+1. Cache-Control：no-cache、no-store、max-age=0、must-revalidate
+   - 请求头和响应头都支持该字段
+2. Pragma：no-cache
+   - 作用：类似于Cache-Control：no-cache   兼容HTTP/1.0客户端
+3. Expires：0
+   - 指定一个日期，即：在指定日期之后，缓存过期。若日期值为0，则表示缓存过期
+
+从上面解释可以看到SpringSecurity默认不做任何缓存。但是这个是**针对SpringSecurity过滤器的请求**，如果请求本身没有经过SpringSecurtiy过滤器，那么该缓存的还是会缓存
+
+若请求经过SpringSecurity过滤器，但是又希望开启缓存功能，那么需要关闭SpringSecurity中关于缓存的默认配置：.cacheControl().disable()，这样SpringSecurity就不会配置Cache-Control、Pragma、Expires这三个缓存相关的相应头了
+
+##### X-Content-Type_Options
+
+得先了解MIME嗅探
+
+X-Content-Type_Options响应头相当于一个提示标志，被服务器用来提示客户端一定要遵循在Content-Type中对MIME类型的设定，而不能对其进行修改。换言之，就是服务端告诉服务端其对于MIME类型的设置没有任何问题
+
+X-Content-Type_Options：nosiniff
 
 
-这些响应头都是在HeaderWriterFilter中添加的，默认情况下，该过滤器会添加到Spring Security过滤链中
+
+##### Strict-Transport-Security
+
+用来指定当前客户端只能通过Https服务服务端，而不能通过Http访问
+
+Strict-Transport-Security：max-age=3152600；includeSumDomains
+
+1. max-age：浏览器收到这个请求后的多少秒的时间内，凡是访问这个域名下的请求都使用https请求
+
+2. includeSubDomains：可选项，若被指定则表示第一条规则也适用于子域名
+
+   
+
+##### X-Frame-Options
+
+该响应头用来告诉浏览器是否允许一个页面在<from>、<ifram>、<embed>或<objec>中展现，通过该响应头可以确保网站没有被嵌入到其他站点里面，进而避免发送单击劫持
+
+**单击劫持**：一种视觉上的欺骗手段。攻击者将被劫持的网页放在一个iframe标签中，设置该iframe标签透明不可见，然后将该iframe标签覆盖在另一个页面上，最后诱使用户在该页面上进行操作，通过调整iframe页面的位置，可以诱使用户恰好单击在iframe页面的一些功能性按钮上
+
+- deny：表示该页面不允许在frame中展示，即便在相同域名的页面中嵌套也不允许
+- sameorigin：该页面可以在相同域名页面的frame中展示
+- allow-from uri：表示该页面可以在指定来源的frame中展示
+
+SpringSecurity中默认取值是Deny
+
+X-Frame-Options：DENY
 
 
 
-##### HTTP通信安全
+#### HTTP通信安全
 
 三方面入手
 
