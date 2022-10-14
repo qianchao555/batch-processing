@@ -638,7 +638,32 @@ Strict-Transport-Security：max-age=3152600；includeSumDomains
 
 SpringSecurity中默认取值是Deny
 
+~~~shell
 X-Frame-Options：DENY
+~~~
+
+
+
+##### X-XSS-Protection
+
+X-XSS-Protection响应头告诉浏览器，当检测到跨站脚本攻击（XSS）时，浏览器将停止加载页面
+
+1. 0 表示禁止XSS过滤
+2. 1表示启用XSS过滤(浏览器默认的)，若检测到跨站脚本攻击，浏览器将清除页面（删除不安全的部分）
+3. 1;mode=block 表示启用XSS过滤。如果检测到攻击，浏览器不清除页面，而是阻止页面加载
+4. 1;report=<reporting-URI> 表示启用过滤XSS，若检测到跨站脚本攻击，浏览器清除页面，并使用CSP report-uri指令的功能发送违规报告(Chrome支持)
+
+XSS攻击：跨站脚本攻击，是一种安全漏洞，攻击者利用这种漏洞在网站注入恶意的javascript代码，而浏览器无法区分出这是恶意的javascript代码还是正常的javascript代码。当被攻击者登录网站时，就会自动运行这些恶意代码，攻击者可以利用这些恶意代码去窃取Cookie、监听用户行为以及修改DOM结构等
+
+
+
+SpringSecurity中设置的X-XSS-Protection响应头为：
+
+```shell
+X-XSS-Protection： 1; mode=block
+```
+
+
 
 
 
@@ -655,7 +680,11 @@ X-Frame-Options：DENY
 
 ---
 
+
+
 ### 10、HTTP认证
+
+
 
 Http提供了一个用于认证和权限控制的通用方式，这种认证方式通过Http请求头来提供认证信息，而不是通过表单登录
 
@@ -667,7 +696,7 @@ Spring Security对这两种认证方式都提供了支持
 
 ##### Http Basic authentication
 
-Http基本认证，这种认证方式中：将用户的登录名/密码经过Base64编码后，放在请求头的Authorization字段中，从而完成用户身份的认证
+**Http基本认证**，这种认证方式中：将用户的登录名/密码经过Base64编码后，放在请求头的Authorization字段中，从而完成用户身份的认证
 
 WWW-Authenticate响应头：定义了用何种验证方式取完成身份认证
 
@@ -685,7 +714,13 @@ Spring Security中为Http摘要认证提供了相应的AuthenticationEntryPoint�
 
 Http摘要认证使用的也不多。。。
 
-还是老老实实用JWT把
+
+
+实际项目中这两个都不用，还是老老实实用JWT吧
+
+
+
+
 
 ---
 
@@ -693,7 +728,7 @@ Http摘要认证使用的也不多。。。
 
 跨域是一个非常常见的需求，Spring框架中对跨域有好几种方案，引入Spring Security后跨域方案又增加了
 
-##### CORS
+#### CORS
 
 Cross-Origin Resource Sharing，是W3C制定的一种跨域资源共享技术标准，其目的就是为了解决前端的跨域请求
 
@@ -701,42 +736,91 @@ Options方法请求：预检请求，目的是查看服务端是否支持即将�
 
 若服务端支持跨域请求则返回响应头中将包含：Access-Control-Allow-Origin：http://xxxx
 
+Access-Control-Allow-Origin：告诉浏览器可以访问该资源的域
 
 
-##### Spring处理跨域方案
+
+#### Spring处理跨域方案
 
 1. @CrossOrigin
    - 可以标注在方法上、Controller上
 2. addCorsMappings
    - @CrossOrigin需要添加在不同的Controller上，所以需要一种全局的配置方法，就是重写WebMvcConfigurer的addCorsMappings方法来实现全局配置
    - 这两种都是在CrosInterceptor拦截器中实现的
-3. CorsFilter
+3. **CorsFilter**：使用多
    - 是Spring Web提供的一个处理跨域的过滤器，可以通过这个过滤器处理跨域
+   - 整体项目:则推荐使用这个
 4. 选一种来处理跨域即可
 
 
 
-##### Spring Security处理跨域方案
+#### Spring Security处理跨域方案
 
-项目使用SpringSecurity后Spring提供的第1、2两种方案处理跨域方式会失效，第3种方案会不会失效则要看过滤器的优先级，若过滤器优先级高于SpringSecurity过滤器则有效，否则会失效
+项目使用SpringSecurity后Spring提供的第1、2两种方案处理跨域方式会失效，第3种CorsFilter方案会不会失效则要看过滤器的优先级，若过滤器优先级高于SpringSecurity过滤器则有效，否则会失效
+
+
+
+**Filter、DispatcherServlet、Interceptor执行顺序**如下：
 
 ![image-20220929232805913](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202209292328029.png)
 
-Filter、DispatcherServlet、Interceptor执行顺序
+使用@CrossOrigin注解或addCorsMappings方法配置跨域，最终都是在CorsInterceptor中对跨域进行校验的，要进入CrosIntercepter拦截器，首先要经过SpringSecurtiy过滤器链，而在SpringSecurity过滤器链时，由于预检请求没有携带认证信息，就会被拦截下来
+
+如果使用CrosFilter配置跨域，则只要配置的过滤器优先级高于SpringSecurity优先级，即：在SpringSecurity过滤器之前执行跨域请求校验，那么就没有问题。若配置的过滤器优先级低于SpringSecurity，则会被SpringSecurity过滤器拦截下来
+
+
+
+##### 特殊处理Options请求
+
+引入SpringSeucrity之后，要想继续通过@CrossOrigin或addCrosMappings方法配置跨域，那么需要通过给Options请求单独放行，来解决预检请求被拦截的问题
+
+
+
+1. configure(HttpSecurity)中配置：
+   - 不过：这种直接在configure中直接指定所有的Options请求直接通过的方案，既不安全也不优雅，实际开发中很少使用，了解即可
+
+~~~java
+ //指定所有的Options请求直接通过
+antMatchers(HttpMethod.Options).permitAll()  
+~~~
+
+2. 继续使用CorsFilter
+
+   - 只需要将CorsFilter的优先级设置高于SpringSecurity过滤器优先级
+   - ![image-20221014140031747](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210141400956.png)
+   - FilterRegistrationBean实现过滤器、能够实现过滤器之间的优先级
+   - order：值越低，优先级越高
+   - 
+
+   - ![image-20221014140321150](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210141403730.png)
+   - 
+   - 只要将CorsFilter的优先级高于FilterChainProxy即可
+   - ![image-20221014141645556](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210141416856.png)
+   - SpringSecurity过滤器的优先级，从SecurityProperties中获取的，该对象默认过滤器优先级为-100，所以，开发者配置CorsFilter过滤器只需要小于-100即可
+
+   
+
+
 
 **专业解决方案**
 
-SpringSecurity跨域问题的处理：根据开发者提供的CorsConfigurationSource对象构建出CorsFilter，并将CorsFilter放置于认证过滤器之前，所以能处理跨域问题
+SpringSecurity中提供了更加专业的方式来解决预检请求所面临的问题
+
+跨域问题的处理：根据开发者提供的CorsConfigurationSource对象构建出CorsFilter，并将CorsFilter放置于认证过滤器之前，所以能处理跨域问题
+
+这是第四种构建CorsFilter的方式
 
 核心思路：将处理跨域的过滤器放在Spring Securtity认证过滤器之前即可
 
 
 
+**实际项目推荐：第三种，即CrosFilter**
+
 ---
 
 ### 12、Spring Security异常处理
 
-Security种主要分为认证异常处理、权限异常处理，除此之外的异常则抛出，交由Spring去处理
+Security种主要分为**认证异常**处理、**权限异常**处理，除此之外的异常则抛出，交由Spring去处理
 
 AuthenticationException：认证异常
 
@@ -746,23 +830,23 @@ AccessDeniedException：权限异常
 
 Spring Security异常处理主要由ExceptionTranslationFilter过滤器中完成
 
-
-
-
-
 ---
 
+
+
 ### 13、权限管理
+
+
 
 认证和授权是Spring Security的两大核心功能，授权就是我们日常说的权限管理
 
 两大核心功能间有很好的解耦和关系，无论使用哪种认证方式，都不影响权限管理功能的使用
 
-Spring Security中对于RBAC、ACL等不同权限模型都有很好的支持
+Spring Security中对于**RBAC、ACL等不同权限模型都有很好的支持**
 
 
 
-##### 什么是权限管理
+#### 什么是权限管理
 
 认证就是确认用户身份，也就是我们常说的登录
 
@@ -772,26 +856,28 @@ Spring Security中对于RBAC、ACL等不同权限模型都有很好的支持
 
 
 
-##### Spring Security 权限管理策略
+#### SpringSecurity权限管理策略
 
 主要有两种类型：
 
-1. 基于过滤器的权限管理
+1. 基于过滤器的权限管理：FilterSecurityInterceptor
 
    - 主要用来拦截Http请求，拦截下来后，根据Http请求地址进行权限校验
 
-2. 基于AOP的权限管理
+2. 基于AOP的权限管理：MethodSecrityInterceptor
 
    - 主要用来处理方法级别的权限问题
    - 当调用某一个方法时候，通过Aop将操作拦截下来，然后判断用户是否具备相关的权限，具备则允许方法调用
 
    
 
-##### 核心概念
+#### 核心概念
 
-###### 角色与权限
+##### 角色与权限
 
-Security中，用户登录成功后，用户信息保存在Authentication对象中，该对象有一个getAuthorities方法，用来返回当前对象所具备的权限信息，也即：已经授予当前登录用户的权限
+Security中，**用户登录成功后，用户信息保存在Authentication对象中**，该对象有一个getAuthorities方法，用来返回当前对象所具备的权限信息，也即：已经授予当前登录用户的权限
+
+getAuthorities()返回值为Collection<? extends GrantedAuthority>，即：集合中存放的是GrantedAuthority的子类
 
 无论用户的认证方式采用何种方式例如：用户/密码、RememberMe、还是其他的CAS、OAuth2等认证方式，最终用户的权限信息都可以通过getAuthorities获取
 
@@ -809,15 +895,13 @@ Security中，用户登录成功后，用户信息保存在Authentication对象�
 
 
 
-###### 角色继承
+##### 角色继承
 
 角色继承：指的是角色存在一个上下级的关系，例如：role_amdin继承自role_user，那么role_admin就自动具备role_user的所有权限
 
 
 
----
-
-##### 基于Url地址的权限关联
+#### 基于Url地址的权限关联
 
 基于Url地址的权限关联主要是通过过滤器FilterSecurityInterceptor来实现
 
@@ -833,7 +917,7 @@ Filter将请求拦截下来后，交给AccessDecisionManager进行处理，Acces
 
 
 
-###### 动态管理权限规则
+##### 动态管理权限规则
 
 通过代码来配置Url拦截规则和请求url所需要的权限 比较死板、不灵活，若要调整某个url所需要的权限还得修改代码
 
@@ -862,7 +946,7 @@ Filter将请求拦截下来后，交给AccessDecisionManager进行处理，Acces
 
 
 
-##### 基于方法的权限管理
+#### 基于方法的权限管理
 
 主要通过AOP实现，在Spring Security中通过MethodSecurityInterceptor来提供相关实现
 
