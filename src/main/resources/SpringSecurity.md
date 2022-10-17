@@ -1308,19 +1308,23 @@ RBAC3
 
 ## OAuth2
 
+OAuth主要有OAuth1.0a和OAuth2.0两个版本，二者完全不同，而且不兼容。2.0是目前广泛使用的版本
+
+
+
 Open Authority
 
 https://blog.csdn.net/u012702547/article/details/105699777
 
 一个验证授权的**开放标准协议**，所有人都能基于这个标准实现自己的OAuth，OAuth基于Https以及APIs，Service应用使用access token来进行身份验证
 
-OAuth主要有OAuth1.0a和OAuth2.0两个版本，二者完全不同，而且不兼容。2.0是目前广泛使用的版本
 
-#### OAuth2.0
+
+### OAuth2.0
 
 目前流行的**授权机制**，是一个非常重要的**认证协议**，用来授权第三方应用获取用户数据，利用第三方系统获得资源。该标准允许用户让第三方应用访问该用户在某一网站上存储的私密资源，并且这个过程中无须将用户名和密码提供给第三方应用。通过token可以实现这一功能，每一个令牌授权一个特定的网站，在特定的时间段内允许访问特定的资源
 
-常用于第三方登录，例如：微信、微博、Github授权登录等等
+OAuth让用户可以授权第三方网站灵活的访问它们存储在另一些资源服务器上的特定信息，而非所以内容。对于用户而言，互联网应用中，最常见的OAuth应用就是各种第三方登录，例如：微信、微博、Github授权登录等等
 
 例如：用户想通过微信登录微博，此时微博就是一个第三方应用，微博需要访问用户存在在微信服务器上的一些用户基本信息，此时就需要得到用户的信息。如果用户把自己的微信用户名/密码告诉微博，那么微博就能访问用户存储在微信服务器上的所有数据，并且用户只有修改密码才能收回授权，这种授权方式安全隐患很大，使用OAuth就能很好的解决这一问题
 
@@ -1334,11 +1338,13 @@ Spring Security对OAuth2协议提供了相应的支持，可以在Spring Securit
 
 
 
+
+
 #### 为什么要有OAuth
 
 在OAuth之前，使用用户名、密码进行身份验证，这种形式不安全。OAuth的出现就是为了解决访问资源的安全性以及灵活性。OAuth使得第三方应用对资源的访问更加安全
 
-#### OAuth2.0中四个角色
+### OAuth2 中四个角色
 
 OAuth的流程中，主要有以下四个角色
 
@@ -1359,11 +1365,11 @@ OAuth的流程中，主要有以下四个角色
 
 
 
-#### OAuth2.0四种授权模式
+### OAuth2四种授权模式
 
 OAuth2.0对于如何颁发令牌的细节，规定的很细，一共分为四种授权类型即：四种颁发令牌的方式，适用于不同的场景
 
-##### 授权码模式
+#### 授权码模式（重要）
 
 常见的第三方平台登录功能基本都是使用这种模式，是最安全并且使用最广泛的一种模式
 
@@ -1371,11 +1377,11 @@ OAuth2.0对于如何颁发令牌的细节，规定的很细，一共分为四种
 
 
 
-##### 简化模式
+#### 简化模式
 
 简化模式是：不需要客户端服务器参与，直接在浏览器中向授权服务器申请令牌，一般如果网站是纯静态页面可以采用这种方式
 
-##### 密码模式
+#### 密码模式
 
 密码模式是用户把用户名密码直接告诉客户端，客户端使用说这些信息向授权服务器申请令牌（token）。这需要用户对客户端高度信任，**例如客户端应用和服务提供商就是同一家公司，我们自己做前后端分离登录就可以采用这种模式**
 
@@ -1383,25 +1389,9 @@ OAuth2.0对于如何颁发令牌的细节，规定的很细，一共分为四种
 
 密码模式有一个前提就是你高度信任第三方应用，举个不恰当的例子：如果我要在 www.javaboy.org 这个网站上接入微信登录，我使用了密码模式，那你就要在 www.javaboy.org 这个网站去输入微信的用户名密码，这肯定是不靠谱的，所以密码模式需要你非常信任第三方应用
 
-密码模式的流程：
-
-密码式的流程比较简单：
-
-假如www.javabay.org这个网站要接入微信授权登录
-
-首先 www.javaboy.org 会发送一个 post 请求，类似下面这样的：
-
-```
-https://wx.qq.com/oauth/authorize?response_type=password&client_id=javaboy&username=江南一点雨&password=123
-```
-
-response_type 的值这里是 password，表示密码式，另外多了用户名/密码参数，没有重定向的 redirect_uri ，因为这里不需要重定向。
-
-微信校验过用户名/密码之后，直接在 HTTP 响应中把 令牌 返回给客户端。
 
 
-
-##### 客户端模式
+#### 客户端模式
 
 客户端模式是指客户端使用自己的名义而不是用户的名义向服务提供者申请授权，严格来说，客户端模式并不能算作 OAuth 协议要解决的问题的一种解决方案，但是，对于开发者而言，在一些前后端分离应用或者为移动端提供的认证授权服务器上使用这种模式还是非常方便的
 
@@ -1409,9 +1399,9 @@ response_type 的值这里是 password，表示密码式，另外多了用户名
 
 
 
-#### OAuth2.0令牌存放
+### OAuth2.0令牌存放
 
-##### 令牌存在哪里
+#### 令牌存在哪里
 
 ![image-20220319202813566](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203192028725.png)
 
@@ -1470,7 +1460,7 @@ https://mp.weixin.qq.com/s/xEIWTduDqQuGL7lfiP735w
 
 ---
 
-### SpringSecurity OAuth2
+### Spring  Security  OAuth2
 
 Spring Security对OAuth2提供了很好的支持，使得在Spring Security中使用OAuth2非常方便，在对OAuth2的落地支持方案中比较混乱，例如：Spring Security OAuth、SpringCloud Security、SpringBoot1.5x开始都提供了对OAuth2的实现，以至于非常混乱
 
@@ -1482,9 +1472,17 @@ Spring Security5开始，统一了OAuth2的支持
 
 ---
 
+
+
+
+
 承接上OAuth2，token默认是明文不安全，采用JWT进行加密更安全
 
-### JWT：Json Web Tokens
+
+
+## JWT
+
+JWT：Json Web Tokens
 
 Jwt其实是一种广泛使用的token，他通过数字签名的方式，以JSON为载体，在不同的服务终端之间安全的传输信息
 
@@ -1492,14 +1490,14 @@ Jwt其实是一种广泛使用的token，他通过数字签名的方式，以JSO
 
 
 
-#### 常见应用场景
+### 常见应用场景
 
 1. 授权认证，用户登录后，后续每个请求都将包含jwt，系统每次处理用户请求前，都要先进行jwt安全校验，通过校验后才能访问资源
 2. 单点登录
 
 
 
-#### JWT数据格式
+### JWT数据格式
 
 JWT包含三部分数据：Header、Payload、Signature
 
@@ -1563,7 +1561,9 @@ https://www.cnblogs.com/throwable/p/14419015.html这个讲的还行
 
 项目：https://www.jianshu.com/p/e88d3f8151db
 
-#### JWT交互流程
+
+
+### JWT交互流程
 
 ![image-20220319204234978](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203192042146.png)
 
@@ -1573,7 +1573,9 @@ https://www.cnblogs.com/throwable/p/14419015.html这个讲的还行
 
 因为 JWT 签发的 token 中已经包含了用户的身份信息，并且每次请求都会携带，这样服务就无需保存用户信息，甚至无需去数据库查询，这样就符合了 RESTful 的无状态规范
 
-#### JWT存在的问题
+
+
+### JWT存在的问题
 
 JWT 也不是天衣无缝，由客户端维护登录状态带来的一些问题在这里依然存在，举例如下：
 
@@ -1605,7 +1607,17 @@ jwtVerifier.verify(token);
 
 
 
-微服务中使用Spring Security+Jwt中认证流程：
+
+
+### 微服务中使用Spring Security+OAuth+Jwt中认证流程
+
+实际项目中，会在网关层，对用户进行统一鉴权操作
+
+把token验证提出来放在网关层，security只负责权限管理
+
+
+
+
 
 ![image-20221002221511891](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210022215077.png)
 
@@ -1619,10 +1631,14 @@ jwtVerifier.verify(token);
 
 
 **如何实现登录、刷新、注销等？**
- 登录比较简单，在验证身份信息后可以使用工具包例如jjwt根据用户信息生成token并设置有效时长，最后将token返回给客户端存储即可，客户端只需要每次访问时将token加在请求头里即可,然后在zuul增加一个filter,此filter来过滤请求，如果是登录获取token则放行，其他的话用公钥解密验证token是否有效。
- 如果要实现刷新，则需要在生成token时生成一个refreshKey，在登录时和token一并返回给客户端，然后由客户端保存定时使用refreshKey和token来刷新获取新的有效时长的token,这个refreshKey可自定义生成，为了安全起见，服务器可能需要缓存refreshKey，可使用redis来进行存储，每次刷新token都将生成新的refreshKey和token，服务器需要将老refreshKey替换，客户端保存新的token和refreshKey来进行之后的访问和刷新。
- 如果要实现注销，并使得旧的token即便在有效期内也不能通过验证，则需要修改登录、刷新、和优化zuul的filter。首先在登录时生成token和refreshKey后，需要将token也进行缓存，如果通过redis进行缓存可以直接放一个Set下，此Set存储所有未过期的token。其次，在刷新时在这个Set中删除旧的token并放入新的。最后对zuulFilter进行优化，在解密时先从redis里存放token的Set查找此token是否存在（redis的Set有提供方法），如果没有则直接拒绝，如果有再进行下一步解密验证有效时长，验证有效时长是为了防止刷新机制失效、没有刷新机制、网络异常强行退出等事件出现，在这种情况下旧的token没有被删除，导致了旧的token一直可以访问（如果只验证是否token是否在缓存中）。在注销时只需要删除redis中Set的token记录就好，最后写个定时器去定时删除redis中Set里面过时的token,原因也是刷新机制失效、没有刷新机制、网络异常强行退出等事件出现导致旧的token没有被删除
 
----
+登录比较简单，在验证身份信息后可以使用工具包，例如：jjwt根据用户信息生成token并设置有效时长，最后将token返回给客户端存储即可，客户端只需要每次访问时将token加在请求头里即可。然后在zuul（网关）增加一个filter，此filter来过滤请求，如果是登录获取token则放行，其他的话用公钥解密验证token是否有效。
 
----
+如果要实现刷新，则需要在生成token时生成一个refreshKey，在登录时和token一并返回给客户端，然后由客户端保存，定时使用refreshKey和token来刷新获取新的有效时长的token，这个refreshKey可自定义生成，为了安全起见，服务器可能需要缓存refreshKey，可使用redis来进行存储，每次刷新token都将生成新的refreshKey和token，服务器需要将老refreshKey替换，客户端保存新的token和refreshKey来进行之后的访问和刷新。
+
+如果要实现注销，并使得旧的token即便在有效期内也不能通过验证，则需要修改登录、刷新、和优化zuul的filter。
+
+1. 首先在登录时生成token和refreshKey后，需要将token也进行缓存，如果通过redis进行缓存可以直接放一个Set下，此Set存储所有未过期的token。
+2. 其次，在刷新时在这个Set中删除旧的token并放入新的
+3. 最后对网关的过滤器进行优化，在解密时先从redis里存放token的Set查找此token是否存在（redis的Set有提供方法），如果没有则直接拒绝，如果有再进行下一步解密验证有效时长，验证有效时长是为了防止刷新机制失效、没有刷新机制、网络异常强行退出等事件出现，在这种情况下旧的token没有被删除，导致了旧的token一直可以访问（如果只验证是否token是否在缓存中）。
+4. 在注销时只需要删除redis中Set的token记录就好，最后写个定时器去定时删除redis中Set里面过时的token,原因也是刷新机制失效、没有刷新机制、网络异常强行退出等事件出现导致旧的token没有被删除
