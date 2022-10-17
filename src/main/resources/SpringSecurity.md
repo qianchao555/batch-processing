@@ -862,7 +862,7 @@ Spring Security中对于**RBAC、ACL等不同权限模型都有很好的支持**
 
 1. 基于过滤器的权限管理：FilterSecurityInterceptor
 
-   - 主要用来拦截Http请求，拦截下来后，根据Http请求地址进行权限校验
+   - 主要用来拦截Http请求，拦截下来后，**根据Http请求地址进行权限校验**
 
 2. 基于AOP的权限管理：MethodSecrityInterceptor
 
@@ -881,39 +881,257 @@ getAuthorities()返回值为Collection<? extends GrantedAuthority>，即：集�
 
 无论用户的认证方式采用何种方式例如：用户/密码、RememberMe、还是其他的CAS、OAuth2等认证方式，最终用户的权限信息都可以通过getAuthorities获取
 
-设计层面讲，角色和权限是完全不同的东西：权限就是一些具体的操作，例如针对员工数据的读权限、针对员工数据的写权限；角色是某些权限的集合，例如管理员角色、普通用户角色
+**设计层面讲**，角色和权限是完全不同的东西：权限就是一些具体的操作，例如针对员工数据的读权限、针对员工数据的写权限；角色是某些权限的集合，例如管理员角色、普通用户角色
 
 例如：某个用户是管理员角色，管理员角色拥有的权限集合肯定比普通用户的权限集合更丰富
 
-代码层次讲，角色和权限并没有太大的不同，特别是Spring Security中，角色和权限的处理方式基本是一样的，唯一的区别是会自动给角色添加一个ROLE_前缀，而权限则不会自动添加任何前缀
+**代码层次讲**，角色和权限并没有太大的不同，特别是Spring Security中，角色和权限的处理方式基本是一样的，唯一的区别是会自动给角色添加一个ROLE_前缀，而权限则不会自动添加任何前缀
 
 
 
-权限系统设计简单：用户=>权限=>资源
+对于Authentication#getAuthorities方法返回值，则要根据情况来对待：
 
-权限系统设计复杂写：用户=>角色=>权限=>资源的系统中（用户关联角色、角色关联权限、权限关联资源）
+1. 权限系统设计简单：用户=>权限=>资源，那么getAuthorities方法的含义**就是返回用户的权限**
 
+2. 权限系统设计复杂写：用户=>角色=>权限=>资源的系统中（用户关联角色、角色关联权限、权限关联资源），此时，可以将getAuthorities方法返回值**当作权限来理解**。SpringSecurity没有提供相关的角色类，因此这个时候需要自定义角色类
 
+   - 系统中同时存在角色和权限，可以使用GrantedAuthority的实现类SimpleGrantedAuthority来表示一个权限，在该实现类中，可以将权限描述为一个字符串。例如：Read_Employee、Write_Employee。据此，定义角色类如下：角色继承自GrantedAuthority，一个角色对应多个权限
+
+   - ~~~java
+     @Data
+     public class Role implements GrantedAuthority{
+         private String name;
+         private List<SimpleGrantedAuthority> allowedOperations=new ArrayList<>();
+         
+         @Override
+         public String getAuthority(){
+             return name;
+         }
+     }
+     ~~~
+
+   - 定义用户类的时候，**将角色转为权限**。 这里就体现为：代码层面-角色和权限差别不大
+
+   - ~~~java
+     public class User implements UserDetails{
+         private List<Role> roles=new ArrayList<>();
+         
+         @Override
+         public Collection<? extends GrantedAuthority> getAuthorities(){
+             List<SimpleGrantedAuthority> authorities=new ArrayList<>();
+             for(Role role:roles){
+                 authorities.addAll(role.getAllowedOperations());
+             }
+             return 
+                 authorities.stream().distinct().collect(Collectors.toList());
+         }
+     }
+     ~~~
+
+     
 
 ##### 角色继承
 
 角色继承：指的是角色存在一个上下级的关系，例如：role_amdin继承自role_user，那么role_admin就自动具备role_user的所有权限
 
+Hierarchy：层次结构、等级制度、统治集团
+
+SpringSecurity中通过RoleHierarchy接口对角色继承提供支持，该接口中有一个getReachableGrantedAuthorities方法，返回**用户真正可触达的权限**。例如：role_admin继承自role_user，role_user继承自role_guest。那么role_admin的权限包含了这两个用户能访问的资源。该方法就是根据当前用户所具有的角色，从角色层级映射结构中解析成用户真正可触达的权限
 
 
-#### 基于Url地址的权限关联
 
-基于Url地址的权限关联主要是通过过滤器FilterSecurityInterceptor来实现
+##### 两种处理器
+
+基于过滤器和基于Aop的权限管理，都涉及一个前置处理器和后置处理器
+
+基于过滤器的权限管理中：请求首先到达FilterSecurityInterceptor，在其执行过程中，前置处理器会判断当前请求的用户是否具备相应的权限，若具备，则请求继续往下走，到达目标方法并执行完毕。在响应时，又会经过该过滤器的后置处理器去完成一些其他收尾工作。基于过滤器的权限管理中，后置处理器一般不工作
+
+![image-20221017112040612](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210171120362.png)
+
+
+
+基于方法（Aop)的权限管理：目标方法的调用会被MethodSecurityInterceptor拦截下来，实现原理就是Aop机制。当目标方法的调用被该拦截器拦截之后，在其invoke方法中，会首先执行前置处理器判断当前用户是否具备调用该目标方法所需的权限，若具备，则请求继续往下走执行目标方法。目标方法执行完毕后，在invoke方法中，再去执行后置处理器对目标方法的返回结果进行过滤或者鉴权，然后在invoke方法中将处理后的结果返回
+
+![image-20221017112113052](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210171121408.png)
+
+
+
+##### 前置处理器
+
+###### 投票器AccessDecisionVoter
+
+是SpringSecurity中权限管理中的一个组件，作用是**针对是否允许某一个操作进行投票**。当请求的url地址或当方法的调用被aop拦截下来，都会调用投票器对当前操作进行投票，以便决定是否允许当前操作
+
+具体投票方法：根据用户所具有的权限以及当前请求需要的权限进行投票
+
+SpringSecurity中，提供了多个投票器的实现，在具体使用中，可以单独使用一个，也可以多个一起使用。开发者还可以自定义投票器，需要注意的是：投票器的投票结果并非最终结果(通过、拒绝)，最终结果还要看决策器（AccessDecisionManager)
+
+###### 决策器AccessDecisionManager
+
+决策器由AccessDecisionManager负责，它会同时管理多个投票器，由它来调用投票器进行投票，然后根据投票结果做出相应的决策。所以它也称为**决策管理器**
+
+一个AccessDecisionManager对应多个投票器，那么多个投票器针对同一个请求可能会给出多个不同的结果，那么这就要看决策器的决策结果了
+
+1. AffirmativeBased：一票通过机制，即只要有一个投票器通过就可以访问（默认机制）
+2. UnanimousBased：一票否决机制，即只要有一个投票器反对就不可以访问
+3. ConsensusBased：少数服从多数机制
+
+这是SpringSecurity提供的三个决策器，若无法满足我们的需求，那么我们可以自定义决策器，通过继承AbstractAccessDecisionManager来实现自己的决策器
+
+**这就是前置处理器的大致逻辑，主要是投票器和决策器，无论是基于url地址还是基于方法的权限管理，都是在前置处理器中通过AccessDecisionManager调用AccessDecisionVoter进行投票，然后进而做出相应的决策**
+
+
+
+##### 后置处理器
+
+后置处理器一般只在基于方法的权限控制中会用到，当目标方法执行完毕后，通过后置处理器可以**对目标方法的返回值进行权限校验或过滤**
+
+
+
+##### 权限元数据
+
+###### ConfigAttribute
+
+投票器的具体投票方法vote中，受保护的对象**所需要的权限**存储在一个Collection\<ConfigAttribute>集合中
+
+ConfigAttribute用来存放与安全系统相关的属性，也就是系统关于权限的配置
+
+```java
+public interface ConfigAttribute extends Serializable{
+    String getAttribute();
+}
+```
+
+该接口只有一个getAttribute方法，返回具体的权限字符串，而GrantedAuthority中则是通过getAuthority方法返回用户所具有的权限，两者返回值都是字符串
+
+ConfigAttribute有不同的实现类，例如：
+
+1. WebExpressionConfigAttribute
+   - 若用户是基于url来控制权限并且支持SpEL，那么默认配置的权限控制表达式会封装为该对象
+2. SecurityConfig
+   - 若用户使用了@Secured注解来控制权限，那么配置的权限就会被封装为SecurityConfig对象
+3. Jsr250SecurityConfig
+4. PreInvocationExpressionAttritute
+5. PostInvocationExpressionAttritute
+
+针对不同的配置方式，配置数据会以不同的ConfigAttribute对象存储
+
+
+
+###### SecurityMetadataSource
+
+投票器在投票时，需要两方面的权限：当前用户具备哪些权限；当前访问的url或方法需要哪些权限才能访问；投票器所做的就是对这两种权限进行比较
+
+用户所具备的权限保存在Authentication中
+
+当前访问的url或方法需要的权限：SecurityMetadataSource有关
+
+作用：提供受保护对象所需要的权限。例如：用户访问一个url地址，该url地址需要哪些权限才能访问？这个就是由SecurityMetadataSource提供的
+
+![image-20221017143221572](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210171432401.png)
+
+默认url权限控制会将其请求地址和所需权限封装为一个map
+
+FilterInvacationSecurityMetadataSource用于处理基于Url权限管理控制相关
+
+例如：SpringSecurity中，若直接在configure(HttpSecurity)方法中配置url请求地址拦截
+
+这段请求和权限之间的映射关系，会经过DefaultFilterInvocationSecurityMetadataSource的子类ExpressionBasedFilterInvocationSecurityMetadataSource进行处理，并将映射关系保存到requestMap中
+
+~~~java
+http.authorizaRequests()
+.antMatchers("/admin/**").hasRole("admin")
+.antMatchers("/user/**").access("hasRole('user')")
+~~~
+
+但是，**实际开发中，url地址和访问它所需要的权限是保存在数据库中的，所以此时需要自定义类实现FilterInvocationSecurityMetadataSource接口，然后重写里面的getAttributes()，在该方法中，根据当前请求的url地址去数据库查询其所需要的权限，然后将查询结果封装为相应的ConfigAttribute集合返回即可**
+
+
+
+MethodSecurityMetadataSource用于处理基于方法的权限管理控制相关
+
+其实现类较多，例如
+
+1. PrePostAnnotationSecurityMetadataSource
+   - @PreAuthorize、@PreFilter、等注解，将由其负责提供
+2. SecuredAnnotationSecurityMetadataSource
+3. 等等
+
+总之：不同的权限拦截方式，都对应一个SecurityMetadataSource实现类，请求的url或方法需要什么权限，调用SecurityMetadataSource#getAttributes()就可以获取到
+
+
+
+##### 权限表达式
+
+SpringSecurity 3.0 开始引入了SpEL表达式进行权限配置，在请求的url或方法上，通过SpEL来配置需要的权限
+
+SpringSecurity内置了很多表达式，基本上能满足需求。若内置表达式无法满足项目需求，那么可以自定义表达式。
+
+![image-20221017144012061](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210171440125.png)
+
+
+
+SecurityExpressOperations接口定义了基本的权限表达式
+
+基本实现类SecurityExpressionRoot中定义的表达式既可以在url权限管理中使用，也可以在基于方法的权限管理中使用
+
+在SpringSecurity中使用基于Url地址管理的权限管理，使用的是WebSecurityExpressionRoot，其继承自SecurityExpressionRoot，并添加了hasIpAddress方法，用来判断请求的ip地址是否满足要求
+
+
+
+其他几个对象，使用时候看一下即可，比较简单
+
+
+
+---
+
+#### 基于Url地址的权限管理
+
+
+
+基于Url地址的权限关联主要是通过**过滤器FilterSecurityInterceptor**来实现
 
 若开发者配置了基于Url地址的权限管理，那么该过滤器会被自动添加到SpringSecurity过滤器链中，在过滤器链中拦截下请求，然后分析当前用户是否具备请求所需要的权限
 
 Filter将请求拦截下来后，交给AccessDecisionManager进行处理，AccessDecisionManager则会调用投票器进行投票，然后对投票结果进行决策，最终决定请求是否通过
 
+SpringSecurity会为hasRole表达式自动添加ROLE_ 前缀，所以用户信息从数据库中读取的时候，需要注意ROLE_ 前缀的问题
 
+
+
+##### 角色继承
+
+若需要配置角色继承，则只需要提供一个RoleHierarchy实例即可
+
+~~~java
+//role_amdin继承role_user  
+@Bean
+RoleHierarchy roleHierarchy(){
+    RoleHierarchyImpl h=new RoleHierarchyImpl();
+    h.setHierarchy("role_admin > role_user");
+    return h;
+}
+~~~
+
+
+
+##### 自定义表达式
+
+自定义PermissionExpress类，并注册到Spring容器中，然后在里面定义相应的方法。最后在SecurityConfig中添加相应的匹配规则
 
 
 
 权限管理系统复杂：复杂的是设计！！，技术相对来说更加容易
+
+##### 基于Url权限管理控制-原理剖析
+
+AbstractSecurityInterceptor
+
+FilterSecurityInterceptor
+
+AbstractInterceptUrlConfigurer
+
+
 
 
 
@@ -921,7 +1139,7 @@ Filter将请求拦截下来后，交给AccessDecisionManager进行处理，Acces
 
 通过代码来配置Url拦截规则和请求url所需要的权限 比较死板、不灵活，若要调整某个url所需要的权限还得修改代码
 
-所以，动态管理权限规则可以解决这样问题：将Url拦截规则和访问Url所需要的权限都保存在数据库中，这样，在不改变代码的情况下，只需要修改数据库中的数据，就可以对权限进行调整
+所以，动态管理权限规则可以解决这样问题：**将Url拦截规则和访问Url所需要的权限都保存在数据库中**，这样，在不改变代码的情况下，只需要修改数据库中的数据，就可以对权限进行调整
 
 简单设计：用户、角色、资源
 
@@ -948,39 +1166,45 @@ Filter将请求拦截下来后，交给AccessDecisionManager进行处理，Acces
 
 #### 基于方法的权限管理
 
+用的较少，一般用于特殊处理，比如某一个方法，只能由具有admin角色的用户才能访问
+
+
+
 主要通过AOP实现，在Spring Security中通过MethodSecurityInterceptor来提供相关实现
 
 不同于FilterSecurityInterceptor只是在请求之前进行前置处理，MethodSecurityInterceptor除了前置处理外，还可以进行后置处理，即：前置处理在请求之前判断是否具备相应的权限，后置处理则是在对方法执行完后，进行二次过滤
 
 
 
-实现方式：主要通过@EnableGlobalMethodSecurity注解开启权限注解的使用
+实现方式：目前，SpringBoot中，基于方法的权限管理，主要通过@EnableGlobalMethodSecurity注解开启权限注解的使用
 
 
 
 ---
 
-##### 权限模型
+### 权限模型
+
+
 
 权限管理是一个非常复杂繁琐的工作，为了能开发出高效的易于维护的权限管理系统，需要一个“指导思想”，这是指导思想就是**权限模型**
 
 
 
-##### DAC
+#### DAC
 
 Discretionary access control：自主访问控制
 
 是一种访问控制模型，这种访问控制模型中，系统会根据被操作对象的权限控制列表中的信息，来决定当前用户能够对其进行哪些操作，用户可以将其具备的权限直接或者间接授予其他用户，这也是其称为自主访问控制的原因
 
-##### MAC
+#### MAC
 
 Mandatory access control：强制访问控制，也叫非自主访问控制
 
 
 
-##### ABAC
+#### ABAC（未来）
 
-Attribute-Base Access Control：基于属性的访问控制，有时也称为PBAC或CBAC
+Attribute-Base Access Control：基于属性的访问控制，有时也称为PBAC或CBAC，也被称为下一代权限管理模型
 
 基于属性的访问控制中一般包含四类属性：用户属性、环境属性、操作属性、资源属性，通过动态计算一个或一组属性是否满足某一条件来进行授权
 
@@ -990,9 +1214,9 @@ Attribute-Base Access Control：基于属性的访问控制，有时也称为PBA
 
 
 
-##### ACL
+#### ACL（次要）
 
-Access control list：访问控制列表，是一种比较古老的权限控制模型，它是一种面向资源的访问控制模型，在ACL中，我们所做的所以权限配置都是针对资源的
+Access control list：访问控制列表，是一种比较古老的权限控制模型，它是一种面向资源的访问控制模型，在ACL中，我们所做的所有权限配置都是针对资源的
 
 ACL核心思路：将某个对象的某种权限授予某个用户或角色，它们之间的关系是多对多，即一个用户/角色可以具备某个对象的多种权限，某个对象的权限也可以被多个用户/角色持有
 
@@ -1000,9 +1224,9 @@ ACL是一种粒度非常细的权限控制，它可以精确到某一个资源�
 
 
 
-##### RBAC
+#### RBAC（重要）
 
-Role-Based access control：基于角色的访问控制，是一种以角色为基础的访问控制，它是一种较新且广为使用的权限控制模型，这种机制部署给用户赋予权限，而是将权限赋予角色
+Role-Based access control：基于角色的访问控制，是一种以角色为基础的访问控制，它是一种较新且广为使用的权限控制模型，这种机制不是直接给用户赋予权限，而是将权限赋予角色
 
 RBAC权限模型中，将用户按照角色进行归类，通过用户的角色来确定用户对某项资源是否具备操作权限
 
@@ -1020,7 +1244,7 @@ RBAC的应用非常广泛：常规的企业级应用、医疗、国防等等领�
 
 ##### RBAC权限模型分类
 
-有四种不同的分类
+有四种不同的分类RBAC0~3
 
 RBAC0
 
@@ -1034,7 +1258,7 @@ RBAC0 权限模型图：
 
 RBAC1
 
-在RBAC0模型上引入了角色继承，让角色有了上下级关系
+在RBAC0模型上引入了角色继承，让角色有了上下级关系，通过前面的角色继承实现方式完成
 
 ![image-20221001230705676](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210012307791.png)
 
@@ -1062,4 +1286,343 @@ RBAC3
 
 
 
-若这四种模型依然不能满足项目的要求，则开发者可以在此基础上进行扩展，例如：用户分组、角色分组等
+若这四种模型依然不能满足项目的要求，则开发者可以在此基础上进行扩展，例如：用户分组、角色分组等，实际项目中用户分组、角色分组使用也比较多
+
+---
+
+
+
+
+
+
+
+**Spring Security和Spring Security OAuth2关系**
+
+1. Spring Security是一个框架，提供了认证和授权
+2. OAuth2只是一个协议，需要具体的实现
+3. spring security oauth2：spring security框架中内置了oauth2，可以直接使用，当然其他框架也有实现了oauth2的
+
+---
+
+
+
+## OAuth2
+
+Open Authority
+
+https://blog.csdn.net/u012702547/article/details/105699777
+
+一个验证授权的**开放标准协议**，所有人都能基于这个标准实现自己的OAuth，OAuth基于Https以及APIs，Service应用使用access token来进行身份验证
+
+OAuth主要有OAuth1.0a和OAuth2.0两个版本，二者完全不同，而且不兼容。2.0是目前广泛使用的版本
+
+#### OAuth2.0
+
+目前流行的**授权机制**，是一个非常重要的**认证协议**，用来授权第三方应用获取用户数据，利用第三方系统获得资源。该标准允许用户让第三方应用访问该用户在某一网站上存储的私密资源，并且这个过程中无须将用户名和密码提供给第三方应用。通过token可以实现这一功能，每一个令牌授权一个特定的网站，在特定的时间段内允许访问特定的资源
+
+常用于第三方登录，例如：微信、微博、Github授权登录等等
+
+例如：用户想通过微信登录微博，此时微博就是一个第三方应用，微博需要访问用户存在在微信服务器上的一些用户基本信息，此时就需要得到用户的信息。如果用户把自己的微信用户名/密码告诉微博，那么微博就能访问用户存储在微信服务器上的所有数据，并且用户只有修改密码才能收回授权，这种授权方式安全隐患很大，使用OAuth就能很好的解决这一问题
+
+OAuth2关注客户端开发者的简易型，同时为Web应用、桌面应用、移动设备等提供专门的认证流程
+
+Spring Security对OAuth2协议提供了相应的支持，可以在Spring Security中非常方便的使用OAuth2协议，这也是Spring Security的魅力之一
+
+#### Spring Social
+
+是一个遵循OAuth协议的框架，暂不去了解
+
+
+
+#### 为什么要有OAuth
+
+在OAuth之前，使用用户名、密码进行身份验证，这种形式不安全。OAuth的出现就是为了解决访问资源的安全性以及灵活性。OAuth使得第三方应用对资源的访问更加安全
+
+#### OAuth2.0中四个角色
+
+OAuth的流程中，主要有以下四个角色
+
+1. Client：第三方应用，想要访问用户的客户端，它使用OAuth来获取访问权限
+2. Resouce Owner：用户拥有资源服务器上面的数据
+3. Resouce Server：资源服务器，能够通过http请求进行访问，在访问时需要OAuth访问令牌。受保护资源需要验证收到的令牌，并决定是否响应以及如何响应请求
+4. Authorization Server：授权服务器，一个HTTP服务器，OAuth的主要引擎。授权服务器对资源拥有者和客户端进行身份认证，让资源拥有者向客户端授权，为客户端颁发令牌。
+
+例如：假设你使用了一个照片云存储服务和一个云打印服务，并且想使用云打印服务来打印存放在云存储服务上的照片。很幸运，这两个服务能够使用API 来通信。这很好，但两个服务由不同的公司提供，这意味着你在云存储服务上的账户和在云打印服务上的账户没有关联。使用OAuth 可以解决这个问题：授权云打印服务访问照片，但并不需要将存储服务上的账户密码交给它。
+在这上面这一段中：
+客户端 ： 云打印服务
+资源拥有者：你
+资源服务器，授权服务器：照片云存储服务
+
+![image-20220319190248139](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203191902399.png)
+
+
+
+
+
+#### OAuth2.0四种授权模式
+
+OAuth2.0对于如何颁发令牌的细节，规定的很细，一共分为四种授权类型即：四种颁发令牌的方式，适用于不同的场景
+
+##### 授权码模式
+
+常见的第三方平台登录功能基本都是使用这种模式，是最安全并且使用最广泛的一种模式
+
+授权码模式中分为授权服务器和资源服务器，授权服务器用来分派Token、拿着Token则可以去资源服务器获取资源，这两个服务器可以分开也可以合并
+
+
+
+##### 简化模式
+
+简化模式是：不需要客户端服务器参与，直接在浏览器中向授权服务器申请令牌，一般如果网站是纯静态页面可以采用这种方式
+
+##### 密码模式
+
+密码模式是用户把用户名密码直接告诉客户端，客户端使用说这些信息向授权服务器申请令牌（token）。这需要用户对客户端高度信任，**例如客户端应用和服务提供商就是同一家公司，我们自己做前后端分离登录就可以采用这种模式**
+
+密码模式在SpringCloud项目中广泛应用
+
+密码模式有一个前提就是你高度信任第三方应用，举个不恰当的例子：如果我要在 www.javaboy.org 这个网站上接入微信登录，我使用了密码模式，那你就要在 www.javaboy.org 这个网站去输入微信的用户名密码，这肯定是不靠谱的，所以密码模式需要你非常信任第三方应用
+
+密码模式的流程：
+
+密码式的流程比较简单：
+
+假如www.javabay.org这个网站要接入微信授权登录
+
+首先 www.javaboy.org 会发送一个 post 请求，类似下面这样的：
+
+```
+https://wx.qq.com/oauth/authorize?response_type=password&client_id=javaboy&username=江南一点雨&password=123
+```
+
+response_type 的值这里是 password，表示密码式，另外多了用户名/密码参数，没有重定向的 redirect_uri ，因为这里不需要重定向。
+
+微信校验过用户名/密码之后，直接在 HTTP 响应中把 令牌 返回给客户端。
+
+
+
+##### 客户端模式
+
+客户端模式是指客户端使用自己的名义而不是用户的名义向服务提供者申请授权，严格来说，客户端模式并不能算作 OAuth 协议要解决的问题的一种解决方案，但是，对于开发者而言，在一些前后端分离应用或者为移动端提供的认证授权服务器上使用这种模式还是非常方便的
+
+---
+
+
+
+#### OAuth2.0令牌存放
+
+##### 令牌存在哪里
+
+![image-20220319202813566](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203192028725.png)
+
+1. InMemoryTokenStore 内存中，也是系统默认的，不推荐
+2. jdbcTokenStore 保持到数据库中
+3. JwtTokenStore 这个其实不是存储，因为使用了 jwt 之后，在生成的 jwt 中就有用户的所有信息，服务端不需要保存，这也是无状态登录
+4. RedisTokenStore，这个就是将 access_token 存到 redis 中
+   - access_token 这个 key 在 Redis 中的有效期就是授权码的有效期。正是因为 Redis 中的这种过期机制，让它在存储 access_token 时具有天然的优势
+5. JwkTokenStore，将 access_token 保存到 JSON Web Key
+
+**掌握2、3、4**
+
+
+
+#### OAuth2.0结合JWT
+
+https://mp.weixin.qq.com/s/xEIWTduDqQuGL7lfiP735w
+
+传统的通过 session 来记录用户认证信息的方式我们可以理解为这是一种有状态登录，而 JWT 则代表了一种无状态登录
+
+#####  什么是有状态
+
+有状态服务，即服务端需要记录每次会话的客户端信息，从而识别客户端身份，根据用户身份进行请求的处理，典型的设计如 Tomcat 中的 Session。例如登录：用户登录后，我们把用户的信息保存在服务端 session 中，并且给用户一个 cookie 值，记录对应的 session，然后下次请求，用户携带 cookie 值来（这一步有浏览器自动完成），我们就能识别到对应 session，从而找到用户的信息。这种方式目前来看最方便，但是也有一些缺陷，如下：
+
+- 服务端保存大量数据，增加服务端压力
+- 服务端保存用户状态，不支持集群化部署
+
+##### 什么是无状态
+
+微服务集群中的每个服务，对外提供的都使用 RESTful 风格的接口。而 RESTful 风格的一个最重要的规范就是：服务的无状态性，即：
+
+- 服务端不保存任何客户端请求者信息
+- 客户端的每次请求必须具备自描述信息，通过这些信息识别客户端身份
+
+那么这种无状态性有哪些好处呢？
+
+- 客户端请求不依赖服务端的信息，多次请求不需要必须访问到同一台服务器
+- 服务端的集群和状态对客户端透明
+- 服务端可以任意的迁移和伸缩（可以方便的进行集群化部署）
+- 减小服务端存储压力
+
+#####  如何实现无状态
+
+无状态登录的流程：
+
+- 首先客户端发送账户名/密码到服务端进行认证
+- 认证通过后，服务端将用户信息加密并且编码成一个 token，返回给客户端
+- 以后客户端每次发送请求，都需要携带认证的 token
+- 服务端对客户端发送来的 token 进行解密，判断是否有效，并且获取用户登录信息
+
+
+
+授权服务器颁发令牌后，客户端拿着令牌去请求资源服务器，资源服务器回去校验令牌的真伪。与JWT结合，实际上令牌就不要存储了（无状态登录，服务端不需要保存信息），因为用户的所有信息都在jwt里面
+
+
+
+---
+
+### SpringSecurity OAuth2
+
+Spring Security对OAuth2提供了很好的支持，使得在Spring Security中使用OAuth2非常方便，在对OAuth2的落地支持方案中比较混乱，例如：Spring Security OAuth、SpringCloud Security、SpringBoot1.5x开始都提供了对OAuth2的实现，以至于非常混乱
+
+Spring Security5开始，统一了OAuth2的支持
+
+一般来说，当项目中使用OAuth2时，都是开发客户端，授权服务器和资源服务器都是外部提供的。例如在自己开发的一个网站上集成Github.com第三方登录，只需要开发自己的客户端即可，认证服务器和授权服务器都是Github提供的
+
+
+
+---
+
+承接上OAuth2，token默认是明文不安全，采用JWT进行加密更安全
+
+### JWT：Json Web Tokens
+
+Jwt其实是一种广泛使用的token，他通过数字签名的方式，以JSON为载体，在不同的服务终端之间安全的传输信息
+
+是一种 JSON 风格的轻量级的授权和身份认证**规范**，可实现无状态、分布式的 Web 应用授权。作为一种规范，并没有与某一种语言绑定在一起，开发者可以使用任何语言来实现JWT，Java中的JWT相关开源库也比较多，例如：jjwt、nimbus-jose-jwt
+
+
+
+#### 常见应用场景
+
+1. 授权认证，用户登录后，后续每个请求都将包含jwt，系统每次处理用户请求前，都要先进行jwt安全校验，通过校验后才能访问资源
+2. 单点登录
+
+
+
+#### JWT数据格式
+
+JWT包含三部分数据：Header、Payload、Signature
+
+由三部分组成，这三部分使用 "."号 隔开，会对头部进行Base64编码方式编码，例如：eyJhbGc6IkpXVCJ9.eyJpc3MiOiJCIsImVzg5NTU0NDUiLCJuYW1lnVlfQ.SwyHTf8AqKYMAJc
+
+1. header：包含token的类型和加密算法
+
+   - ```json
+     { 
+       "alg": "HS256",	 //签名使用的加密算法（第三部分的signature）：通常是HMAC SHA256
+        "typ": "JWT"      //声明类型：JWT
+     } 
+     ```
+
+   - 常见加密算法：MD5、SHA、HAMC
+
+     - MD5：message-digest algorithm 5 信息-摘要算法，广泛用于文件校验
+     - SHA：Secure Hash Algorithm 安全散列算法，数字签名等密码学应用中重要的工具，安全性高于MD5
+     - HMAC：Hash Message Authentication Code 散列消息鉴别码，基于密钥的Hash算法的认证协议。用公开函数和密钥产生一个固定长度的值作为认证标识，用这个标识鉴别消息的完整性。常用于接口签名验证
+
+   - 我们会对头部进行 Base64Url 编码（可解码），得到第一部分数据
+
+2. payload：载荷，就是存放有效信息的地方  （payload其实就是完整的Claims，每一项表示一个claim），Claims是对实体及额外数据的描述，例如对用户身份、权限的描述。默认情况下JWT是未加密的
+
+   - iss (issuer)：表示jwt签发者
+   - exp (expiration time)：表示token过期时间
+   - sub (subject)：主题、即jwt所面向的用户
+   - aud (audience)：受众、即接受jwt的一方
+   - nbf (Not Before)：生效时间、即定义在什么时间之前，该jwt都是不可用的
+   - iat (Issued At)：jwt签发时间
+   - jti (JWT ID)：jwt唯一身份认证编号，主要用来做一次性token，从而避免重放攻击
+   - 这部分也会采用 Base64Url 编码，得到第二部分数据。
+
+3. signature：签名，是对上两部分数据签名，通过指定的算法生成Hash，以确保数据不会被篡改，是整个数据的认证信息。
+
+   - 签名生成依赖于散列或加解密算法，例如：SHA256、512等，也就是通过SHA256对于编码后的`Header`和`Claims`（payload）字符串进行一次散列计算
+
+   - ```java
+     //伪代码
+     
+     // 不进行编码
+     HMACSHA256(
+       base64UrlEncode(header) + "." +
+       base64UrlEncode(payload),
+       256 bit secret key
+     )
+     
+     // 进行编码
+     base64UrlEncode(
+         HMACSHA256(
+            base64UrlEncode(header) + "." +
+            base64UrlEncode(payload)
+            [256 bit secret key])
+     )
+         
+     ```
+
+   - 一般根据前两步的数据，再加上服务的密钥 secret（密钥保存在服务端，不能泄露给客户端）。这个密钥通过 Header 中配置的加密算法生成，得到的最终的token。用于验证整个数据完整和可靠性。
+
+https://www.cnblogs.com/throwable/p/14419015.html这个讲的还行
+
+项目：https://www.jianshu.com/p/e88d3f8151db
+
+#### JWT交互流程
+
+![image-20220319204234978](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203192042146.png)
+
+1. 应用程序或客户端向授权服务器请求授权
+2. 获取到授权后，授权服务器会向应用程序返回访问令牌
+3. 应用程序使用访问令牌来访问受保护资源（如API）
+
+因为 JWT 签发的 token 中已经包含了用户的身份信息，并且每次请求都会携带，这样服务就无需保存用户信息，甚至无需去数据库查询，这样就符合了 RESTful 的无状态规范
+
+#### JWT存在的问题
+
+JWT 也不是天衣无缝，由客户端维护登录状态带来的一些问题在这里依然存在，举例如下：
+
+1. 续签问题，这是被很多人诟病的问题之一，传统的 cookie+session 的方案天然的支持续签，但是 jwt 由于服务端不保存用户状态，因此很难完美解决续签问题，如果引入 redis，虽然可以解决问题，但是 jwt 也变得不伦不类了。
+2. 注销问题，由于服务端不再保存用户信息，所以一般可以通过修改 secret 来实现注销，服务端 secret 修改后，已经颁发的未过期的 token 就会认证失败，进而实现注销，不过毕竟没有传统的注销方便。
+3. 密码重置，密码重置后，原本的 token 依然可以访问系统，这时候也需要强制修改 secret。
+4. 基于第 2 点和第 3 点，一般建议不同用户取不同 secret(密钥)
+5. 默认JWT是不加密的，一般生成令牌后，可以对该令牌再次进行加密(项目中是利用令牌的后16为来加解密)
+
+#### Java-jwt
+
+是Java推荐的JWT实现库而已，通过maven导入即可使用
+
+~~~java
+//产生加密token
+String token = JWT.create()
+  .withExpiresAt(newDate(System.currentTimeMillis()))  //设置过期时间
+  .withAudience("user1") //设置接受方信息，一般时登录用户
+  .sign(Algorithm.HMAC256("111111"));  //使用HMAC算法，111111作为密钥加密
+
+//解密Token获取负载信息并验证token是否有效
+String userId = JWT.decode(token).getAudience().get(0);
+Assertions.assertEquals("user1", userId);
+JWTVerifier jwtVerifier = JWT.require(Algorithm.HMAC256("111111")).build();
+jwtVerifier.verify(token);
+
+
+~~~
+
+
+
+微服务中使用Spring Security+Jwt中认证流程：
+
+![image-20221002221511891](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springsecurity_img/202210022215077.png)
+
+
+
+用户在提交登录信息后，服务器校验数据后将通过密钥的方式来生成一个字符串token返回给客户端，客户端在之后的请求会把token放在header里，在请求到达服务器后，服务器会检验和解密token，如果token被篡改或者失效将会拒绝请求，如果有效则服务器可以获得用户的相关信息并执行请求内容，最后将结果返回。
+ 在微服务架构下,通常有单独一个服务Auth去管理相关认证，为了安全不会直接让用户访问某个服务，会开放一个入口服务作为网关gateway，只允许外网网关，所有请求首先访问gateway，有gateway将请求路由到各个服务。
+
+客户端请求网关后，增加一个filter,此filter来过滤请求，网关会根据路径过滤请求，是登录获取token操作的路径则直接放行，请求直接到达auth服务进行登录操作，之后进行JWT私钥加密生成token返回给客户端；是其他请求将会进行token私钥解密校验，如果token被篡改或者失效则直接拒绝访问并返回错误信息，如果验证成功经过路由到达请求服务，请求服务响应并返回数据
+
+
+
+**如何实现登录、刷新、注销等？**
+ 登录比较简单，在验证身份信息后可以使用工具包例如jjwt根据用户信息生成token并设置有效时长，最后将token返回给客户端存储即可，客户端只需要每次访问时将token加在请求头里即可,然后在zuul增加一个filter,此filter来过滤请求，如果是登录获取token则放行，其他的话用公钥解密验证token是否有效。
+ 如果要实现刷新，则需要在生成token时生成一个refreshKey，在登录时和token一并返回给客户端，然后由客户端保存定时使用refreshKey和token来刷新获取新的有效时长的token,这个refreshKey可自定义生成，为了安全起见，服务器可能需要缓存refreshKey，可使用redis来进行存储，每次刷新token都将生成新的refreshKey和token，服务器需要将老refreshKey替换，客户端保存新的token和refreshKey来进行之后的访问和刷新。
+ 如果要实现注销，并使得旧的token即便在有效期内也不能通过验证，则需要修改登录、刷新、和优化zuul的filter。首先在登录时生成token和refreshKey后，需要将token也进行缓存，如果通过redis进行缓存可以直接放一个Set下，此Set存储所有未过期的token。其次，在刷新时在这个Set中删除旧的token并放入新的。最后对zuulFilter进行优化，在解密时先从redis里存放token的Set查找此token是否存在（redis的Set有提供方法），如果没有则直接拒绝，如果有再进行下一步解密验证有效时长，验证有效时长是为了防止刷新机制失效、没有刷新机制、网络异常强行退出等事件出现，在这种情况下旧的token没有被删除，导致了旧的token一直可以访问（如果只验证是否token是否在缓存中）。在注销时只需要删除redis中Set的token记录就好，最后写个定时器去定时删除redis中Set里面过时的token,原因也是刷新机制失效、没有刷新机制、网络异常强行退出等事件出现导致旧的token没有被删除
+
+---
+
+---
