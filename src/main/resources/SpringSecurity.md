@@ -1316,7 +1316,7 @@ Open Authority
 
 https://blog.csdn.net/u012702547/article/details/105699777
 
-一个验证授权的**开放标准协议**，所有人都能基于这个标准实现自己的OAuth，OAuth基于Https以及APIs，Service应用使用access token来进行身份验证
+是一个验证授权的**开放标准协议**，所有人都能基于这个标准实现自己的OAuth，OAuth基于Https以及APIs，Service应用使用access token来进行身份验证
 
 
 
@@ -1642,3 +1642,36 @@ jwtVerifier.verify(token);
 2. 其次，在刷新时在这个Set中删除旧的token并放入新的
 3. 最后对网关的过滤器进行优化，在解密时先从redis里存放token的Set查找此token是否存在（redis的Set有提供方法），如果没有则直接拒绝，如果有再进行下一步解密验证有效时长，验证有效时长是为了防止刷新机制失效、没有刷新机制、网络异常强行退出等事件出现，在这种情况下旧的token没有被删除，导致了旧的token一直可以访问（如果只验证是否token是否在缓存中）。
 4. 在注销时只需要删除redis中Set的token记录就好，最后写个定时器去定时删除redis中Set里面过时的token,原因也是刷新机制失效、没有刷新机制、网络异常强行退出等事件出现导致旧的token没有被删除
+
+
+
+OAuth2  双token机制：access_token、refresh_token
+
+access_token 是临时的，有一定有效期。这是因为，access access_token 在使用的过程中可能会泄露。给 access token 限定一个较短的有效期可以降低因 access_token泄露而带来的风险。
+
+然而引入了有效期之后，使用起来就不那么方便了，因为每当access_token过期，使用方就必须获取新的access_token
+
+怎么获取呢？那就是重新授权，也就是要打开鉴权页面。这样用户可能每隔几天，甚至每天都需要进行授权操作。这是一件非常影响用户体验的事情。希望有一种方法，可以避免这种情况。
+
+为了解决token过期后，**活跃用户**需要在登录页面重新登录问题，此时需要刷新token
+
+活跃用户：在access_token创建时间点 到 2 * access_token时效 的时间内 认为用户是活跃的
+
+
+
+于是 Oauth2.0 引入了 refresh_token 机制
+
+当鉴权服务器发送access_token给使用方时，同时也发送一个 refresh token。 这个refresh_token的有效期很长，作用是可以用来刷新access_token，当用户的access_token过期了之后，会使用refresh_token获取新的access_token
+
+refresh_token的有效时间不能小于用户的活跃时间点，假设access_token的有效时间为et，那么用户在 [access_token起始时间点，2*et] 时间内用户是活跃的，由此可知：refresh_token的有效时间 >= 2* * access_token的有效时间。例如：access_token有效时间为7天，那么refresh_token实现可以给15天、也可以给30天等等
+
+
+
+
+
+
+
+
+
+
+
