@@ -144,7 +144,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
         		}
         	}
         ~~~
-  
+    
         
 
 4. 处理和显示结果
@@ -152,6 +152,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
    - ~~~java
         /**
        	 * 查询
+
        	 * @return
        	 */
        	public List<Course> findCourseList(){
@@ -185,9 +186,9 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
        		return courseList;
        	}
      ~~~
-
+   
    - PreparedStatement和Statement比较
-
+   
      1. 两者都是用来执行SQL的
      2. PreparedStatement需要根据SQl语句来创建，它通过设置参数、指定相应的值，不像Statement使用字符串拼接方式
      3. PreparedStatement使用参数设置，可读性好、不易出错。相反Statement采用字符串拼接，容易出错及可读性和维护性差
@@ -486,15 +487,61 @@ list<Stu> stuList=mapper.selectLike(val);
 
 ### Mybatis如何扩展一个mybatis插件
 
+Mybatis插件存在的目的：相当于JavaWeb中的拦截器，可拦截要操作的四大对象，包装对象额外添加内容，使得Mybatis的灵活性更强
+
+Mybatis支持用插件对四大核心对象进行拦截，对mybatis来说插件就是拦截器，用来增强核心对象的功能，增强功能本质上是借助第层的动态代理实现的，即：Mybatis的四大对象都是代理对象
+
+#### 四大对象
+
+Executor：执行增删改查操作
+
+StatementHandler：处理sql语句预编译，用于执行sql语句
+
+ParameterHandler：处理SQL的参数对象
+
+ResultSetHandler：处理SQL的返回结果集
+
+创建动态代理的时候，是按照插件配置顺序创建层层代理对象，执行目标方法是按照逆向顺序执行
+
+#### 插件原理
+
+1. Mybatis的插件借助责任链模式进行拦截的处理
+2. 使用动态代理对目标对象进行包装，达到拦截的目的
+3. 作用于Mybatis的作用域对象之上
+
+
+
+#### MappedStatement
+
+MappedStatement维护了一条<select | update | deltete | insert> 节点的疯子
+
+例如：转换为Java类就是一个MappedStatement
+
+~~~xml
+<select id="selectDataNum" resulteType="int">
+    select * from user where id=1
+</select>
+~~~
+
+
+
+##### SqlSource
+
+负责根据用户传递的parameterObject，动态生成sql语句，将信息封装到BoundSql对象中
+
+##### BoundSql
+
+表示动态生成的SQL语句、以及相应的参数信息
+
+当调用SqlSource的getBoundSql方法，传入的就是parameterMappings相对应的参数,最终生成BoundSql对象,有了BoundSql就可以执行sql语句了
 
 
 
 
 
+Mybatis封装的JDBC
 
-
-
-
+SqlSession ->MapperProxy(被代理对象的方法的访问都会落实到代理者的invoke方法)-> MapperMethod   (此时mapper对象与sqlsession就真正的关联起来了)->Executor->StatementHandler->prepareStatement（ps.execute()去执行）
 
 
 
