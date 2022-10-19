@@ -144,7 +144,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
         		}
         	}
         ~~~
-    
+      
         
 
 4. 处理和显示结果
@@ -354,6 +354,12 @@ Mybatis分页是基于内存的分页，即先查询出所有记录，再按起�
 
 mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行的内存分页，而非物理分页。可以在sql内直接书写带有物理分页参数了完成分页功能，也可以使用分页插件来完成物理分页
 
+RowBounds：内存分页，不太实用
+
+自定义分页插件，进行内存分页
+
+
+
 #### Mybatis分页插件原理
 
 基本原理是：使用mybatis提供的插件接口，实现自定义插件，在插件的拦截方法内拦截待执行的sql，然后重写sql，根据dialect方言，添加对应的物理分页语句和物理分页参数
@@ -428,6 +434,139 @@ mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行�
 对于缓存数据更新机制，当某一个作用域的进行了delete、update、insert后，默认都会导致本地缓存和二级缓存被清空
 
 二级缓存有过期时间，并不是k-v的过期时间，而是这个cache的过期时间，即flushInterval，意味着清空整个缓存，每次存取数据的时候，都会检测cache时间，默认一个小时，超过这个时间就整个缓存清空一下
+
+
+
+Mybatis缓存机制整体设计以及二级缓存的工作模式：
+
+![image-20221019225030299](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192250591.png)
+
+
+
+##### Mybaits缓存机制
+
+当开启一个会话时，一个SqlSession对象会使用一个Excutor对象来完成会话操作，Mybatis的二级缓存就是在这个Excutor对象上做文章
+
+如果开启了二级缓存，那么MyBatis在为SqlSession创建Excutor对象的时候，会对Excutor加一个装饰者：CacheExcutor，这时SqlSession使用Excutor对象来完成操作
+
+CachingExecutor对于查询请求，会判断该查询请求在Application级别的二级缓存中是否有缓存结果，若有则直接返回缓存结果，没有则会交给真正的Executor对象来完成查询操作，之后CachingExecutor会将真正Executor返回的查询结果放置到缓存中，然后再返回给用户
+
+![image-20221019225140940](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192251045.png)
+
+CachingExecutor是Executor的装饰者，以增强Executor的功能，使其具有缓存查询的功能。（采用Mybatis插件功能对Executor进行增强）
+
+##### 二级缓存的划分
+
+Mybatis并不是简单的对整个Application就有一个Cache缓存对象，它将缓存划分的更细，即：Mapper级别 。即：每一个Mapper都可以拥有一个Cache对象，也可以多个Mapper共用一个Cache缓存对象
+
+1. 为每一个Mapper分配一个Cache缓存对象（使用\<cache>节点配置）
+   - Mybatis将Application级别的二级缓存细分到Mapper级别，即：对于每一个Mapper.xml，如果在其中使用了\<cache>节点，则会为这个Mapper创建一个Cache缓存对象
+   - ![image-20221019231215583](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192312703.png)
+2. 多个Mapper共用一个Cache缓存对象（使用\<cache-ref>节点配置）
+   - 想让多个Mapper公用一个Cache的话，可以使用\<cache-ref namespace="">节点，来指定这个Mapper使用那一个Mapper的缓存
+   - ![image-20221019231237319](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192312414.png)
+
+
+
+
+
+##### 使用二级缓存必须具备的条件
+
+**Mybatis对于二级缓存的支持粒度很细，它会指定某一条查询语句是否使用二级缓存**
+
+虽然在Mapper.xml中配置了\<cache>节点，并且也为此Mapper分配了Cache对象，但是：这并不代表我们使用Mapper中定义的查询语句查到的结果都会放置到Cache对象中，我们**必须指定Mapper中的某条查询语句是否支持查询**。例如：需要在\<select>标签节点中配置useCache="true"，Mapper才会对此查询语句支持缓存特性，否则，对此select查询不会经过Cache缓存
+
+~~~xml
+<select id="selectById" resulteType="int" useCache="true">
+    select  * from A 
+</select>
+~~~
+
+总之，想要某条select查询语句支持二级缓存，需要保证
+
+1. 开启Mybatis二级缓存总开关：cacheEnabled=true
+2. 开启Mapper分开关：在Mapper中配置\<cache> 或\<cache-ref>节点，并且有效
+3. \<select>节点配置参数：useCache=true
+
+
+
+##### 一、二级缓存的使用顺序
+
+如果你的MyBatis使用了二级缓存，并且你的Mapper和select语句也配置使用了二级缓存，那么在执行select查询的时候，MyBatis会先从二级缓存中取输入，其次才是一级缓存，即MyBatis查询数据的顺序是：**二级缓存 —> 一级缓存 —> 数据库**
+
+
+
+
+
+##### 二级缓存实现的选择
+
+MyBatis对二级缓存的设计非常灵活，它自己内部实现了一系列的Cache缓存实现类，并提供了各种缓存刷新策略如LRU，FIFO等等；
+
+另外，MyBatis还允许用户自定义Cache接口实现，用户是需要实现Cache接口，然后将Cache实现类配置在`<cache type="">`节点的type属性上即可；
+
+除此之外，MyBatis还支持跟第三方内存缓存库如Memecached的集成
+
+总之有三种选择：
+
+1. Mybatis自生提供的二级缓存机制实现
+2. 用户自定义Cache接口实现
+3. 整个第三方内存缓存库集成
+
+
+
+##### 自身提供的二级缓存的实现
+
+自身提供了丰富的二级缓存实现，它拥有一系列的Cache接口装饰者，可以满足各种对缓存操作和更新的策略
+
+![image-20221019233302708](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192333825.png)
+
+对每一个Cache而言，都有一个容量限制，Mybatis提供了多种策略来对Cache缓存的容量进行控制，以及对Cache中的数据进行刷新和置换
+
+刷新和置换策略：
+
+1. LRU：最近最少未使用算法，即如果缓存中容量满了，会将最近最少使用的缓存记录删除，然后添加新的记录
+2. FIFO：先进先出，若缓存中容量满了，马么将最先进入缓存中的数据清除
+3. Scheduled：时间间隔清空算法，会以指定的某一个时间间隔清空缓存中的数据
+
+
+
+##### 二级缓存中的问题
+
+
+
+现有AMapper.xml中定义了对数据库表 ATable 的CRUD操作，BMapper定义了对数据库表BTable的CRUD操作；
+
+假设 MyBatis 的二级缓存开启，并且 AMapper 中使用了二级缓存，AMapper对应的二级缓存为ACache；
+
+除此之外，AMapper 中还定义了一个跟BTable有关的查询语句，类似如下所述：
+
+```xml
+<select id="selectATableWithJoin" resultMap="BaseResultMap" useCache="true">  
+      select * from ATable left join BTable on ....  
+</select>
+```
+
+
+
+执行以下操作：
+
+- 执行AMapper中的"selectATableWithJoin" 操作，此时会将查询到的结果放置到AMapper对应的二级缓存ACache中；
+- 执行BMapper中对BTable的更新操作(update、delete、insert)后，BTable的数据更新；
+- 再执行1完全相同的查询，这时候会直接从AMapper二级缓存ACache中取值，将ACache中的值直接返回；
+
+好，**问题就出现在第3步**上：
+
+由于AMapper的“selectATableWithJoin” 对应的SQL语句需要和BTable进行join查找，而在第 2 步BTable的数据已经更新了，但是第 3 步查询的值是第 1 步的缓存值，已经极有可能跟真实数据库结果不一样，即ACache中缓存数据过期了！
+
+总结来看，就是：
+
+对于某些使用了 join连接的查询，如果其关联的表数据发生了更新，join连接的查询由于先前缓存的原因，导致查询结果和真实数据不同步；
+
+从MyBatis的角度来看，这个问题可以这样表述：
+
+**对于某些表执行了更新(update、delete、insert)操作后，如何去清空跟这些表有关联的查询语句所造成的缓存**
+
+
 
 ---
 
