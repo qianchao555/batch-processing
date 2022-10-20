@@ -152,7 +152,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
    - ~~~java
         /**
            	 * 查询
-     
+       
            	 * @return
            	 */
            	public List<Course> findCourseList(){
@@ -346,7 +346,7 @@ ${}：是字符串替换，#{}：是预处理
 
 ### Mybatis分页
 
-Mybatis分页是基于内存的分页，即先查询出所有记录，再按起始位置和页面容量取出结果
+Mybatis分页是基于内存的分页，即先查询出所有记录，再按偏移量和limit取出结果，在大数据量的情况下这样的分页是没有用的
 
 这里指的是JVM内存
 
@@ -354,9 +354,8 @@ Mybatis分页是基于内存的分页，即先查询出所有记录，再按起�
 
 mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行的内存分页，而非物理分页。可以在sql内直接书写带有物理分页参数了完成分页功能，也可以使用分页插件来完成物理分页
 
-RowBounds：内存分页，不太实用
-
-自定义分页插件，进行内存分页
+1. RowBounds：内存分页，不太实用
+2. PageHelper分页插件，自定义分页插件，进行物理分页
 
 
 
@@ -437,7 +436,15 @@ Mybatis将连接池中的PooledConnection分为两种状态：空闲(idle)、活
 
 
 
+使用连接池，使用了Connection对象后，如何放回连接池？
 
+代理模型解决：为真正的Connection对象创建一个代理对象，代理对象所有的方法都是调用真正的Connection对象的方法实现，当代理对象执行close()方法时，要特殊处理，不调用真正Connection对象的close()方法，而是将Connection对象添加到连接池中
+
+
+
+MyBatis的PooledDataSource的PoolState内部维护的对象是PooledConnection类型的对象，而PooledConnection则是对真正的数据库连接java.sql.Connection实例对象的包裹器。
+
+PooledConnection对象内持有一个真正的数据库连接java.sql.Connection实例对象和一个java.sql.Connection的代理
 
 
 
