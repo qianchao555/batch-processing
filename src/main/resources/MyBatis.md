@@ -151,40 +151,40 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
 
    - ~~~java
         /**
-       	 * 查询
-
-       	 * @return
-       	 */
-       	public List<Course> findCourseList(){
-       		String sql = "select * from t_course order by course_id";
-       		Connection conn = null;
-       		PreparedStatement pstmt = null;
-       		ResultSet rs = null;
-       		//创建一个集合对象用来存放查询到的数据
-       		List<Course> courseList = new ArrayList<>();
-       		try {
-       			conn = DbUtil.getConnection();
-       			pstmt = (PreparedStatement) conn.prepareStatement(sql);
+           	 * 查询
+     
+           	 * @return
+           	 */
+           	public List<Course> findCourseList(){
+           		String sql = "select * from t_course order by course_id";
+           		Connection conn = null;
+           		PreparedStatement pstmt = null;
+           		ResultSet rs = null;
+           		//创建一个集合对象用来存放查询到的数据
+           		List<Course> courseList = new ArrayList<>();
+           		try {
+           			conn = DbUtil.getConnection();
+           			pstmt = (PreparedStatement) conn.prepareStatement(sql);
                  
                  //结果集
-       			rs = (ResultSet) pstmt.executeQuery();
-       			while (rs.next()){
-       				int courseId = rs.getInt("course_id");
-       				String courseName = rs.getString("course_name");
-       				//每个记录对应一个对象
-       				Course course = new Course();
-       				course.setCourseId(courseId);
-       				course.setCourseName(courseName);
-       				//将对象放到集合中
-       				courseList.add(course);
-       			}
-       		} catch (SQLException e) {
-       			e.printStackTrace();
-       		}finally{
-       			//释放资源
-       		}
-       		return courseList;
-       	}
+           			rs = (ResultSet) pstmt.executeQuery();
+           			while (rs.next()){
+           				int courseId = rs.getInt("course_id");
+           				String courseName = rs.getString("course_name");
+           				//每个记录对应一个对象
+           				Course course = new Course();
+           				course.setCourseId(courseId);
+           				course.setCourseName(courseName);
+           				//将对象放到集合中
+           				courseList.add(course);
+           			}
+           		} catch (SQLException e) {
+           			e.printStackTrace();
+           		}finally{
+           			//释放资源
+           		}
+           		return courseList;
+           	}
      ~~~
    
    - PreparedStatement和Statement比较
@@ -373,17 +373,140 @@ RowBounds：内存分页，不太实用
 1. Mybatis仅仅支持association关联对象和collection关联集合对象的延迟加载，association指的是一对一，collection指的是一对多查询。在Mybatis配置文件中，可以配置是否启用延迟加载：lazyLoadingEnabled=true / false
 2. 延迟加载基本原理：使用Cglib创建目标对象的代理方法，点调用目标方法时，进入拦截器方法，比如调用a.getB().getName()，拦截器invoke()方法发现a.getB()是null值，那么就会单独发送事先保存好的查询关联B对象的sql，把B查询上来，然后调用a.setB(b)，于是a的对象b属性就有值了，接着完成a.getB().getName()方法的调用
 
+
+
 ---
 
+### Mybatis数据源DataSourec与连接池
 
+
+
+#### DataSource分类
+
+1. UnPooled：不使用连接池的数据源
+2. Pooled：使用连接池的数据源
+3. JNDI：使用JNDI实现的数据源
+
+
+
+#### 数据源DataSource创建过程
+
+Mybatis数据源DataSource对象的创建发生在Mybatis初始化过程中，Mybatis通过工厂模式来创建数据源的DataSource对象。抽象工厂DataSourceFactory
+
+不同的类型具有不同的工厂
+
+1. PooledDataSourceFacotry
+2. Un
+3. JndiDataSourceFactory
+
+创建DataSource对象后，会将其放到Configuration对象内的Enviroment对象中，供以后使用
+
+
+
+#### 什么时候创建Connection对象
+
+当创建SqlSession对象去执行SQL语句时，这时候Mybatis才会去调用dataSource对象来创建java.sql.Connection对象，也就是说Connection对象的创建一直延迟到执行SQL语句的时候
+
+
+
+#### 为什么使用连接池
+
+创建一个java.sql.Connection对象是一个耗时的过程，可能创建一个Connection对象就需要200-300毫秒，这对于计算机来说是非常奢侈的了
+
+若仅仅创建一个Connection连接就需要那么大代价，那么在web应用中，用户的每一个请求就操作一次数据库，那么当有10000人在线用户，并发操作的话，仅仅创建Connection对象就需要10000*250ms=2500s=41分钟！！！！
+
+分析：创建一个Connection对象过程，在底层相当于和数据库建立的通信连接，在建立通信连接的过程消耗了这么多时间，往往是建立连接后，就执行一个简单的sql语句，然后就要抛弃掉，这是非常大的资源浪费
+
+解决方案：
+
+对于需要频繁地跟数据库交互的应用程序，可以在创建了Connection对象，并操作完数据库后，可以不释放掉资源，而是将它放到内存中，当下次需要操作数据库时，可以直接从内存中取出Connection对象，不需要再创建了，这样就极大地节省了创建Connection对象的资源消耗。
+
+由于内存也是有限和宝贵的，这就要求我们对内存中的Connection对象怎么有效地维护提出了很高的要求。
+
+我们将在内存中存放Connection对象的容器称之为连接池（Connection Pool）
+
+
+
+#### PooledDataSource原理
+
+Mybatis将连接池中的PooledConnection分为两种状态：空闲(idle)、活动(active)状态。这两种状态的PooledConnection对象分别存放到了两个List集合中
+
+**idleConnections**:表示当前闲置的没有被使用的PooledConnection集合，调用PooledDataSource的getConnection()方法时，会优先从此集合中取PooledConnection对象。当用完后，在放回到此集合中
+
+**activeConnections**:表示当前正在被使用的PooledConnection集合，调用PooledDataSource的getConnection()方法时，会优先从idleConnections集合中取PooledConnection对象,如果没有，则看此集合是否已满，如果未满，PooledDataSource会创建出一个PooledConnection，添加到此集合中，并返回
+
+
+
+
+
+
+
+---
 
 ### Mybatis的一级二级缓存
 
+
+
 #### 一级缓存
+
+对于SqlSession级别的缓存称为一级缓存
+
+![image-20221020162658425](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210201627715.png)
+
+1. SqlSession对象只是一个门面，真正干活的是Executor执行器，Mybatis将缓存和对缓存相关的操作封装在Cache接口中，SqlSession、Executor、Cache之间的关系图为：
+
+![image-20221020162958732](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210201630530.png)
+
+
+
+
+
+![image-20221020163339872](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210201633898.png)
+
+
+
+SqlSession级别的一级缓存实际上就是使用PerpetualCache维护的，底层就是一个普通的HashMap来存放的。
+
+Cache最核心的实现其实就是一个Map，将本次查询使用的特征值作为key，将查询结果作为value存储到Map中。现在最核心的问题出现了：怎样来确定一次查询的特征值？换句话说就是：怎样判断某两次查询是完全相同的查询？也可以这样说：如何确定Cache中的key值？
+
+MyBatis认为，对于两次查询，如果以下条件都完全一样，那么就认为它们是完全相同的两次查询：
+
+- 传入的 statementId
+- 查询时要求的结果集中的结果范围 （结果的范围通过rowBounds.offset和rowBounds.limit表示）
+- 这次查询所产生的最终要传递给JDBC java.sql.Preparedstatement的Sql语句字符串（boundSql.getSql() ）
+- 传递给java.sql.Statement要设置的参数值
+
+**现在分别解释上述四个条件**：
+
+- 传入的statementId，对于MyBatis而言，你要使用它，必须需要一个statementId，它代表着你将执行什么样的Sql；
+- MyBatis自身提供的分页功能是通过RowBounds来实现的，它通过rowBounds.offset和rowBounds.limit来过滤查询出来的结果集，这种分页功能是基于查询结果的再过滤，而不是进行数据库的物理分页；
+- 由于MyBatis底层还是依赖于JDBC实现的，那么，对于两次完全一模一样的查询，MyBatis要保证对于底层JDBC而言，也是完全一致的查询才行。而对于JDBC而言，两次查询，只要传入给JDBC的SQL语句完全一致，传入的参数也完全一致，就认为是两次查询是完全一致的。
+- 上述的第3个条件正是要求保证传递给JDBC的SQL语句完全一致；第4条则是保证传递给JDBC的参数也完全一致；即3、4两条MyBatis最本质的要求就是：调用JDBC的时候，传入的SQL语句要完全相同，传递给JDBC的参数值也要完全相同。
+
+综上所述,CacheKey由以下条件决定：**statementId + rowBounds + 传递给JDBC的SQL + 传递给JDBC的参数值**；
+
+##### CacheKey对象创建
+
+对于每次的查询请求，Executor都会根据传递的参数信息以及动态生成的SQL语句，将上面的条件根据一定的计算规则，创建一个对应的CacheKey对象。
+
+我们知道创建CacheKey的目的，就两个：
+
+- 根据CacheKey作为key,去Cache缓存中查找缓存结果；
+- 如果查找缓存命中失败，则通过此CacheKey作为key，将从数据库查询到的结果作为value，组成key,value对存储到Cache缓存中；
+
+
+
+##### 一级缓存的生命周期
+
+MyBatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个新的Executor对象，Executor对象中持有一个新的PerpetualCache对象；当会话结束时，SqlSession对象及其内部的Executor对象还有PerpetualCache对象也一并释放掉
+
+**一级缓存是一个粗粒度的缓存，没有更新缓存和缓存过期的概念**
 
 1. 默认情况下，mybatis只启用了本地的会话缓存，它仅仅对一个会话中的数据进行缓存。这就是Mybatis的一级缓存，其作用域是SqlSession
 
-2. 一级缓存运行过程：执行sql语句时，首次从数据库取的数据被存储在一段高速缓存中，今后执行这条语句的时候就会从高速缓存中读取结果。但是一旦执行新增或更新或删除操作，缓存就会被清除
+2. 一级缓存运行过程：MyBatis一次会话: 一个SqlSession对象中创建一个本地缓存(local cache)，对于每一次查询，都会尝试根据查询的条件去本地缓存中查找是否在缓存中，如果在缓存中，就直接从缓存中取出，然后返回给用户；否则，从数据库读取数据，将查询结果存入缓存并返回给用户
+
+2. 但是一旦执行新增或更新或删除操作，缓存就会被清除
 
 3. ~~~xml
    <!--
@@ -396,7 +519,9 @@ RowBounds：内存分页，不太实用
 
 4. 
 
-5. 一级缓存没有过期时间，只有生命周期，mybatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个Executor对象，Executor对象中持有一个PerpetualCache对象（HashMap本地缓存），如果SqlSession调用了close()则会释放掉一级缓存PerpetualCache对象，一级缓存将不可用。在这个SqlSession中执行了update、delete、insert操作，都会清空PerpetualCache对象里面的数据，但是该对象可以继续使用
+6. 一级缓存没有过期时间，只有生命周期，mybatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个Executor对象，Executor对象中持有一个PerpetualCache对象（HashMap本地缓存），如果SqlSession调用了close()则会释放掉一级缓存PerpetualCache对象，一级缓存将不可用。在这个SqlSession中执行了update、delete、insert操作，都会清空PerpetualCache对象里面的数据，但是该对象可以继续使用
+
+
 
 #### 二级缓存
 
@@ -488,6 +613,16 @@ Mybatis并不是简单的对整个Application就有一个Cache缓存对象，它
 2. 开启Mapper分开关：在Mapper中配置\<cache> 或\<cache-ref>节点，并且有效
 3. \<select>节点配置参数：useCache=true
 
+##### mybatis整合SpringBoot
+
+1. mybatis整合Springboot后，直接在Mapper.xml中添加 \<cache> .... \</cache> 表示开启二级缓存
+
+2. Mapper.xml里面 的select查询都具有缓存功能
+
+3. 可以针对单个\<select id="xxx"   useCache="false">，取消单个查询的二级缓存
+
+   
+
 
 
 ##### 一、二级缓存的使用顺序
@@ -568,11 +703,21 @@ MyBatis对二级缓存的设计非常灵活，它自己内部实现了一系列�
 
 
 
+MyBatis二级缓存的一个重要特点：松散的Cache缓存管理和维护
+
+![image-20221020161902039](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210201620163.png)
+
+
+
+解决上述问题方案：**对于某些表执行了更新(update、delete、insert)操作后，去清空跟这些指定的表有关联的查询语句所造成的缓存**; 这样，就是以很细的粒度管理MyBatis内部的缓存，使得缓存的使用率和准确率都能大大地提升
+
+
+
 ---
 
-
-
 ### MyBatis如何将sql执行结果封装为目标对象并返回的
+
+
 
 #### 使用标签
 
