@@ -152,7 +152,7 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
    - ~~~java
         /**
            	 * 查询
-       
+           
            	 * @return
            	 */
            	public List<Course> findCourseList(){
@@ -356,6 +356,10 @@ mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行�
 
 1. RowBounds：内存分页，不太实用
 2. PageHelper分页插件，自定义分页插件，进行物理分页
+2. Mybatis-plus分页组件：
+2. Spring-data分页：
+
+还可以自定义Page，组合Mybatis-plus的分页信息、还可以将Mybatis-plus的分页信息 封装后 转换为spring-data的分页
 
 
 
@@ -840,19 +844,93 @@ SqlSession ->MapperProxy(被代理对象的方法的访问都会落实到代理�
 
 
 
+-------------------------
+
+
+
+## Mybatis-Plus
+
+### 特性
+
+1. 无侵入：只做增强不做改变
+2. 强大的curd：内置通用Mapper、通用Service
+   - 可以不使用Mybatis-plus提供的 IService
+   - 可以自己定义顶层Service，结合mapper，完成Service的框架封装
+3. 支持Lambda形式调用：通过lambda表达式，方便编写各类查询条件，无需担心字段写错
+4. 支持主键自动生成
+5. 分页插件支持多种数据库：MySQL、Oracle、Postgresql、HSQL、MariaDB等等
+6. 内置性能分析插件：可输出sql语句以及其执行时间，建议在开发、测试时启用该功能
+
+
+
+### 核心功能
+
+#### 代码生成器
+
+#### CRUD接口
+
+#### 条件构造器
+
+QueryWrapper
+
+LambdaQueryWrapper
+
+#### 主键策略
+
+#### 自定义ID生成器
 
 
 
 
 
+-----
+
+## SpringData
+
+Spring Data是Spring的一个子项目，用于简化数据库访问，支持NoSQL和关系型数据库。主要目标是：使数据库的访问变得方便快捷
+
+支持NoSQL：
+
+1. MongoDB，文档数据库
+2. Redis，k-v数据库
+3. Hbase，列值数据库
+4. Neo4j，图像数据库
+
+支持关系型数据库
+
+1. JDBC
+2. JPA
 
 
 
+### JDBC与JPA
+
+区别：
+
+1. 不同标准：jdbc是数据库统一接口标准，jpa是orm框架统一接口标准
+2. 用法：jdbc更注重数据库，orm更注重java代码，但是实际上jpa实现的框架底层还是用jdbc去和数据库打交道
+
+### ORM框架
+
+Mybatis：半orm框架，不是依照JPA规范，它需要写一些sql
+
+Hibernate：是JPA的一种实现
+
+Spring data JPA：对JPA规范的再次抽象，底层使用的是Hibernate
+
+Spring data JDBC：jdbcTemplate模板数据库简化对数据库的操作，相比传统JDBC而言省去了，数据库驱动，连接等无关配置，只需要写sql，设置参数
 
 
 
+![image-20221021142127464](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210211421235.png)
 
 
+
+### JPA
+
+Java Persistence API：Java对象持久化的API
+
+JPA本质上是一种ORM规范，不是ORM框架，因为JPA未提供ORM实现，它只是制定了一些规范，提供了一些API接口，但具体实现则由服务厂商来提供实现。JPA是为了让面向对象设置的，为了不写sql而设置的
 
 
 
