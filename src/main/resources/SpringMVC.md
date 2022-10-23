@@ -108,7 +108,7 @@ public Class MyDateConverter implements Converter<String,Date>{
 
 创建完成自定义类型转换器后，需要进行配置才会使得自定义类型转换器生效
 
-SpringBoot中，将自定义的转换器注册到WebMvcConfigur
+SpringBoot中，将自定义的转换器注册到WebMvcConfigurer，实现 WebMvcConfigurer 接口来定制 Spring MvVC 配置
 
 ~~~java
 public class WebConfig implements WebMvcConfigurer{
@@ -127,6 +127,60 @@ public class WebConfig implements WebMvcConfigurer{
 实际项目中，经常会涉及到一些进行格式化的数据，例如：金额、日期等等。这些数据需要经过一定的格式化处理才能正常使用
 
 Spring提供了一个Formatter\<T>接口，它被称为格式化转换器
+
+
+
+---
+
+
+
+### SpringMVC Json数据交互
+
+#### JSON数据转换
+
+为了实现浏览器与控制器之间的JSON数据交互，SpringMVC提供了一个默认的MappingJackon2HttpMessageConverter类，顶层接口为HttpMessageConverter，用来处理Json格式请求和响应
+
+通过它可以将JSON数据转换为Java对象，也可以将Java对象转换为JSON数据
+
+#### JSON转换注解
+
+SpringMVC提供了两个十分重要的与JSON格式转换相关的注解，分别是@RequestBody、@ResponseBody
+
+RequestBody：作用于方法形参上，用于将请求体中的数据绑定到控制器方法的形参上
+
+ResponseBody：该注解 用于将控制器方法的返回值直接作为响应报文的响应体，响应到浏览器上
+
+#### MappingJackon2HttpMessageConverter
+
+是SpringBoot中默认的Json消息转换器
+
+
+
+#### JackSon
+
+SpringMVC默认采用Jackson解析Json，尽管还有一些很优秀的json解析工具：Fast json、GSON但是出于最小依赖的考虑，也许Json解析第一选择就应该是Jackson
+
+FastJson代码质量、漏洞、坑多问题，尽量避免使用FastJson
+
+
+
+Jackson目前使用比较广泛的用来序列化和反序列化json的Java开源框架
+
+ 核心模块
+
+1. jackson-core：核心包
+2. jackson-annotations：注解包，提供标准注解功能
+3. jackson-databind：数据绑定包，提供基于对象绑定解析相关的API（ObjectMapper)和树模型(JsonNode)
+
+Jackson ObjectMapper类
+
+是使用Jackson解析JSON最简单的方法，最常用的API就是基于对象绑定的ObjectMapper
+
+1. ObjectMapper可以从字符串、流、文件中解析JSON，并创建表示已解析的Json的Java对象。将Json解析为Java对象也称为Json反序列化Java对象
+2. 也可以从Java对象创建Json，将Java对象解析为Json称为Java对象序列化Json
+3. Object映射器可以将JSON解析为自定义的类对象，也可以解析置Json树模型的对象
+
+之所以称为ObjectMapper，是因为它可以将Json对象映射为Java对象(反序列化)，也可以将Java对象映射为Json对象(序列化)
 
 ---
 
@@ -147,18 +201,21 @@ Spring提供了一个Formatter\<T>接口，它被称为格式化转换器
 
 该注解实现将controller方法返回对象转换为json对象响应给客户
 
----
+@RestController =>@ResposeBody+@Controller
 
-### SpringMvc中控制器的注解一般采用那个
 
-一般采用@Controller，也可以使用@RestController =>@ResposeBody+@Controller
 
 ---
 
 ### SpringMvc的控制器是单例吗
 
 1. dispatcherServlet是单例的，在多线程访问的时候有线程安全问题。
-2. 解决方案是：在控制器里面不能写可变状态变量，即无状态bean
+
+2. controller是单例的
+
+   
+
+解决方案是：在控制器里面不能写可变状态变量，即无状态bean、或者使用ThreadLocal
 
 
 
@@ -301,7 +358,7 @@ Filter是Servlet规范中最实用的技术，通过它可以对服务器管理�
 
 
 
-过滤器前->Servlet ->拦截器前 ->controller ->拦截器后  ->过滤器后
+**过滤器前->Servlet ->拦截器前 ->controller ->拦截器后  ->过滤器后**
 
 
 
