@@ -1,4 +1,79 @@
-## 集合
+## 集合容器
+
+Java体系中容器主要包括Collection和Map两种，Collection存放对象的集合，Map存放k-v对的映射表
+
+Collection主要包含List、Set、Queue
+
+### List
+
+#### ArrayList源码分析
+
+针对：JDK8
+
+ArrayList是顺序容器，即：元素存放的数据与放进去的顺序相同，运行放入null元素，底层通过数组实现。未实现同步机制，其余与Vector大致相同
+
+创建ArrayList时，默认ArrayList对象中的elementData长度是空的{}，即：arr.length=0；size是(elementData中元素包含的个数)0，当第一次add的时候，elementData将会变成默认大小为10
+
+
+
+##### ArrayList自动扩容机制
+
+每当向数组中添加元素时，都要去检查添加后元素的个数是否会超出当前数组的长度，如果超出，数组将会进行扩容，以满足添加数据的需求
+
+数组进行扩容时，会将老数组中的元素重新拷贝一份到新的数组中，每次数组容量的增长大约是其原容量的1.5倍(oldCapacity + (oldCapacity >> 1)) => (10 + 10>>1)  ==>10+5 =15
+
+这种操作的代价是很高的，因此在实际使用时，我们应该尽量避免数组容量的扩张。当我们可预知要保存的元素的多少时，要在构造ArrayList实例时，就指定其容量，以避免数组扩容的发生
+
+每次add的时候，都会在添加之前检查是否能存放，否则会进行自动扩容 grow()方法
+
+
+
+##### ArrayList添加和删除的性能
+
+时间复杂度O
+
+添加：
+
+1. 指定位置后面的元素会依次向右移动一个位置：O(n)
+2. 直接在末尾添加：O(1)
+
+删除：
+
+1. 后面的元素后依次向左移动一个位置，将最后一个元素置null，好让垃圾收集器进行回收，remove方法不会让数组的长度缩减，只是将最后一个数组元素置空而已：O(n)
+
+这就导致了在指定位置添加和删除的性能消耗大！
+
+
+
+##### ArrayList Fail-Fast机制
+
+使用iterator遍历可能会引发多线程异常
+
+ArrayList采用了快速失败机制，通过记录modCount参数来实现，在面对并发修改时，迭代器很快就会完全失败，而不是冒着在将来某个不确定的时间发生任何不确定行为的风险
+
+
+
+##### ArrayList序列化机制
+
+transient Object[] elementData ，ArrayList元素数组是不会被序列化的
+
+ArrayList自己实现了序列化与反序列化的方法
+
+writeObject(ObjectOutputStream)：序列化
+
+readObject(ObjectInputStream) ：反序列化
+
+与直接序列化Object数组相比，这样做的优势：
+
+1. elementData是一个Object数组，它通常会预留一些容量，等容量不足时再进行扩容
+2. 有些空间(elementData[size] ~ elementData[elementData.length-1])实际上并没有存储元素(存的是null)
+
+ArrayList的序列化机制：elementData定义为transient的优势，自己根据size序列化真实的元素，**只序列化实际存储的集合元素，而不是去实例化整个Object数组，从而节省空间和时间的消耗**
+
+
+---
+
+
 
 ### HashMap
 
