@@ -158,17 +158,135 @@ private static class Node<E> {
 
 ---
 
+### Stack & Queue
+
+使用栈时，Stack已经不推荐使用了，而是使用更高效的ArrayDeque；Queue是一个接口，当需要使用队列时也首选ArrayDeque，其次才是LinkedList
+
+Queue继承自Collection接口
+
+DeQue ：Double ended queue，双端队列，Deque继承自Queue接口，由于它是双端的，所以可以对队列的头和尾进行操作
+
+双端队列，既可以当作栈使用，也可以当作队列使用
+
+当Deque当作FIFO的队列时，元素从尾部添加，从头部删除
+
+ArrayDeque与LinkedList是Deque的两个通用实现，官方推荐使用ArrayDeque
 
 
-### HashMap
 
-#### HashMap结构
+#### ArrayDeque
+
+底层通过数组实现，为了满足可以同时在数组两端插入或删除元素的需求，该数组所以设计为循环的，即：循环数组；也就是说循环数组的任何一点都可能被看作起点或者终点
+
+ArrayDeque是非线程安全的，其次，该容器不允许放null元素
+
+
+
+数组也会进行扩容，扩容为原理的两倍
+
+---
+
+
+
+#### PriorityQueue
+
+优先队列，作用：能保证每次取出的元素都是队列中权值最小的
+
+元素大小的判定可以通过元素本身的自然顺序，也可以通过构造时传入比较器来做判定
+
+PriorityQueue实现了Queue，不允许放入null元素
+
+##### 实现原理
+
+通过堆实现，具体来说就是：通过二叉树实现的小顶堆，通过数组来作为PriorityQueue的底层实现
+
+小顶堆：任意一个非叶子节点的权值，都不大于其左右子节点的权值
+
+二叉堆可以用数组表示：父子节点下表关系为
+
+leftNode=parentNo*2+1
+
+rightNode=parentNo*2+2
+
+parentNode=(nodeNo-1)/2
+
+
+
+新加入的元素可能会破坏小顶堆的性质，因此需要做必要的调整
+
+调整过程：从k指定的位置开始，将x逐层与当前节点的paren进行比较并交换，直到满足x>=queue[parent]为止，这里都比较可以是自然顺序，也可以是依靠比较器的顺序
+
+
+
+删除
+
+删除队首元素，会改变队列的结构，要去维护小顶堆的性质去做必要的调整
+
+删除指定元素，也会去维护
+
+
+
+---
+
+### Set
+
+#### HashSet
+
+HashSet是对HashMap的简单包装，即：HashSet底层是HashMap实现
+
+HashSet只用map的键存储数据，map的所有值为Object PRESENT=new Object();
+
+可以存放null，但是只能有一个
+
+HashSet查找效率为O(1)：根据hash值直接定位
+
+
+
+#### LinkedHashSet
+
+具有HashSet的查找效率，其内部使用双向链表来维护元素的插入顺序
+
+对LinkedHashMap包装了一层而已
+
+
+
+#### TreeSet
+
+基于红黑树实现，支持有序性操作，查找效率为O(logn)
+
+同理：TreeSet是对TreeMap做的一层封装
+
+---
+
+### Map
+
+#### HashMap
+
+1. HashMap允许k-v都为null，但是只能有一个元素为null
+2. 容器不保证元素的顺序
+
+根据对冲突的处理方式不同，哈希表有两种实现方式
+
+1. 开放地址法
+2. 冲突链表方式（Java7采用此种方式）
+
+hashcode()：方法决定对象被放到数组的哪个位置(bucket)
+
+equals()：当多个对象的哈希值冲突时，equals决定了这些对象是否是同一个对象
+
+所以，若要将自定义的对象放入到HashMap或HashSet中，需要重写这两个方法
+
+
+
+##### HashMap结构
+
+Java8：数组+链表+红黑树
 
 内部有一个非常重要的属性Node，是HashMap的一个内部类，其实现了Map.Entry接口
 
 其中Node中包含一个Node next，从而形成链表结构
 
-#### HashMap容量
+##### HashMap容量
 
 ~~~java
 static final int DEFAULT_INITIAL_CAPACITY = 1 << 4;
@@ -180,7 +298,7 @@ static final int DEFAULT_INITIAL_CAPACITY = 1 << 4;
 
 
 
-#### HashMap负载因子
+##### HashMap负载因子
 
 为什么需要负载因子：
 
@@ -212,7 +330,7 @@ HashMap的负载因子默认为0.75
 
 
 
-#### HashMap的hash()算法
+##### HashMap的hash()算法
 
 ~~~java
 static final int hash(Object key) {
@@ -225,17 +343,17 @@ static final int hash(Object key) {
 
 实际上就是把一个数的低16位 与 高16位做异或运算。目的是减少hash冲突
 
-#### Hash算法
+##### Hash算法
 
 hash其实就是一个函数，该函数实现的就是一种算法，通过一系列的算法来得到一个hash值，通过hash算法得到的hash值存放与hash表中
 
-#### HashCode
+##### HashCode
 
 1. hashCode就是通过hash函数得到的，hashcode就是在hash表中有对应的位置
 2. 每个对象都有hashcode，对象的hashcode是通过对象的内部地址(也就是物理地址)转换成一个整数，然后该整数通过hash函数的算法就得到了hashcode(不同jvm的实现不同）。
 3. 比如：hash表中有hashcode为1、hashcode为2、3、4、5、6、7、8等这样八个位置，有一个对象A，假如A的物理地址转换为一个整数17，就通过hash算法(假如直接取余算法)，17%8=1，那么A的hashcode就为1，则A就在hash表中1的位置
 
-##### 为什么使用hashcode
+为什么使用hashcode
 
 1. 为了查找的快捷性，HashCode是用来在散列存储结构中确定对象的存储地址的
 2. hashmap之所以快，就是因为使用了散列表，根据key的hashcode值，生成数组下标以得到对应的对象
@@ -253,7 +371,7 @@ hash其实就是一个函数，该函数实现的就是一种算法，通过一�
    - 不相等，则加入对象
    - 相等，则放弃加入
 
-#### 解决hash冲突的方法
+##### 解决hash冲突的方法
 
 1. 开放定制法
    - 线性探查法
@@ -272,7 +390,9 @@ hash其实就是一个函数，该函数实现的就是一种算法，通过一�
 
 
 
-#### HashMap的数组+链表/红黑树问题
+##### HashMap的数组+链表/红黑树问题
+
+根据数组元素中，第一个节点数据类型是Node还是TreeNode来判断该位置下是链表还是红黑树
 
 ##### 为什么引入链表
 
@@ -296,7 +416,7 @@ tab[i=(n-1) & hash]
 
 
 
-#### 数组的长度为什么是2的n次幂
+##### 数组的长度为什么是2的n次幂
 
 https://www.itqiankun.com/article/hashmap-basic-question
 
@@ -345,11 +465,11 @@ static final int tableSizeFor(int cap) {
 
 
 
-#### HashMap扩容原理
+##### HashMap扩容原理
 
 当map中的Entry的数量大于等于threshold=loadFactor*capacity的时候，且新建的Entry刚好落在一个非空的桶上(数组[i])上，此时触发扩容机制，将其容量扩大为原来的两倍
 
-#### put过程
+##### put过程
 
 1. 对key的hashCode()做hash运算，计算出index
 2. 如果没有hash碰撞，则调用newNode()来创建Node放入tab中
@@ -357,11 +477,11 @@ static final int tableSizeFor(int cap) {
 4. 如果某节点已经存在，则新的值替换为旧的值(保证key的唯一性)
 5. 如果tab快满了(阈值=loadFacotr*currentCapacity)，则会进行扩容(resize)
 
-#### 为什么转为红黑树
+##### 为什么转为红黑树
 
 
 
-#### HashMap线程不安全问题
+##### HashMap线程不安全问题
 
 产生的原因：
 
@@ -381,7 +501,58 @@ static final int tableSizeFor(int cap) {
 
 
 
-## 
+
+
+#### LinkedHashMap
+
+使用双向链表来维护元素顺序，顺序为插入顺序或最近最少使用顺序
+
+在HashMap的基础上，采用双向链表的形式，将所有entry连接起来，这样就保证了元素的迭代顺序与插入顺序是相同的
+
+LinkedHashMap经典用法：
+
+实现采用FIFO替换策略的缓存
+
+
+
+#### TreeMap
+
+基于红黑树实现
+
+红黑树是一种近似于平衡的二叉树，它能够保证任何一个节点左右子树的高度差不会超过二者中较低那个的一倍
+
+红黑树是满足以下条件的二叉查找树
+
+1. 每个节点要么是红色，要么是黑色。
+2. 根节点必须是黑色
+3. 红色节点不能连续(也即是，红色节点的孩子和父亲都不能是红色)。
+4. 对于每个节点，从该点至`null`(树尾端)的任何路径，都含有相同个数的黑色节点
+
+
+
+当树的结构发生改变时，需要对其进行调整，以满足红黑树的约束条件，红黑树调整分为两类：颜色调整，结构调整：结构调整包含两个基本操作左旋和右旋
+
+左旋：将x的右子树绕x逆时针旋转，使得右子树成为x的父亲，同时修改相关节点的引用。旋转之后，二叉查找树的属性仍然满足
+
+
+
+右旋：将x的左子树围绕x顺时针旋转，使得x的左子树成为x的父亲，同时修改相关节点的引用
+
+
+
+#### WeakHashMap
+
+没有WeakHashSet，不过可以通过包装WeakHashMap来包装一个自己的WeakHashSet
+
+特殊的Map，weakHashMap里面的entry可能会被GC自动删除，即使没有调用remove或clear方法
+
+使用场景：需要缓存的场景
+
+弱引用
+
+---
+
+
 
 
 
