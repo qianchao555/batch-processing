@@ -14,6 +14,13 @@ ArrayList是顺序容器，即：元素存放的数据与放进去的顺序相�
 
 创建ArrayList时，默认ArrayList对象中的elementData长度是空的{}，即：arr.length=0；size是(elementData中元素包含的个数)0，当第一次add的时候，elementData将会变成默认大小为10
 
+##### 底层数据结构
+
+~~~java
+transient Object [] elementObject；
+private int size;
+~~~
+
 
 
 ##### ArrayList自动扩容机制
@@ -45,11 +52,40 @@ ArrayList是顺序容器，即：元素存放的数据与放进去的顺序相�
 
 
 
+##### ArrayList排序、判断对象是否相等
+
+判断ArrayList里面的对象，需要重写该对象的equals、hashcode方法
+
+排序操作：
+
+1. 采用集合工具类中提供的方法进行排序：Collections.sort方法，若存放的是自定义对象时：该对象需要实现Compareable接口，并实现compareTo(T o)，按照我们自定义的规则进行排序
+2. 使用比较器Comparator
+3. Java8：Stream流，arrayList.stream().sorted(Student::age).collection(Collectors.toList);
+
+
+
 ##### ArrayList Fail-Fast机制
 
 使用iterator遍历可能会引发多线程异常
 
 ArrayList采用了快速失败机制，通过记录modCount参数来实现，在面对并发修改时，迭代器很快就会完全失败，而不是冒着在将来某个不确定的时间发生任何不确定行为的风险
+
+使用迭代器remove单线程不会报并发修改错误，因为迭代器remove后，会重新设置expectedModCount=等于外部的modCount变量，从而不会触发快速失败机制(比较modCount)
+
+使用迭代器提供的remove方法时，实际上还是调用的集合的remove方法删除元素，但是在删除元素之后会将expectedModCount重新置为modCount的值，即让这两个值变得想等了，因此单线程下使用迭代器的remove方法删除元素是不会触发快速失败机制的
+
+##### fail-safe 安全失败机制
+
+安全失败，是相对于快速失败而言的，快速失败时立即抛出异常，安全失败则是不会抛出异常，失败的“很安全”，但是，也是属于一个“失败”的操作
+
+采用安全失败机制的集合容器，实际上在遍历时不是直接在原来的集合内容上访问的，而是先复制原有集合内容，在拷贝的集合上进行遍历。这种机制也被称为“**写时复制**”（Copy-On-Write，简称**COW**），很多实现都使用了该机制，比如Redis的快照功能，Redis写快照的时候，就用到了Linux底层的Copy-On-Write技术
+
+原理：迭代时是对原集合的拷贝进行遍历，所以在遍历过程中对原集合所作的修改并不能被迭代器检测到，所以不会触发ConcurrentModificationException
+
+实现例子：CopyOnWriteArrayList
+
+
+
 
 
 
@@ -70,6 +106,55 @@ readObject(ObjectInputStream) ：反序列化
 
 ArrayList的序列化机制：elementData定义为transient的优势，自己根据size序列化真实的元素，**只序列化实际存储的集合元素，而不是去实例化整个Object数组，从而节省空间和时间的消耗**
 
+
+---
+
+#### LinkedList分析
+
+LinkedList实现了List接口和Deque双端队列接口，即：可以将它看作一个顺序容器，又可以看作一个队列，同时又可以看作一个栈
+
+但需要使用栈或队列的时候，可以考虑使用LinkedList，但是首先ArrayDeque，它比LinkedList(当作栈或队列)有着更好的性能
+
+LinkedList没有实现同步，多线程访问时，可以采用Collections.synchronizedList()方法对其进行包装
+
+##### 底层数据结构
+
+双向链表，双向链表的每个节点用内部类Node表示。LinkedList通过first和last引用，分别执行链表的第一个和最后一个元素。没有哑元(头节点前的一个空节点)节点，当链表为空的时候first和last都指向null
+
+~~~java
+transient int size = 0;
+
+transient Node<E> first;
+
+transient Node<E> last;
+
+/**
+* Node是一个私有内部类
+*/
+private static class Node<E> {
+        E item;
+        Node<E> next;
+        Node<E> prev;
+
+        Node(Node<E> prev, E element, Node<E> next) {
+            this.item = element;
+            this.next = next;
+            this.prev = prev;
+        }
+    }
+
+~~~
+
+
+
+1. 底层实现了**双向链表**和双端队列的特点
+2. 双向链表的每一个节点用内部类Node表示
+3. 添加和删除效率高 直接改变指向
+4. 查找速度慢 链表需要一直挨着去查找
+5. 添加是从尾部添加元素
+   - 逻辑：把最后一个节点last取出来=》L(Node)
+   - 当前节点pre指向L、next指向null
+   - last=newNode
 
 ---
 
