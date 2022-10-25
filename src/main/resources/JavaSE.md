@@ -196,6 +196,24 @@ ArrayDeque是非线程安全的，其次，该容器不允许放null元素
 
 PriorityQueue实现了Queue，不允许放入null元素
 
+~~~java
+	/**默认容量为11*/
+	private static final int DEFAULT_INITIAL_CAPACITY = 11;
+
+	/**队列容器*/
+    transient Object[] queue;
+
+	/**队列包含的元素长度（个数）*/
+    private int size = 0;
+
+	/**比较器,为null使用自然排序*/
+    private final Comparator<? super E> comparator;
+
+.......
+~~~
+
+
+
 ##### 实现原理
 
 通过堆实现，具体来说就是：通过二叉树实现的小顶堆，通过数组来作为PriorityQueue的底层实现
@@ -262,13 +280,15 @@ HashSet查找效率为O(1)：根据hash值直接定位
 
 #### HashMap
 
+https://www.developers.pub/wiki/1002310/582
+
 1. HashMap允许k-v都为null，但是只能有一个元素为null
 2. 容器不保证元素的顺序
 
 根据对冲突的处理方式不同，哈希表有两种实现方式
 
 1. 开放地址法
-2. 冲突链表方式（Java7采用此种方式）
+2. 链地址法（Java采用此种方式）：数组加链表的结合，在每一个数组元素上都链上一个链表结构，当元素hash后，得到数组下标，然后把元素放在对应的链表后边
 
 hashcode()：方法决定对象被放到数组的哪个位置(bucket)
 
@@ -467,6 +487,8 @@ static final int tableSizeFor(int cap) {
 
 ##### HashMap扩容原理
 
+resize方法，数组是无法扩容的，所有采用一种新的数组代替已有的小容量数组
+
 当map中的Entry的数量大于等于threshold=loadFactor*capacity的时候，且新建的Entry刚好落在一个非空的桶上(数组[i])上，此时触发扩容机制，将其容量扩大为原来的两倍
 
 ##### put过程
@@ -491,6 +513,7 @@ static final int tableSizeFor(int cap) {
 2. Jdk8
    - 数据覆盖问题
    - 线程A会把线程B插入的数据给**覆盖**，发生线程不安全
+   - 在put时，如果没有hash碰撞时，插入元素时候，多个线程操作，可能会造成覆盖
 
 如何解决
 
