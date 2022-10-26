@@ -768,6 +768,52 @@ public class FruitGenerator implements GenericInterface<String> {}
 
 #### 泛型方法
 
+在调用方法的时候指明泛型的具体类型
+
+~~~java
+public class GenericTest<T>{
+    private T key;
+    
+    //泛型方法   public 和    返回值   直接的<T> 声明为泛型方法
+    public <T> T genericMethod(Class<T> tClass){
+            T instance = tClass.newInstance();
+            return instance;
+    }
+    
+    //泛型方法
+    public <T> void test(String name){}
+    //泛型方法
+    public <T> void test(T t){}
+    
+    //泛型方法中的可变参数
+    public <T> void argsMethod(A ...args){}
+    
+
+    //非泛型方法,只不过返回值是在声明泛型类已经声明过的泛型
+    //所以这个方法中才可以继续使用T这个泛型
+    public T getKey(){
+        return key;
+    }
+    
+}
+~~~
+
+
+
+### 泛型数组
+
+Java的泛型数组，在初始化时，数组类型不能是具体的泛型类型，只能是通配符形式
+
+因为：具体类型会导致可存入任意类型对象，在取出时会发生类型转换异常，会与泛型的设计思想冲突，而通配符本来就需要自己强转，符合预期
+
+~~~java
+List<?> [] list=new ArrayList<?>[10];
+
+List<String> [] ls =new ArrayList[10];  //这样也行，不过会报警告
+~~~
+
+
+
 
 
 ### 泛型通配符
@@ -778,20 +824,28 @@ public class FruitGenerator implements GenericInterface<String> {}
 
 \<? super E> ：固定下边的界通配符，E就是该泛型的下边界，？表示E的父类类型
 
+多个限制：&     例如：<T extends Student & Man>
+
+
+
 ### 类型擦除
 
 JVM泛型的擦除机制
 
 
 
-Java编译器会先检查代码中泛型的类型，然后进行类型擦除，再进行编译
+
 
 ~~~java
+// 通过反射添加其它类型的元素
 public class Test {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args)   {
         ArrayList<Integer> list = new ArrayList<Integer>();
-        list.add(1);  //这样调用 add 方法只能存储整形，因为泛型类型的实例为 Integer
+         //这样调用 add 方法只能存储整形，因为泛型类型的实例为 Integer
+        list.add(1); 
+        
+        //反射插入String类型的数据
         list.getClass().getMethod("add", Object.class).invoke(list, "asd");
         for (int i = 0; i < list.size(); i++) {
             System.out.println(list.get(i));
@@ -799,6 +853,52 @@ public class Test {
     }
 }
 ~~~
+
+1. 无限制类型擦除
+   - ![image-20221026223244650](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/javase_img/202210262233351.png)
+   - 类定义在类型参数没有任何限制时，类型擦除中直接被替换为Object
+   - 即：\<T> \<?>的类型参数被擦除为Object
+2. 有限制类型擦除
+   - ![image-20221026223459104](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/javase_img/202210262234296.png)
+   - 当类定义中的类型参数存在限制（上下界）时，在类型擦除中替换为类型参数的上界或者下界，比如形如`<T extends Number>`和`<? extends Number>`的类型参数被替换为`Number`，`<? super Number>`被替换为Object
+3. 擦除方法定义中的类型参数
+   - ![image-20221026223651412](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/javase_img/202210262236521.png)
+
+
+
+### 如何理解编译期间检查
+
+Java编译器会**编译之前**先检查代码中泛型的类型，然后进行类型擦除，再进行编译
+
+**类型检查是针对引用**的，谁是一个引用，用这个引用调用泛型方法，就会对这个引用调用的方法进行类型检查，而无关它真正引用的对象
+
+~~~java
+//因为类型检查就是编译时完成的，new ArrayList()只是在内存中开辟了一个存储空间，可以存储任何类型对象，而真正涉及类型检查的是它的引用，因为我们是使用它引用list1来调用它的方法，比如说调用add方法，所以list1引用能完成泛型类型的检查。而引用list2没有使用泛型，所以不行
+public class Test {  
+
+    public static void main(String[] args) {  
+
+        ArrayList<String> list1 = new ArrayList<>();  
+        list1.add("1"); //编译通过  
+        list1.add(1); //编译错误  
+        String str1 = list1.get(0); //返回类型就是String  
+
+        ArrayList list2 = new ArrayList<String>();  
+        
+        list2.add("1"); //编译通过  
+        list2.add(1); //编译通过  
+        Object object = list2.get(0); //返回类型就是Object  
+
+        new ArrayList<String>().add("11"); //编译通过  
+        new ArrayList<String>().add(22); //编译错误  
+
+        //返回类型就是String  
+        String str2 = new ArrayList<String>().get(0); 
+    }  
+} 
+~~~
+
+
 
 
 
@@ -835,13 +935,122 @@ static <T> T newTClass(Class <T> clazz){
 
 
 
-### 泛型数组
+### 理解泛型类中的静态方法和静态变量
 
-Java的泛型数组，初始化时，数组类型不能是具体的泛型类型，只能是通配符形式
+泛型类中的静态方法和静态变量，不可用使用泛型类所声明的泛型类型参数
 
-因为：具体类型会导致可存入任意类型对象，在取出时会发生类型转换异常，会与泛型的设计思想冲突，而通配符本来就需要自己强转，符合预期
+原因：泛型类中，泛型参数的实例化是在定义对象的时候指定的，而静态变量和静态方法不需要使用对象来调用，此时对象都没有创建，不能确定这个泛型参数是何种类型，所以是错误的
 
 ~~~java
-List<?> [] list=new ArrayList<?>[10];
+public class Test2<T> {    
+    //编译错误    
+    public static T one;   
+    
+    //编译错误  
+    public static  T show(T one){   
+        return null;    
+    }    
+}
 ~~~
 
+
+
+但是，静态的泛型方法却是可以的
+
+因为：泛型方法中所以的`<T>`**是自己在方法中定义的T，而不是泛型类的T**
+
+~~~java
+public class Test2<T> {    
+
+    public static <T >T show(T one){ //这是正确的    
+        return null;    
+    }    
+}
+~~~
+
+
+
+### 如何获取泛型参数
+
+既然类型都被擦除了，那么应该如何获取泛型参数类型？ 可以通过反射获取泛型
+
+java.lang.reflect.Type是Java种所以类型的公共高级接口，代表了Java中的所有类型
+
+Type体系中类型包括：
+
+1. 数组类型：GenericArrayType
+2. 参数化类型：ParameterType
+3. 类型变量：TypeVariable
+4. 通配符类型：WildcardType
+5. 原始类型：Class
+6. 基本类型：Class
+
+这些类型都实现了Type接口
+
+
+
+### 泛型开发中的应用
+
+项目中
+
+自己实现的一个
+
+abstract class AbstractService\<T> implements BaseMapper\<T>
+
+BaseMapper\<T> extends Mapper\<T>
+
+
+
+---
+
+## 注解
+
+注解是附加在代码中的一些元信息，用于一些工具在编译、运行是进行解析和使用
+
+起到说明、配置的功能。注解不会也不能影响代码的实际逻辑，仅仅起到辅助性的作用
+
+
+
+### 注解实现原理
+
+~~~java
+public @interface MyTest{}
+~~~
+
+注解到底是个什么东西：类、接口、抽象类？
+
+反编译查看字节码得到：
+
+Java编译器认为注解是一个接口，一个继承自Annotation的接口，里面的每一个属性，其实就是接口的一个抽象方法
+
+
+
+注解是接口，那么何时实例化、怎么实例化？
+
+调用getDeclaredAnnotations()时候返回一个代理$Proxy对象，这个是使用JDK动态代理创建的，使用Proxy的newProxyInstance()，传入接口和InvocationHandler的一个实例(也就是AnnotationInvocationHandler)，最后返回一个代理实例
+
+
+
+最终总结：
+注解@interface 是一个实现了Annotation接口的 接口， 然后在调用getDeclaredAnnotations()方法的时候，返回一个代理$Proxy对象，这个是使用jdk动态代理创建，使用Proxy的newProxyInstance方法时候，传入接口 和InvocationHandler的一个实例(也就是 AnotationInvocationHandler ) ，最后返回一个代理实例
+
+期间，在创建代理对象之前，解析注解时候 从该注解类的常量池中取出注解的信息，包括之前写到注解中的参数，然后将这些信息在创建 AnnotationInvocationHandler时候 ，传入进去 作为构造函数的参数
+
+当调用该代理实例的获取值的方法时，就会调用执行AnotationInvocationHandler里面的逻辑，将之前存入的注解信息 取出来
+
+
+
+### 自定义注解
+
+自定义注解重要，重要的是注解处理器，如果编写注解处理器！
+
+自定义注解使用场景，项目中用过吗？
+
+一般自定义注解，结合Aop使用
+
+自己写过（见过的哈哈哈）
+
+1. 注解+Aop实现Log的添加
+2. 注解+Aop+redis 实现：幂等性接口（防止重复提交）
+3. 测试架构中：注解(指定excel位置)，解析将excel中的数据，注入到容器里面的数据库中
+4. 等等等等
