@@ -577,9 +577,190 @@ LinkedHashMap经典用法：
 
 
 
+## 泛型
+
+JDK1.5引入了泛型，泛型提供了编译时类型安全检查机制，该机制允许程序员在编译时检测到非法的类型
+
+泛型的本质是：参数化类型，即给类型指定一个参数，在使用时再指定此参数具体的值，这个类型就可以在使用时决定了
+
+参数化类型：就是**将原来的具体的类型参数化**，然后在使用/调用时传入具体的类型(类型实参)
 
 
 
+### 为什么使用泛型
+
+1. 保证了类型的安全性
+
+   - 没有泛型之前，从集合中读取到的每一个对象都需要进行类型转换，若不小心插入了错误的类型对象，在运行时的转换处理就会出错
+
+   - ~~~java
+     public static void noGeneric() {
+         //没有泛型
+     	ArrayList names = new ArrayList();
+     	names.add("搜索时");
+     	names.add(123); //编译正常
+         for(int i = 0; i< arrayList.size();i++){
+             String item = (String)arrayList.get(i);
+             Log.d("泛型测试","item = " + item);
+     	}
+         //上述会抛出异常
+         //java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+         
+         
+         //为了解决上述问题(在编译阶段就可以解决),泛型应运而生
+         
+         
+         //有泛型之后，编译器会在编译阶段帮我们发现类似的问题
+         ArrayList<String> names = new ArrayList<>();
+     	names.add("搜索时");
+     	names.add(123); //编译不通过
+     }
+     ~~~
+
+2. 消除强制转换
+
+   - ~~~java
+     List list = new ArrayList();
+     list.add("hello");
+     //需要强制转换
+     String s = (String) list.get(0);
+     
+     
+     List<String> list2 = new ArrayList<String>();
+     list2.add("hello");
+     String s = list.get(0); //不用需要强制转换
+     
+     ~~~
+
+     
+
+3. 避免了不必要的装箱、拆箱操作，提高程序的性能
+
+4. 提高了代码的重用性
 
 
+
+### 特性
+
+泛型只在编译阶段有效，编译过程中，正确检验泛型结果后，会将泛型的相关信息擦除，并且在对象进入和离开方法的边界处添加类型检测和类型转换的方法
+
+即：泛型信息不会进入到运行阶段，泛型类型在逻辑上可以看成是多个不同的类型，实际上都是相同的基本类型
+
+
+
+### 泛型的使用：类型、接口、方法
+
+#### 泛型类
+
+~~~java
+public class GenericClass<a,b,c>{}
+
+public class GenericClass<T>{
+    
+}
+~~~
+
+
+
+参数类型使用规范
+
+T：任意类型 type
+E：集合中元素的类型 element
+K：key-value形式 key
+V： key-value形式 value
+
+#### 泛型接口
+
+~~~java
+public interface GenericInterface<T>{}
+
+
+//实现泛型接口，未传入泛型参数时
+//需要将泛型的声明也一起加到类中，否则编译器会报：UnKnow class
+public FruitGenerator<T> implements GenericInterface<T>{}
+
+//实现泛型接口，传入泛型实参时
+public class FruitGenerator implements GenericInterface<String> {}
+~~~
+
+
+
+#### 泛型方法
+
+
+
+### 泛型通配符
+
+\<?> ：无边界通配符，类型参数可以是任意类型
+
+\<? extends  E>  ：固定上边界的通配符，E就是该泛型的上边界，?表示继承自E或实现了E接口的类型
+
+\<? super E> ：固定下边的界通配符，E就是该泛型的下边界，？表示E的父类类型
+
+### 类型擦除
+
+JVM泛型的擦除机制
+
+
+
+Java编译器会先检查代码中泛型的类型，然后进行类型擦除，再进行编译
+
+~~~java
+public class Test {
+
+    public static void main(String[] args) throws Exception {
+        ArrayList<Integer> list = new ArrayList<Integer>();
+        list.add(1);  //这样调用 add 方法只能存储整形，因为泛型类型的实例为 Integer
+        list.getClass().getMethod("add", Object.class).invoke(list, "asd");
+        for (int i = 0; i < list.size(); i++) {
+            System.out.println(list.get(i));
+        }
+    }
+}
+~~~
+
+
+
+### 为什么不能将基本类型作为泛型类型
+
+例如：有 ArrayList\<Integer>   而没有 ArrayList\<int>
+
+因为类型擦除后，ArrayList的原始类型变为Object，但是Object不能存int，所有只能引用Integer的值
+
+注意ArrayList\<Object>  list 中： list.add(123)      这个 123是经过自动装箱为Integer的
+
+
+
+### 如何理解泛型类型不能实例化
+
+~~~java
+T t=new T();  //编译不过
+~~~
+
+不能实例化泛型类型的本质：还是类型擦除
+
+Java编译期间没法确定泛型参数化类型，也就找不到对应的字节码文件，自然不能进行实例化。
+
+此外，由于T被擦除为Object，new T()则变成了new Object()，失去了本意
+
+如果确实需要实例化一个泛型应该通过反射实现
+
+~~~java
+static <T> T newTClass(Class <T> clazz){
+    T obj =clazz.newInstance();
+	return obj;
+}
+~~~
+
+
+
+### 泛型数组
+
+Java的泛型数组，初始化时，数组类型不能是具体的泛型类型，只能是通配符形式
+
+因为：具体类型会导致可存入任意类型对象，在取出时会发生类型转换异常，会与泛型的设计思想冲突，而通配符本来就需要自己强转，符合预期
+
+~~~java
+List<?> [] list=new ArrayList<?>[10];
+~~~
 
