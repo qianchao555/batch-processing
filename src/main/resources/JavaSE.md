@@ -220,6 +220,12 @@ PriorityQueue实现了Queue，不允许放入null元素
 
 小顶堆：任意一个非叶子节点的权值，都不大于其左右子节点的权值
 
+
+
+小顶堆、大顶堆应用场景：求10亿个数的前1000大、小  （TopN问题）
+
+
+
 二叉堆可以用数组表示：父子节点下表关系为
 
 leftNode=parentNo*2+1
@@ -573,7 +579,82 @@ LinkedHashMap经典用法：
 
 弱引用
 
+
+
 ---
+
+
+
+## 反射
+
+https://cn-sec.com/archives/880047.html
+
+
+
+Java通过反射机制可以操作字节码文件
+
+### 获取Class的方式
+
+1. Class.forName("完整类名")
+2. 对象.getClass()
+3. 类型.class
+4. 类加载器 xxxClassLoader.loadClass()传入路径获取
+   - ClassLoader.getSystemClassLoader().loadClass("cn.qianchao.MyObject")
+   - 通过类加载器获取Class对象不会进行初始化，意味着不进行包括初始化等一系列步骤，静态代码块和静态对象也不会得到执行
+
+### 通过反射实例化对象
+
+对象.newInstance()
+
+newInstance()方法内部实际上是调用了无参构造方法，必须保证无参构造函数存在时才可以调用，否则会抛出异常：java.lang.InstantiationException
+
+
+
+### 反射工具包
+
+reflectutils 
+
+
+
+Spring Ioc ->反射
+
+Jdbc -> 反射动态加载数据库驱动程序
+
+Aop基于->动态代理->反射实现
+
+Java注解对象的获取
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
