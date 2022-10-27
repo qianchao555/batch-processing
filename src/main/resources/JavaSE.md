@@ -993,13 +993,15 @@ Type体系中类型包括：
 
 项目中
 
-自己实现的一个
+自己实现的一个抽象service
 
-abstract class AbstractService\<T> implements BaseMapper\<T>
+abstract class AbstractService\<T> implements BaseService<T>
 
-BaseMapper\<T> extends Mapper\<T>
+BaseService\<T> extends PrincialService\<T> ，CriteriaService\<T>，CommonCriteriaService\<T>
 
 
+
+主要思想：顶层Service接口定义相关增删改查和一些额外的方法，AbstractService结合抽象BaseMapper\<T>实现数据库操作，具体Service覆写具体的Mapper实现自己的数据库的一系列操作
 
 ---
 
