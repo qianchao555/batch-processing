@@ -883,6 +883,18 @@ LambdaQueryWrapper
 
 
 
+### Mybatis-plus自定义DefaultSqlInjector，扩展BaseMapper
+
+目的：
+
+MyBats-Plus在一开始就给大家提供了很多通用的方法，在DefaultSqlInjector这个类中，在MethodList这个集合当中包含的都是通用方法类，如果想要使用自定义通用方法，也需要添加到这个集合当中
+
+
+
+自定义自己的通用方法可以实现接口 ISqlInjector 也可以继承抽象类 AbstractSqlInjector 注入通用方法 SQL 语句 然后继承 BaseMapper 添加自定义方法，全局配置 sqlInjector 注入 MP 会自动将类所有方法注入到 mybatis 容器中
+
+
+
 -----
 
 ## SpringData

@@ -1056,3 +1056,44 @@ Java编译器认为注解是一个接口，一个继承自Annotation的接口，
 2. 注解+Aop+redis 实现：幂等性接口（防止重复提交）
 3. 测试架构中：注解(指定excel位置)，解析将excel中的数据，注入到容器里面的数据库中
 4. 等等等等
+
+
+
+
+
+---
+
+## SPI机制
+
+Service Provider Interface
+
+
+
+是JDK内置的一种服务发现机制，这个东西一般而言针对厂商或插件，可以用来启用框架扩展和替换组件，主要被框架的开发人员使用
+
+比如：java.sql.Driver接口，不同的厂商可以针对同一接口做出不同的实现，例如MySQL、Oracle、Postgresql等等都有自己的实现，而Java SPI机制可以为某个接口寻找不同的服务实现
+
+Java SPI机制主要思想：是将装配的控制权转移到程序之外，核心思想就是**解耦**
+
+![image-20221028164004656](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/javase_img/202210281641562.png)
+
+**当服务的提供者(实现者)提供了一种接口的实现之后，需要在classpath下的META-INF/services目录里创建一个以服务接口命名的文件，这个文件里面的内容就是这个接口的具体的实现类**
+
+当其他程序需要这个服务的时候，就可以通过查找这个jar包的META-INF/services中的配置文件，配置文件中有接口的具体实现类名，可以根据这个类名进行加载实例化，就可以使用改服务了
+
+JDK中查找服务的实现的工具类为：java.util.ServiceLoader
+
+
+
+
+
+### SPI在SpringBoot等框架中的应用
+
+Jdbc：
+
+1. 硬编码方式：Class.forName()加载驱动，通过Meta-INF/services/java.sql.Driver文件来指定实现类的方式来暴露驱动提供者
+2. DriverManager封装
+   - DriverManager是Java实现的，用来获取数据库连接
+   - 底层封装了Class.forName()
+
+SpringBoot：自动装配机制
