@@ -1,6 +1,112 @@
-### Spring
+## Spring
 
-#### BeanFactory
+### Spring特性和优势
+
+1. 非侵入式：
+2. 控制反转：**将对象的创建权交给 Spring 去创建**。使用 Spring 之前，对象的创建都是由我们自己在代码中new创建。而使用 Spring 之后。对象的创建都是给了 Spring 框架
+3. 依赖注入：指**依赖的对象不需要手动调用** setXX 方法去设置，而是通过配置赋值
+4. 容器：Spring是一个容器，因为它包含并管理应用对象的生命周期
+5. 面向切面编程AOP
+6. 组件化：
+   - Spring 实现了使用简单的组件配置组合成一个复杂的应用
+   - 在 Spring 中可以使用XML和Java注解组合这些对象
+7. 一站式：在 IOC 和 AOP 的基础上可以整合各种企业应用的开源框架和优秀的第三方类库
+
+---
+
+
+
+### Spring各个组件及构成
+
+
+
+#### Core Container
+
+Core Container层是：
+
+Spring的核心容器，是其他模块构建的基础，由Beans模块、Core核心模块、Context上下文模块、SpEL表达式语言模块组成
+
+Beans：提供了框架的基础部分，主要包括控制反转和依赖注入
+
+Core：封装了Spring框架的底层部分，包括资源访问、类型转换以及一些常用工具类
+
+Context：建立在Core和Beans模块基础之上，集成Beans模块功能并添加资源绑定、数据验证、国际化、JaveEE支持、容器生命周期、事件传播等。其中，**ApplicationContext接口是上下文接口的焦点**
+
+SpEL：提供了强大的表达式语言的支持（不用太深入，了解使用即可）
+
+
+
+#### AOP、Aspects、Instrumentation、Messaging
+
+
+
+**AOP 模块**：提供了面向切面编程实现，提供比如日志记录、权限控制、性能统计等通用功能和业务逻辑分离的技术，并且能动态的把这些功能添加到需要的代码中，这样各司其职，降低业务逻辑和通用功能的耦合。
+
+**Aspects 模块**：提供与 AspectJ 的集成，是一个功能强大且成熟的面向切面编程（AOP）框架。
+
+**Instrumentation 模块**：提供了类工具的支持和类加载器的实现，可以在特定的应用服务器中使用。
+
+**messaging 模块**：Spring 4.0 以后新增了消息（Spring-messaging）模块，该模块提供了对消息传递体系结构和协议的支持。
+
+**jcl 模块**： Spring 5.x中新增了日志框架集成的模块。
+
+
+
+
+
+#### Data Access/Integration
+
+数据访问/集成层，主要包括：JDBC、ORM、OXM、JMS、Transactions模块
+
+JDBC：提供了一个 JDBC 的样例模板，使用这些模板能消除传统冗长的 JDBC 编码还有必须的事务控制，而且能享受到 Spring 管理事务的好处
+
+ORM：提供与流行的“对象-关系”映射框架无缝集成的 API，包括 JPA、JDO、Hibernate 和 MyBatis 等。而且还可以使用 Spring 事务管理，无需额外控制事务
+
+OXM：提供了一个支持 Object /XML 映射的抽象层实现，如 JAXB、Castor、XMLBeans、JiBX 和 XStream。将 Java 对象映射成 XML 数据，或者将XML 数据映射成 Java 对象
+
+JMS：Java消息服务，提供一套 “消息生产者、消息消费者”模板用于更加简单的使用 JMS，JMS 用于用于在两个应用程序之间，或分布式系统中发送消息，进行异步通信
+
+Transactions事务模块：支持**声明式**和编程式事务管理
+
+
+
+#### Web模块
+
+Spring的web模块主要包括：web、servlet、websocket、webflux组件
+
+web模块：提供了基本的 Web 开发集成特性，例如多文件上传功能、使用的 Servlet 监听器的 IOC 容器初始化以及 Web 应用上下文
+
+servlet模块：提供了一个 Spring MVC Web 框架实现
+
+websocket模块：提供了简单的接口，用户只要实现响应的接口就可以快速的搭建 WebSocket Server，从而实现双向通讯
+
+webflux模块： Spring WebFlux 是 Spring Framework 5.x中引入的新的**响应式web框架**。与Spring MVC不同，它不需要Servlet API，是完全异步且非阻塞的，并且通过Reactor项目实现了Reactive Streams规范。Spring WebFlux 用于创建基于事件循环执行模型的完全异步且非阻塞的应用程序
+
+
+
+#### Test模块
+
+Test 模块：Spring 支持 Junit 和 TestNG 测试框架，而且还额外提供了一些基于 Spring 的测试功能，比如在测试 Web 框架时，模拟 Http 请求的功能。
+
+包含Mock Objects, TestContext Framework, Spring MVC Test, WebTestClient
+
+
+
+
+
+---
+
+### Spring各个组件是如何配合来完成工作的？
+
+
+
+---
+
+
+
+
+
+### BeanFactory
 
 BeanFactory是Ioc最最基本的容器，负责生产和管理bean，它为其他具体的IOC容器提供了最基本的规范
 
@@ -18,7 +124,7 @@ Spring中的Ioc容器，大致分为两种：BeanFactory和ApplicationContext
    - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
    - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就意味着容器启动时间较长，并且对系统资源要求也较高
 
-#### FactoryBean
+### FactoryBean
 
 Spring BeanFacoty容器中管理两种bean：
 
@@ -136,7 +242,7 @@ FactoryBean与BeanFactory区别
 
 
 
-#### Spring IoC、DI
+### Spring IoC、DI
 
 https://blog.csdn.net/a745233700/article/details/80959716
 
@@ -231,7 +337,7 @@ Ioc在Spring里，只需要低级容器就可以实现，2个步骤：
 
 ---
 
-#### Spring 中bean的生命周期
+### Spring 中bean的生命周期
 
 https://blog.csdn.net/knknknkn8023/article/details/107130806/
 
@@ -277,7 +383,7 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
 
 
 
-#### Spring AOP
+### Spring AOP
 
 1. 面向切面编程的思想里面，把功能分为核心业务功能和周边功能，作为面向对象的一种补充
 2. 核心功能：登录、增删改查都叫核心业务功能
@@ -410,7 +516,7 @@ Spring容器本身没有提供Bean的线程安全策略，因此可以说Spring�
 
 ---
 
-#### Spring的三级缓存  
+### Spring的三级缓存  
 
 循环依赖下面给出解释
 
@@ -569,7 +675,7 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 
 
-#### Bean装配
+### Bean装配
 
 bean装配是指：在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，**如何通过依赖注入来把它们装配在一起**
 
@@ -606,7 +712,7 @@ bean装配是指：在Spring容器中把bean组装到一起，前提是容器需
 
 
 
-#### Spring事务的实现方式和实现原理
+### Spring事务的实现方式和实现原理
 
 Spring事务的本质就是数据库对事务的支持，没有数据库对事务的支持，spring是无法提供事务功能的
 
@@ -662,7 +768,7 @@ Isolation_Serializable:所有事务逐个依次执行
 
 
 
-### @Transactional
+## @Transactional
 
 1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式实现。本质是对方法的前后进行拦截，然后在目标方法开始之前创建或加入一个事务，执行完目标方法之后根据执行情况提交或回滚事务
 
@@ -702,7 +808,7 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 ---
 
-### Spring、SpringMvc常用注解
+## Spring、SpringMvc常用注解
 
 #### 组件类
 
@@ -769,7 +875,7 @@ Spring IoC容器(ApplicationContext)会在启动的时候实例化所有单例Be
 
 ---
 
-### Spring启动流程
+## Spring启动流程
 
 spring的启动入口有很多，在xml中有xml的方式，在注解中有注解的方式，在web的方式中也有web的注解启动方式。
 

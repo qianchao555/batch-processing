@@ -33,6 +33,8 @@ private int size;
 
 每次add的时候，都会在添加之前检查是否能存放，否则会进行自动扩容 grow()方法
 
+0->10->15->22
+
 
 
 ##### ArrayList添加和删除的性能
@@ -589,7 +591,7 @@ LinkedHashMap经典用法：
 
 https://cn-sec.com/archives/880047.html
 
-
+JAVA反射机制是：在运行状态中，对于任意一个类，都能够知道这个类的所有属性和方法；对于任意一个对象，都能够调用它的任意一个方法和属性；这种动态获取的信息以及动态调用对象的方法的功能称为java语言的反射机制
 
 Java通过反射机制可以操作字节码文件
 
@@ -607,6 +609,34 @@ Java通过反射机制可以操作字节码文件
 对象.newInstance()
 
 newInstance()方法内部实际上是调用了无参构造方法，必须保证无参构造函数存在时才可以调用，否则会抛出异常：java.lang.InstantiationException
+
+### Constructor
+
+反映的是Class对象所表示的类的构造方法
+
+### Field
+
+Field提供有关类或接口的单个字段的信息、以及对这个字段的动态访问权限
+
+反射的字段可能是一个类(静态)字段或实例字段
+
+### Method
+
+Method类提供关于类或接口上某个方法、以及如何访问该方法的信息，所反映的方法可能是类方法或实例方法（包含抽象方法）
+
+
+
+### 反射机制执行流程
+
+底层稍微知道就行了，不用太关注，我达不到那个层次。。。
+
+#### 反射获取类实例
+
+并不是Java实现的，而是交给JVM来搞的
+
+主要是通过ClassLoader，然后调用native原生方法，获取信息
+
+#### 反射获取方法
 
 
 
@@ -1007,23 +1037,170 @@ BaseService\<T> extends PrincialService\<T> ，CriteriaService\<T>，CommonCrite
 
 ## 注解
 
-注解是附加在代码中的一些元信息，用于一些工具在编译、运行是进行解析和使用
+注解是附加在代码中的一些元信息，**用于一些工具在编译、运行时进行解析和使用**
 
 起到说明、配置的功能。注解不会也不能影响代码的实际逻辑，仅仅起到辅助性的作用
 
 
 
+### 元注解
+
+用于定义注解的注解
+
+@Retention：标注注解被保留使用的阶段
+
+- Source：源文件保留
+- Class：编译期保留，默认值
+- Runtime：运行期保留，可通过反射去获取注解信息
+
+@Target：标明注解的使用范围，字段上？方法上？类上？包上？
+
+@Inherited：标明注解是否可继承
+
+@Documented：标明是否生成Javadoc文档
+
+
+
+
+
+
+
+### Java8提供的新注解
+
+重复注解：@Repeatable
+
+什么是重复注解：运行在同一声明类型多次使用同一个注解
+
+Java8之前：由另一个注解来存储重复注解，在使用时候，用存储注解来扩展重复注解
+
+~~~java
+public @interface Authority {
+     String role();
+}
+
+public @interface Authorities {
+    Authority[] value();
+}
+
+public class RepeatAnnotationUseOldVersion {
+
+    @Authorities({@Authority(role="Admin"),@Authority(role="Manager")})
+    public void doSomeThing(){
+    }
+}
+
+~~~
+
+
+
+
+
+Java8里面：不同的地方是，创建重复注解Authority时，加上@Repeatable,指向存储注解Authorities，在使用时候，直接可以重复使用Authority注解。从上面例子看出，java 8里面做法更适合常规的思维，可读性强一点
+
+~~~java
+@Repeatable(Authorities.class)
+public @interface Authority {
+     String role();
+}
+
+public @interface Authorities {
+    Authority[] value();
+}
+
+public class RepeatAnnotationUseNewVersion {
+    @Authority(role="Admin")
+    @Authority(role="Manager")
+    public void doSomeThing(){ }
+}
+
+~~~
+
+
+
+@Native
+
+使用@Native注解修饰成员变量，表示该变量可用被本地代码引用，常常被代码生成工具使用
+
+了解即可
+
+
+
+### 注解支持继承？
+
+不能使用extends来继承莫格@Interface，但是注解在编译后，编译器会自动继承自Annotation接口
+
+
+
+区别于注解的继承
+
+被注解的子类 继承父类注解可以使用@Inherited：如果某个类使用了被@Inherited修饰的Annotation，则其子类将自动具有该注解
+
+
+
+
+
+### 注解与反射接口
+
+定义注解后，如何获取注解中的内容呢？
+
+反射包java.lang.reflect下的AnnotatedElement接口提供这些方法，不过：只有注解被定义为RUNTIME后，该注解才能是运行时可见，当class文件被装载时被保存在class文件中的Annotation才会被虚拟机读取
+
+**自定义注解后，处理注解的时候，就需要用到这个注解反射接口来操作**
+
+
+
+### 自定义注解
+
+根据自己的需求定义注解，并可用元注解对自定义注解进行注解，并且可用处理这个自定义注解
+
+
+
+自定义注解重要，重要的是注解处理器，如果编写注解处理器！
+
+自定义注解使用场景，项目中用过吗？
+
+一般自定义注解，结合Aop使用：原因：通过注解+Aop最终目的是实现模块的解耦
+
+
+
+自己写过（见过的哈哈哈）吗？：面试要讲，而且还有讲清除
+
+1. 注解+Aop实现Log的添加
+2. 注解+Aop+redis 实现：幂等性接口（防止重复提交）
+3. 测试架构中：注解(指定excel位置)，解析将excel中的数据，注入到容器里面的数据库中
+4. 等等等等
+
+
+
+
+
+
+
 ### 注解实现原理
+
+
+
+https://blog.csdn.net/qq_20009015/article/details/106038023
+
+https://www.race604.com/annotation-processing/
+
+了解即可
+
+
+
+
+
+### 注解到底是个什么东西：类、接口、抽象类
 
 ~~~java
 public @interface MyTest{}
 ~~~
 
-注解到底是个什么东西：类、接口、抽象类？
+
 
 反编译查看字节码得到：
 
-Java编译器认为注解是一个接口，一个继承自Annotation的接口，里面的每一个属性，其实就是接口的一个抽象方法
+Java编译器认为**注解是一个接口**，一个继承自Annotation的接口，里面的每一个属性，其实就是接口的一个抽象方法
 
 
 
@@ -1042,25 +1219,6 @@ Java编译器认为注解是一个接口，一个继承自Annotation的接口，
 
 
 
-### 自定义注解
-
-自定义注解重要，重要的是注解处理器，如果编写注解处理器！
-
-自定义注解使用场景，项目中用过吗？
-
-一般自定义注解，结合Aop使用
-
-自己写过（见过的哈哈哈）
-
-1. 注解+Aop实现Log的添加
-2. 注解+Aop+redis 实现：幂等性接口（防止重复提交）
-3. 测试架构中：注解(指定excel位置)，解析将excel中的数据，注入到容器里面的数据库中
-4. 等等等等
-
-
-
-
-
 ---
 
 ## SPI机制
@@ -1069,9 +1227,9 @@ Service Provider Interface
 
 
 
-是JDK内置的一种服务发现机制，这个东西一般而言针对厂商或插件，可以用来启用框架扩展和替换组件，主要被框架的开发人员使用
+是JDK内置的一种**服务发现机制**，这个东西一般而言针对厂商或插件，可以用来启用框架扩展和替换组件，主要被框架的开发人员使用
 
-比如：java.sql.Driver接口，不同的厂商可以针对同一接口做出不同的实现，例如MySQL、Oracle、Postgresql等等都有自己的实现，而Java SPI机制可以为某个接口寻找不同的服务实现
+比如：java.sql.Driver接口，不同的厂商可以针对同一接口做出不同的实现，例如MySQL、Oracle、Postgresql等等都有自己的实现，而**Java SPI机制可以为某个接口寻找不同的服务实现**
 
 Java SPI机制主要思想：是将装配的控制权转移到程序之外，核心思想就是**解耦**
 
@@ -1081,7 +1239,7 @@ Java SPI机制主要思想：是将装配的控制权转移到程序之外，核
 
 当其他程序需要这个服务的时候，就可以通过查找这个jar包的META-INF/services中的配置文件，配置文件中有接口的具体实现类名，可以根据这个类名进行加载实例化，就可以使用改服务了
 
-JDK中查找服务的实现的工具类为：java.util.ServiceLoader
+JDK中查找服务的实现的工具类为：**java.util.ServiceLoader**
 
 
 
@@ -1096,4 +1254,32 @@ Jdbc：
    - DriverManager是Java实现的，用来获取数据库连接
    - 底层封装了Class.forName()
 
+Common-Loggin：
+
+是常用的日志库门面
+
+使用SPI服务发现机制，发现LogFactory的具体实现
+
+
+
 SpringBoot：自动装配机制
+
+springBoot的自动装配过程中，最终会加载META-INF/spring.factories文件，而加载过程是由SpringFactoriesLoader加载的
+
+从Classpath下的每个jar包搜索META-INF/spring.factories配置文件，然后将会解析Properties文件，找到指定名称的配置后返回
+
+
+
+### SPI机制-插件
+
+最具SPI机制的应该属于插件开发
+
+例如：Eclipse的插件思想
+
+
+
+### SPI机制的缺陷
+
+1. 不能按需加载，每次都是去遍历所有的实现
+2. 获取某个类的实现类的方式不够灵活，只能通过Iterator形式获取，不能根据某个参数来获取对应的实现类
+3. 多线程并发使用ServiceLoader是不安全的
