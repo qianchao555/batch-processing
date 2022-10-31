@@ -100,13 +100,110 @@ Test 模块：Spring 支持 Junit 和 TestNG 测试框架，而且还额外提�
 
 
 
+Spring框架管理这些Bean的创建工作，即由用户管理Bean转变为框架管理Bean，这个就叫**控制反转 - Inversion of Control (IoC)**
+
+Spring 框架托管创建的Bean放在哪里呢？ 这便是**IoC Container**;
+
+Spring 框架为了更好让用户配置Bean，必然会引入**不同方式来配置Bean？ 这便是xml配置，Java配置，注解配置**等支持
+
+Spring 框架既然接管了Bean的生成，必然需要**管理整个Bean的生命周期**等；
+
+应用程序代码从Ioc Container中获取依赖的Bean，注入到应用程序中，这个过程叫 **依赖注入(Dependency Injection，DI)** ； 所以说控制反转是通过依赖注入实现的，其实它们是同一个概念的不同角度描述。通俗来说就是**IoC是设计思想，DI是实现方式**
+
+在依赖注入时，有哪些方式呢？这就是构造器方式，@Autowired, @Resource, @Qualifier... 同时Bean之间存在依赖（可能存在先后顺序问题，以及**循环依赖问题**等）
+
+
+
+### Spring IoC和DI
+
+Inversion of Control：控制反转，是一种设计思想，Java中Ioc意味着将你设计好的对象交给容器来控制，而不是采用传统的自己在对象内部直接控制
+
+谁控制谁：Spring Ioc容器控制对象
+
+控制了什么：主要控制了外部资源(不只是对象，包括文件等等)
+
+何为反转：由传统自己在对象中主动控制去直接获取依赖对象，反转为由容器来帮我们创建以及注入依赖对象，即由容器帮我们查找以及注入依赖对象，对象只是被动的接受依赖对象，所以是反转
+
+哪些方面被反转了：依赖对象的获取被反转了
+
+
+
+DI：依赖注入
+
+组件之间的依赖关系由容器在运行期间决定，即由容器动态的将某个依赖关系注入到组件之中
+
+依赖注入的目的：并非为软件系统带来更多功能，而是为了提升组件重用的频率，并为系统搭建一个灵活、可扩展的平台。通过依赖注入机制，我们只需要通过简单的配置，而无需任何代码就可指定目标需要的资源，完成自身的业务逻辑，而不需要关心具体的资源来自何处，由谁实现
+
+谁依赖谁：应用程序依赖于Ioc容器
+
+为什么需要依赖：应用程序需要Ioc容器来提供对象需要的外部资源
+
+谁注入谁：Ioc容器注入应用程序的某个对象
+
+注入了什么：注入某个对象所需要的外部资源(包括：对象、资源、常量数据等等)
+
+
+
+#### Ioc和DI的关系
+
+控制反转是通过依赖注入实现的，它们只是同一概念的不同角度的描述。通俗来讲就是：Ioc是设计思想，DI是实现方式
+
+
+
+#### Ioc配置的三种方式
+
+主流方式：注解+Java Config
+
+1. xml
+   - 缺点：配置繁琐，不易维护，扩展性差
+2. Java config
+   - 优点：配置方便，因为是纯Java代码，扩展性高，灵活方便
+   - 缺点：声明不明显，如果大量配置，可读性比较差
+3. 注解配置
+   - 优点：开发便捷通俗易懂，方便维护，例如：@Service、@Component
+   - 缺点：具有局限性，对于一些第三方资源，无法添加注释，第三方资源一般采用JavaConfig方式配置
+
+
+
 ---
 
 
 
+### 自己设计一个容器应该怎么搞？
+
+思想！思想！思想！
+
+![image-20221031223741470](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202210312237610.png)
+
+
+
+主体部分
+
+- 加载Bean的配置
+- 根据Bean的定义，加载生成Bean实例，并放在Bean容器中
+- 除了基础的Bean外，还需要一些特殊的bean
+- 对容器中的Bean提供统一的管理和调用
+- ..........
+
+
+
+---
+
 
 
 ### BeanFactory
+
+Spring Bean，Spring中，bean就类似是定义的一个组件，而这个组件的作用就是实现某个功能
+
+Bean的创建是典型的**工程模式**，通过一系列的Bean工厂，也即Ioc容器为开发者管理对象将的依赖关系提供了很多便利和基础服务
+
+Spring中有许多的Ioc容器的实现供用户选择和使用，这是Ioc容器的基础，在顶层的结构设计主要围绕BeanFactory和BeanRegistry
+
+BeanFactory：工厂模式定义了Ioc容器的基本功能规范
+
+BeanRegistry：向Ioc容器中，手工注册BeanDefinition对象的方法
+
+
 
 BeanFactory是Ioc最最基本的容器，负责生产和管理bean，它为其他具体的IOC容器提供了最基本的规范
 
@@ -123,6 +220,38 @@ Spring中的Ioc容器，大致分为两种：BeanFactory和ApplicationContext
    - ApplicationContext 是在 BeanFactory 的基础上实现的，BeanFactory 的功能它都有，算是一种高级容器
    - ApplicationContext 在 BeanFactory 的基础上提供了事件发布、国际化等功能
    - 同时，ApplicationContext 和 BeanFactory 还有一个很大的不同在于 ApplicationContext 在容器启动时，就会完成所有 Bean 的初始化，这也就意味着容器启动时间较长，并且对系统资源要求也较高
+
+#### 如何将Bean注册到BeanFactory中
+
+##### BeanDefinition
+
+BeanDefinition：各种Bean对象以及其相关的关系，bean对象在Spring实现中是以它来描述的
+
+Bean对象存在依赖嵌套等关系，所以设计了BeanDefinition，用来对Bean对象及其关系定义
+
+理解时，抓住三点
+
+BeanDefiniton：
+
+BeanDefinitionReader：BeanDefinition的解析器
+
+BeanDefinitionHolder：BeanDefinition的包装类，用来存储BeanDefinition
+
+
+
+### ApplicationContext
+
+ApplicationContext是Ioc容器的接口类，其继承自BeanFactory，表示应用的上下文，除了对Bean的管理外，还提供了额外的功能
+
+- 访问资源：对不同方式的Bean进行加载（实现ResourcePatternResolver接口）
+- 国际化：支持信息源，可实现国际化（实现MessageSource接口）
+- 应用事件：支持应用事件（实现ApplicationEventPublisher接口）
+
+![image-20221031232134347](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202210312321505.png)
+
+---
+
+
 
 ### FactoryBean
 
@@ -341,12 +470,22 @@ Ioc在Spring里，只需要低级容器就可以实现，2个步骤：
 
 https://blog.csdn.net/knknknkn8023/article/details/107130806/
 
-##### 普通Java对象生命周期
+#### 普通Java对象生命周期
 
 1. 实例化对象
 2. 对象不使用时，垃圾回收机制进行回收
 
-##### Spring bean
+#### Spring bean的生命周期
+
+Spring只给我们管理单例作用域Bean的生命周期，在此作用域下，Spring 能够精确地知道该 Bean 何时被创建，何时初始化完成，以及何时被销毁。
+
+对于Prototype作用域的Bean，Spring只负责创建，当容器创建了 Bean 的实例后，Bean 的实例就交给客户端代码管理，Spring 容器将不再跟踪其生命周期。每次客户端请求 prototype 作用域的 Bean 时，Spring 容器都会创建一个新的实例，并且不会管那些被配置成 prototype 作用域的 Bean 的生命周期
+
+
+
+了解生命周期的意义：利用Bean在其存活期间的指定时刻，完成一些相关操作。一般情况下，会在Bean被初始化后和被销毁执行前执行一些相关操作
+
+
 
 主要包含5个主要阶段，其他都是在这四个主要阶段前后的扩展点，5个主要阶段是：
 
@@ -355,12 +494,18 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
 1. 实例化bean
    - 容器寻找Bean的定义信息并将其实例化(构造方法、工厂方法等)
 2. 属性赋值
-   - 使用依赖注入，Spring按照Bean的定义信息配置Bean所有属性(setter等)
+   - 利用依赖注入，Spring按照Bean的定义信息配置Bean所有属性(setter等)
 3. 初始化
 4. 使用
 5. 容器关闭时 销毁
 
 ![Spring 生命周期流程](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/1F32KG1-0.png)
+
+
+
+
+
+![image-20221031234705679](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202210312347899.png)
 
 ##### Bean 生命周期的整个执行过程描述如下。
 
@@ -379,11 +524,44 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
 10. 如果在 <bean> 中指定了该 Bean 的作用域为 singleton，则将该 Bean 放入 Spring IoC 的缓存池中，触发 Spring 对该 Bean 的生命周期管理；如果在 <bean> 中指定了该 Bean 的作用域为 prototype，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
 11. 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法销毁 Bean；如果在配置文件中通过 destory-method 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁。
 
+
+
+
+
+如何掌握？顶层思维！！将这些方法分类
+
+1. Bean自身的方法
+   - 这个包括了Bean本身调用的方法和通过配置文件中`<bean>`的init-method和destroy-method指定的方法
+2. Bean级生命周期接口方法
+   -  这个包括了BeanNameAware、BeanFactoryAware、ApplicationContextAware；当然也包括InitializingBean和DiposableBean这些接口的方法（可以被@PostConstruct和@PreDestroy注解替代)
+3. 容器级生命周期接口方法
+   - 一般称它们的实现类为：后处理器
+   - 包括了：InstantiationAwareBeanPostProcessor 、BeanPostProcessor 这两个接口实现
+4. 工厂后置处理器接口方法
+   - 工厂后置处理器属于容器级的
+   - 在应用上下文装配配置文件之后立即调用
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 
 
 
 ### Spring AOP
+
+Spring框架中，通过定义切面、拦截切点来实现了不同业务模块的解耦，这就是面向切面编程
 
 1. 面向切面编程的思想里面，把功能分为核心业务功能和周边功能，作为面向对象的一种补充
 2. 核心功能：登录、增删改查都叫核心业务功能
@@ -391,13 +569,13 @@ https://blog.csdn.net/knknknkn8023/article/details/107130806/
 4. 周边功能在Spring AOP思想里面，被定义为**切面**
 5. 把切面功能和核心业务功能"编织"在一起==》AOP
 
-##### AOP中的概念
+#### AOP中的概念
 
 Spring Aop是方法级别的Aop框架
 
 ![img](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/2020120700443256.png)
 
-1. 切点Pointcut（从这里进行拦截，然后进行增强）
+1. 切入点Pointcut（从这里进行拦截，然后进行增强）
    - 在哪些类、哪些方法上切入；也就是要对哪些连接点进行拦截
    - **目标对象中要增强的方法**
    - 切点分为execution方式和annotation方式。execution方式可以用路径表达式指定对哪些方法拦截。annotation方式可以指定哪些注解修饰的代码进行拦截
@@ -418,6 +596,8 @@ Spring Aop是方法级别的Aop框架
 7. Proxy
    - 生成的代理对象
 
+![image-20221031222249945](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202210312223524.png)
+
 ##### spring aop 常用注解
 
 1. 那几个通知 before、after 、around、 
@@ -429,17 +609,25 @@ Spring Aop是方法级别的Aop框架
 
 ---
 
-##### AOP实现原理
+#### Spring框架如何实现AOP
+
+Spring将Aop思想引入框架之后，通过预编译方式和运行期间动态代理，实现程序的同一维护
+
+
 
 AOP代理主要分为静态代理和动态代理。静态代理的代表为AspectJ，动态代理则以Spring AOP为代表
 
-###### AspectJ
+##### AspectJ
 
-aspectJ是静态代理，也称为编译时增强，AOP框架会在编译阶段生成AOP代理类，并将AspectJ（切面）织入到Java字节码中，运行的时候就是增强之后的Aop对象
+aspectJ是一个Java实现的Aop框架，能够对Java代码进行Aop编译（一般在编译期间进行），让Java代码具有AspectJ的Aop功能(需要特殊的编译器)
+
+
+
+是静态代理，也称为编译时增强，AOP框架会在编译阶段生成AOP代理类，并将AspectJ（切面）织入到Java字节码中，运行的时候就是增强之后的Aop对象
 
 AspectJ可以单独使用，也可以整合其他框架。单独使用时使用专门的编译器ajc   
 
-###### Spring AOP
+##### Spring AOP
 
 SpringAop需要依赖Ioc容器来管理，并且只能作用于Spring容器
 
@@ -473,7 +661,7 @@ Spring整合了AspectJ使得可以使用aspectj语法来实现Aop
 
 静态代理与动态代理区别：在于生成Aop代理对象的时机不同，相对来说AspectJ的静态代理方式具有更好的性能，但是需要特定的编译器进行处理，而Spring Aop则无需特定的编译器处理
 
-###### AspectJ 与SpringAop区别
+##### AspectJ 与SpringAop区别
 
 1. AspectJ属于静态织入，通过修改字节码实现，有几个织入的时机
    - 编译期织入：例如类A使用AspectJ添加了一个属性，类B引用了它，这个场景就需要编译期的时候就进行织入，否则无法编译B
@@ -489,11 +677,24 @@ Spring整合了AspectJ使得可以使用aspectj语法来实现Aop
 
 1. 防止重复提交
    - 自定义注解+切面的环绕通知实现+分布式锁 redis  实现
-2. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 
-#### Spring框架中的Bean是线程安全的吗？
+### Spring框架中的Bean是线程安全的吗？
 
 Spring容器本身没有提供Bean的线程安全策略，因此可以说Spring容器中的Bean本身不具备线程安全的特性，但是具体情况需要根据Bean的作用域来讨论
 
