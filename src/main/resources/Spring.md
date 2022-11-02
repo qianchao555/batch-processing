@@ -721,7 +721,7 @@ Spring容器本身没有提供Bean的线程安全策略，因此可以说Spring�
 
 循环依赖下面给出解释
 
-##### spring循环依赖
+#### spring循环依赖
 
 https://blog.csdn.net/a745233700/article/details/110914620
 
@@ -730,7 +730,8 @@ https://blog.csdn.net/a745233700/article/details/110914620
 1. 什么是循环依赖
 
    1. ~~~java
-      //多个Bean之间相互依赖，形成一个闭环
+      多个Bean之间相互依赖，形成一个闭环
+          
       //案例：构造器注入，产生循环依赖
       @Service
       public class A {
@@ -860,7 +861,7 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 
 
-##### 为什么要用三级缓存？两级、一级行不行？
+#### 为什么要用三级缓存？两级、一级行不行？
 
 如果仅仅是解决循环依赖问题，使用二级缓存就可以了。但是如果对象实现了AOP，那么给属性注入到其他bean的时候，并不是最终的代理对象，而是原始的。这时就需要通过三级缓存的ObjectFactory才能提前产生最终的需要代理的对象，调用这个对象的getObject方法返回一个封装后的对象，而对象既可以是原始对象也可以是代理对象，再将这个对象返回给需要注入的类
 
@@ -1188,6 +1189,201 @@ ApplicationContext容器中对事件进行了支持
 
 
 
+
+---
+
+## Bean生命周期
+
+12个环节
+
+1. 阶段一：Bean元信息配置阶段
+2. 元信息解析阶段
+3. 将Bean注册到容器中
+4. BeanDefinition合并阶段
+5. Bean Class加载阶段
+6. Bean实例化阶段
+   - Bean实例化前阶段
+   - Bean实例化阶段
+7. 合并后的BeanDefinition处理
+8. 属性赋值阶段
+   - Bean实例化后阶段
+   - Bean属性赋值前阶段
+   - Bean属性赋值阶段
+9. Bean初始化阶段
+   - Bean Aware接口回调阶段
+   - Bean初始化前阶段
+   - Bean初始化阶段
+   - Bean初始化后阶段
+10. 所以单例Bean初始化完成后阶段
+11. Bean使用阶段
+12. Bean销毁前阶段
+13. Bean销毁阶段
+
+### 阶段一：Bean元信息配置阶段
+
+#### Bean信息定义的方式
+
+##### API方式
+
+其他几种方式最终都会采用这种方式来定义bean的配置信息
+
+Spring容器启动过程中，会将Bean解析成BeanDefinition对象，Bean工厂会根据这份Bean的定义信息，对bean进行实例化、初始化等等操作
+
+
+
+##### Xml文件定义
+
+\<bean>
+
+
+
+##### Properties文件定义方式
+
+用的很少
+
+
+
+##### 注解方式
+
+@Compontent、@Bean
+
+bean注册只识别BeanDefinition对象，不管什么方式配置bean，这些配置信息都会转换为BeanDefinition对象，然后注册到容器中
+
+### 阶段二：Bean元信息解析阶段
+
+即：将各种方式定义的bean配置信息，解析为BeanDefinition对象
+
+#### XML文件定义bean的解析
+
+XmlBeanDefinitionReader：将xml中定义的bean解析为BeanDefinition对象
+
+
+
+#### propertis文件定义bean的解析
+
+晓得即可
+
+PropertiesBeanDefinitionReader
+
+#### 注解方式定义bean的解析
+
+AnnotatedBeanDefinitionReader
+
+
+
+### 阶段三：Bean注册阶段
+
+该阶段非常重要的一个接口：BeanDefinitionRegistry
+
+重要的实现类：DefaultListableBeanFactory作为bean注册器
+
+将BeanDefinition注册到BeanDefinitionRegistry中，它是一个巨大的篮子，存放BeanDefinition，它是一种k-v形式存放，key为bean定义的id，value为BeanDefinition
+
+
+
+### 阶段四：BeanDefinition合并阶段
+
+该阶段做的工作：
+
+可能我们在定义bean的时候，存在父子关系的bean，此时子BeanDefinition中的信息是不完整的。
+
+比如设置属性的时候配置在父BeanDefinition中，此时子BeanDefinition中是没有这些信息的，需要将子bean的BeanDefinition和父bean的BeanDefinition进行合并，得到最终的一个RootBeanDefinition，合并之后得到的RootBeanDefinition包含了bean定义的所有信息，包含了从父bean中继承过来的所有信息，后续bean的所有创建工作就是依靠合并之后的BeanDefinition来进行的
+
+bean定义可能存在多级父子关系，合并的时候，要进行递归合并，最终得到一个包含完整信息的RootBeanDefinition
+
+~~~java
+org.springframework.beans.factory.support.AbstractBeanFactory#getMergedBeanDefinition
+~~~
+
+
+
+后面阶段将使用合并产生的RootBeanDefinition
+
+### 阶段五：Bean Class加载阶段
+
+将bean的class名称转换为Class类型的对象
+
+AbstractBeanDefinition中有个Object类型的字段：beanClass，用来表示bean的Class对象
+
+
+
+通常这个字段的值有2种类型，一种是bean对应的Class类型的对象，另一种是bean对应的Class的完整类名，第一种情况不需要解析，第二种情况：即这个字段是bean的类名的时候，就需要通过类加载器将其转换为一个Class对象
+
+该阶段将RootBeanDefinition中的beanClass进行解析，将bean的类名转为Class对象，然后赋予beanClass
+
+```java
+org.springframework.beans.factory.support.AbstractBeanFactory#resolveBeanClass
+```
+
+
+
+得到Bean Class对象以及合并之后的BeanDefinition对象后，下面就开始进入实例化这个对象阶段了
+
+
+
+### 阶段六：Bean实例化阶段
+
+#### Bean实例化前操作
+
+DefaultListableBeanFacotry中，有一个非常重要的字段：
+
+```java
+private final List<BeanPostProcessor> beanPostProcessors = new CopyOnWriteArrayList<>();
+```
+
+
+
+BeanPostProcessor接口：在bean生命周期的不同阶段，会调用该接口的一些方法，来**对生命周期进行扩展**，bean生命周期中的所有扩展点都是依靠这个来实现的，所以要对bean生命周期进行扩展，就必须掌握好这个东西
+
+扩展点：紫色：postProcessBeforeInstantiation方法，在实例化前对bean的创建进行干预，可以在此时就手动创建一个实例，而不是依靠spring内部去创建这个实例。
+
+不过这个扩展点用的非常非常少！大部分的bean实例化还是spring内部自己去创建的
+
+![image-20221031234705679](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202211022249244.png)
+
+
+
+#### Bean实例化操作
+
+通过反射调用bean的构造器来创建bean实例，上面绿色：Bean初始化（构造函数）
+
+这里有一个重要的类AutowiredAnnotationBeanPostProcessor，可以将标注@AutoWired的构造器方法，作为候选构造器返回。我们通过这个东西可以实现自己的注解，让spring自动选择我们的构造器来进行bean实例化。例如@MyAutoWired标注在构造方法上
+
+
+
+会调用SmartInstantiationAwareBeanPostProcessor接口的determineCandidateConstructors方法，该方法会返回候选的构造器，默认返回空。所以我们可以通过自定义SmartInstantiationAwareBeanPostProcessor 实现该方法，spring就会选择调用我们自己构造器来实例化bean
+
+
+
+至此：bean完成了实例化
+
+
+
+### 阶段七：重新合并BeanDefinition
+
+执行完Bean工厂的后置处理器后，可能会对BeanDefinition的信息进行修改，所以要进行重新合并
+
+
+
+### 阶段八：Bean属性设置阶段
+
+#### 实例化后阶段
+
+会调用InstantiationAwareBeanPostProcessor接口的postProcessAfterInstantiation，该方法返回false时，会跳过后续的Bean属性赋值前处理、Bean属性赋值
+
+#### Bean属性赋值前阶段
+
+会调用InstantiationAwareBeanPostProcessor接口的postProcessProperties方法
+
+这个接口有2个比较重要的实现类：
+
+AutowiredAnnotationBeanPostProcessor在这个方法中对@Autowired、@Value标注的字段、方法注入值。
+
+CommonAnnotationBeanPostProcessor在这个方法中对@Resource标注的字段和方法注入值
+
+#### Bean属性赋值
+
+循环处理PropertyValues中属性值信息，通过反射调用set方法将属性的值设置到bean实例中
 
 
 
