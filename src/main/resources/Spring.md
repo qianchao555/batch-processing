@@ -1387,13 +1387,39 @@ CommonAnnotationBeanPostProcessor在这个方法中对@Resource标注的字段�
 
 
 
+### 阶段九：Bean初始化阶段
+
+#### Bean Aware接口回调
 
 
 
+#### Bean初始化前操作
+
+#### Bean 初始化操作
+
+#### Bean初始化后操作
+
+#### Bean初始化完成
 
 
 
+#### 阶段十：所有单例Bean初始化完成后阶段
 
+
+
+### 阶段十一：Bean使用阶段
+
+调用getBean方法得到bean之后，就可以随意使用了
+
+
+
+### 阶段十二：Bean销毁
+
+
+
+---
+
+## Spring应用上下文生命周期
 
 
 
