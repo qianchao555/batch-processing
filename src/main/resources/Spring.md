@@ -187,6 +187,38 @@ DI：依赖注入
 
 
 
+### 注册bean的方式
+
+1. @CompontentScan
+2. @Configuration+@Bean
+3. 第三方jar中的类：
+   - @Bean一个一个的进行注册
+4. @Import：可以用来批量导入需要注册的各种类，如普通类、配置类，完成普通类和配置类中所有bean的注册
+   - 可以引入@Configuration标注的类
+   - 可以引入ImportSelector接口和ImportBeanDefinitionRegistrar接口的实现
+   - 可以引入@ConpontentScan标注的类
+   - 也包括@Conpontent注解的普通类
+
+#### ImportBeanDefinitionRegistrar接口
+
+该接口提供了通过spring容器api的方式，直接**向容器中注册bean**
+
+用法：
+
+1. 定义ImportBeanDefinitionRegistrar接口实现类，在registerBeanDefinitions方法中使用registry来注册bean
+2. 导入步骤1中定义的类
+3. 使用步骤2中@Import标注的类作为AnnotationConfigApplicationContext构造参数创建spring容器
+4. 使用AnnotationConfigApplicationContext操作bean
+
+#### ImportSelector接口
+
+导入选择器
+
+1. 定义ImportSelector接口实现类，在selectImports返回需要导入的类的名称数组
+2. 使用@Import来导入步骤1中定义的类
+3. 使用步骤2中@Import标注的类作为AnnotationConfigApplicationContext构造参数创建spring容器
+4. 使用AnnotationConfigApplicationContext操作bean
+
 ---
 
 
@@ -195,7 +227,7 @@ DI：依赖注入
 
 Spring Bean，Spring中，bean就类似是定义的一个组件，而这个组件的作用就是实现某个功能
 
-Bean的创建是典型的**工程模式**，通过一系列的Bean工厂，也即Ioc容器为开发者管理对象将的依赖关系提供了很多便利和基础服务
+Bean的创建是典型的**工厂模式**，通过一系列的Bean工厂，也即Ioc容器为开发者管理对象将的依赖关系提供了很多便利和基础服务
 
 Spring中有许多的Ioc容器的实现供用户选择和使用，这是Ioc容器的基础，在顶层的结构设计主要围绕BeanFactory和BeanRegistry
 
