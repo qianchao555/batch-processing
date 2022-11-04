@@ -219,7 +219,212 @@ DI：依赖注入
 3. 使用步骤2中@Import标注的类作为AnnotationConfigApplicationContext构造参数创建spring容器
 4. 使用AnnotationConfigApplicationContext操作bean
 
+
+
 ---
+
+### @Conditional
+
+条件配置，当满足一定的条件时候被@Conditional标注的才会被spring容器处理
+
+能阻止类的配置、bean的注册等
+
+~~~java
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Conditional {
+    Class<? extends Condition>[] value();
+}
+~~~
+
+
+
+Condition是一个接口，表示一个条件判断，当所有的Condition都成立的时候，@Conditional的结果才成立
+
+~~~java
+@FunctionalInterface
+public interface Condition {
+    /**
+     * 判断条件是否匹配
+     * context:条件判断上下文
+     * metadata:用来获取被@Conditional标注的对象上的所有注解信息
+     */
+    boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata);
+}
+~~~
+
+
+
+关键问题：条件判断什么时候执行？
+
+spring对配置类的处理主要分为2个阶段：
+
+1. 配置类解析阶段
+   - 得到一批配置类的信息，和一些需要注册的bean
+2. bean注册阶段
+   - 将配置类解析阶段得到的配置类和需要注册的bean注册到spring容器中
+
+
+
+---
+
+
+
+### Bean装配 （依赖注入）
+
+bean装配是指：在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，**如何通过依赖注入来把它们装配在一起**
+
+#### bean的自动装配
+
+自动装配就是spring会在上下文中自动查找，并自动给bean装配到与其关联的属性
+
+##### xml文件方式实现
+
+1. no:默认的方式是不进行自动装配的，通过手工设置ref属性来进行装配bean
+2. byName:通过bean的名称进行自动装配，如果一个bean的 property 与另一bean 的name 相同，就进行自动装配
+3. byType:通过参数的数据类型进行自动装配
+4. constructor:利用构造函数进行装配，并且构造函数的参数通过byType进行装配
+5. autodetect:自动探测，如果有构造方法，通过 construct的方式自动装配，否则使用 byType的方式自动装配
+
+##### 注解方式实现
+
+1. @Autowired
+
+   - 可以作用于：构造函数上、成员变量、setter方法上、普通方法(方法的所有参数，会被当做bean来查找后注入)
+   - 默认按照类型进行装配注入
+   - 在启动spring IoC时，容器自动装载了一个**AutowiredAnnotationBeanPostProcessor**后置处理器，当容器扫描到@Autowied、@Resource或@Inject时，就会在IoC容器自动查找需要的bean，并装配给该对象的属性
+   - 使用Autowired时，首先在容器中查询对应类型的bean，如果查询结果刚好有一个，就将该bean装配给@Autowired指定的数据，如果查询的结果不止一个，则会报错
+   - 如果上述查找的结果为空，会抛出异常。解决方法：required=false
+2. @Qualifier
+   - 限定符，依赖注入查找候选者的过程中，对候选者进行过滤、
+   - 被注入的类型有多个的时候，可以使用@Qulifier来指定需要注入那个bean，将@Qulifier的value设置为需要注入bean的名称：Autowired+Qualifier
+   - 按照类型注入的基础上，再按照名称注入
+3. @Resource
+
+   - **默认按照名称**来装配注入，只有当找不到与名称匹配的bean才会按照类型来装配注入
+   - **先按照名称找，然后安装类型找**
+4. @Primary
+   - 依赖注入过程中，有多个候选者的时候，设置为主要候选者
+
+
+
+#### 泛型注入
+
+~~~java
+public class BaseService<T> {
+    @Autowired
+    private IDao<T> dao; 
+    public IDao<T> getDao() {
+        return dao;
+    }
+    public void setDao(IDao<T> dao) {
+        this.dao = dao;
+    }
+}
+~~~
+
+
+
+~~~java
+public interface IDao<T> {
+}
+~~~
+
+
+
+~~~java
+@Component
+public class OrderDao implements IDao<OrderModel> {
+}
+~~~
+
+
+
+~~~java
+@Component
+public class UserDao implements IDao<UserModel> { 
+}
+~~~
+
+
+
+~~~java
+@Component
+public class UserService extends BaseService<UserModel> {
+}
+~~~
+
+~~~java
+@Component
+public class OrderService extends BaseService<OrderModel> {
+}
+~~~
+
+
+
+~~~java
+@Test
+public void test() {
+    AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MainConfig18.class);
+    System.out.println(context.getBean(UserService.class).getDao());
+    System.out.println(context.getBean(OrderService.class).getDao());
+}
+~~~
+
+
+
+~~~java
+结果：
+com.javacode2018.lesson001.demo26.test18.UserDao@6adbc9d
+com.javacode2018.lesson001.demo26.test18.OrderDao@4550bb58
+~~~
+
+
+
+---
+
+### @Scope、DependsOn、ImportResource、Lazy
+
+#### @Scope
+
+指定bean的作用域：单例singleton、原型prototype
+
+常用方式
+
+1. @Compontent+@scope作用于类上
+2. @Bean+@Scope作用于方法上
+
+#### @DependsOn
+
+指定当前bean依赖的bean
+
+bean1依赖bean2，确保在创建bean1的时候，bean2已经创建好了
+
+
+
+#### @ImportResource
+
+新项目采用Spring的注解方式构建的项目，兼容老项目中采用xml方式配置bean
+
+
+
+#### @Lazy
+
+bean的延迟初始化
+
+常用方式
+
+1. @compontent+@lazy标注类上：这个类延迟初始化
+   - 容器启动过程中，不会被初始化，当在容器中查找这个bean的时候才会被初始化
+2. @Configuration一起标注在配置类中，可以让当前配置类中通过@Bean注册的bean延迟初始化
+3. @bean+@lazy：当前bean延迟初始化
+
+
+
+---
+
+
 
 
 
@@ -398,6 +603,42 @@ FactoryBean与BeanFactory区别
 1. 两者没有比较性，只是名称接近而已
 2. BeanFactory是Ioc容器、负责生产和管理bean，所有的Bean都是由BeanFactory来进行管理的，给具体的Ioc容器的所需提供了规范
 3. FactoryBean是一个bean，这个Bean不是简单的Bean，而是一个能生产或者修饰对象生成的工厂Bean。可以说是一个为Ioc容器中bean的实现提供了更加灵活的方式，FactoryBean在IOC容器的基础上给Bean的实现加上了一个简单工厂模式和装饰模式，我们可以在getObject()方法中灵活配置
+
+---
+
+### 父子容器
+
+父子容器的特点
+
+1. 它们是相互隔离的，它们内部可以存在名称相同的bean
+2. 子容器可以访问父容器的bean，但是，父容器不能访问子容器的bean
+3. **调用子容器的getBean方法获取bean的时候，会沿着当前容器开始向上面的容器进行查找，直到找到对应的bean为止**
+4. **子容器中可以通过任何注入方式注入父容器中的bean，而父容器中是无法注入子容器中的bean，原因是第2点**
+
+
+
+父子容器注意事项
+
+**BeanFactory**：是spring容器的顶层接口，这个接口中的方法是支持容器嵌套结构查找的，比如我们常用的getBean方法，就是这个接口中定义的，调用getBean方法的时候，会从沿着当前容器向上查找，直到找到满足条件的bean为止
+
+**ListableBeanFactory**：不支持容器嵌套结构查找，解决办法：BeanFactoryUtils工具类中名称包含有Ancestors的都支持层次查找
+
+
+
+#### SpringMvc中父子容器问题
+
+1. springmvc中只使用一个容器是否可以？
+
+   - 只使用一个容器是可以正常运行的
+
+2. springmvc中为什么需要用到父子容器？
+
+   - 通常我们使用springmvc的时候，采用3层结构，controller层，service层，dao层；父容器中会包含dao层和service层，而子容器中包含的只有controller层；这2个容器组成了父子容器的关系，controller层通常会注入service层的bean
+   - 采用父子容器可以避免有些人在service层去注入controller层的bean，导致整个依赖层次是比较混乱的
+
+   
+
+
 
 ---
 
@@ -906,39 +1147,6 @@ https://blog.csdn.net/a745233700/article/details/110914620
 ---
 
 
-
-
-
-### Bean装配
-
-bean装配是指：在Spring容器中把bean组装到一起，前提是容器需要知道bean的依赖关系，**如何通过依赖注入来把它们装配在一起**
-
-##### bean的自动装配
-
-自动装配就是spring会在上下文中自动查找，并自动给bean装配到与其关联的属性
-
-###### xml文件方式实现
-
-1. no:默认的方式是不进行自动装配的，通过手工设置ref属性来进行装配bean
-2. byName:通过bean的名称进行自动装配，如果一个bean的 property 与另一bean 的name 相同，就进行自动装配
-3. byType:通过参数的数据类型进行自动装配
-4. constructor:利用构造函数进行装配，并且构造函数的参数通过byType进行装配
-5. autodetect:自动探测，如果有构造方法，通过 construct的方式自动装配，否则使用 byType的方式自动装配
-
-###### 注解方式实现
-
-1. @Autowired
-
-   - 可以作用于：构造函数上、成员变量、setter方法上
-   - 默认按照类型进行装配注入
-   - 在启动spring IoC时，容器自动装载了一个AutowiredAnnotationBeanPostProcessor后置处理器，当容器扫描到@Autowied、@Resource或@Inject时，就会在IoC容器自动查找需要的bean，并装配给该对象的属性
-   - 使用Autowired时，首先在容器中查询对应类型的bean，如果查询结果刚好有一个，就将该bean装配给@Autowired指定的数据，如果查询的结果不止一个，则会报错
-   - 上述解决方法：Autowired+Qualifier
-   - 如果上述查找的结果为空，会抛出异常。解决方法：required=false
-2. @Qualifier：按照类型注入的基础上，再按照名称注入
-2. @Resource
-
-   - 默认按照名称来装配注入，只有当找不到与名称匹配的bean才会按照类型来装配注入
 
 
 
