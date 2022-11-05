@@ -422,6 +422,10 @@ bean的延迟初始化
 
 
 
+
+
+
+
 ---
 
 
@@ -634,9 +638,102 @@ FactoryBean与BeanFactory区别
 2. springmvc中为什么需要用到父子容器？
 
    - 通常我们使用springmvc的时候，采用3层结构，controller层，service层，dao层；父容器中会包含dao层和service层，而子容器中包含的只有controller层；这2个容器组成了父子容器的关系，controller层通常会注入service层的bean
-   - 采用父子容器可以避免有些人在service层去注入controller层的bean，导致整个依赖层次是比较混乱的
+   - 采用父子容器，在父容器中排查controller的扫描，让controller层在子容器中加载，这样，可以避免有些人在service层去注入controller层的bean，导致整个依赖层次是比较混乱的
 
    
+
+---
+
+### Environment接口
+
+用来表示整个应用运行时的环境，为了更形象地理解Environment，可以把Spring应用的运行时简单地想象成两个部分：一个是Spring应用本身，一个是Spring应用所处的环境
+
+Environment在容器中是一个抽象的集合，是指应用环境的2个方面：profiles和properties
+
+properties属性来源可以是：properties文件、yml文件、JVM properties、system环境变量、JNDI等等
+
+
+
+---
+
+
+
+### @Value、PropertySource、RefreshScope
+
+
+
+#### @Value
+
+将外部配置文件中的数据，比如：数据库配置、redis等等配置信息放在配置文件中，然后通过@Value的方式，将其注入到bean的一些字段中
+
+spring容器启动的时候，会将配置信息加载到Environment中，@value中应用的值，最终是通过Environment来解析的。所以通过扩展Environment可以实现@Value数据的来源方式，例如：数据库、其他存储介质中
+
+使用方式：
+
+~~~java
+@Value("${配置文件中的key:默认值}")   //key不存在时，使用默认值来注入属性
+
+@Value("${password:123}")
+String password;   password配置不存在时，123作为值
+
+@Value("${配置文件中的key}")
+~~~
+
+
+
+##### @value数据来源
+
+通常来源于配置文件，不过还可以有其他方式，比如：将配置文件的内容放在数据库等等
+
+
+
+spring中有个类：PropertySource可以理解为一个配置源
+
+~~~java
+org.springframework.core.env.PropertySource
+~~~
+
+
+
+
+
+@Value实现动态刷新关键：@Scope中的proxyMode参数，值为ScopedProxyMode.Default会生成一个代理，来实现@value动态刷新效果
+
+springboot：@RefreshScope实现动态刷新
+
+
+
+#### @PropertySource
+
+标注在类上，用来指定配置文件的路径
+
+
+
+@ConfigurationProperties+前缀方式批量获取配置信息
+
+@Envionment动态获取单个配置
+
+
+
+---
+
+### Spring国际化
+
+对于不同的语言，做出不同的响应显示不同的语言信息
+
+
+
+Spring中，通过MessageSource接口来支持国际化
+
+使用方式
+
+1. 创建国际化文件
+2. 向容器中注册一个MessageSource类型的bean
+3. 调用AbstractApplicationContext中的getMessage来获取国际化信息，其内部将交给第二步中注册的messageSource名称的bean进行处理
+
+国际化配置文件有变化时候，怎么解决？
+
+是否可以将国际化的配置丢到数据库中去管理？
 
 
 
@@ -855,19 +952,21 @@ Spring Aop是方法级别的Aop框架
 2. 连接点Join Point
    - 目标对象中所有要进行增强的方法叫连接点
    - Spring Aop中，一个连接点总代表一个方法的执行
-3. 通知/增强
+3. 通知/增强Advice
    - 在方法执行的什么时间做什么
    - 什么时间=》方法前、后、前后
    - 做什么(增强的功能)
-4. 切面
+4. 切面Aspect
    - 切入点+通知
    - =》在什么时机，什么地方，做什么增强
 5. 织入
    - 把切面加入到对象，并创建出代理对象的过程（由Spring完成）
-6. 目标对象
+6. 目标对象target
    - 被代理对象
 7. Proxy
    - 生成的代理对象
+8. 顾问Advisor
+   - 其实它就是 Pointcut 与 Advice 的组合，Advice 是要增强的逻辑，而增强的逻辑要在什么地方执行是通过Pointcut来指定的，所以 Advice 必需与 Pointcut 组合在一起，这就诞生了 Advisor 这个类，spring Aop中提供了一个Advisor接口将Pointcut 与 Advice 的组合起来
 
 ![image-20221031222249945](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/spring_img/202210312223524.png)
 
@@ -1209,42 +1308,6 @@ Isolation_Repeatable_Read:可重复读，在同一个事务内，任意时刻的
 Isolation_Serializable:所有事务逐个依次执行
 
 
-
-## @Transactional
-
-1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式实现。本质是对方法的前后进行拦截，然后在目标方法开始之前创建或加入一个事务，执行完目标方法之后根据执行情况提交或回滚事务
-
-2. 通过该注解就能让spring为我们管理事务，免去了重复的事务管理逻辑，减少对业务代码的侵入，使得开发人员能够专注于业务层面开发
-
-3. ![image-20220315212611513](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152126724.png)
-
-   
-
-4. @Transactional(rollbackFor=Exception.class)：如果方法抛出异常，就会回滚，数据库里面的数据也会回滚。如果不配置rollbaceFor属性，则事务只会在遇到运行时异常RuntimeException才会回滚
-
-   
-
-
-
-#### Transactional失效场景
-
-结合：Spring事务的传播机制及原因分析
-
-https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
-
-1. Transactional注解标注在非public方法上时
-   - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
-2. 在一个类中A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
-   - spring默认的传播机制：Propagation_Required，即：支持当前事务，如果当前没有事务，就新建一个事务。
-   - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
-   - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
-3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
-4. rollbackFor 可以指定能够触发事务回滚的异常类型。**Spring默认抛出了未检查unchecked异常（继承自 RuntimeException 的异常）或者 Error才回滚事务**；其他异常（uncheck异常）不会触发回滚事务。如果在事务中抛出其他类型的异常，但却期望 Spring 能够回滚事务，就需要指定rollbackFor属性
-5. 事务方法内部手动捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
-6. 多线程与Transaction
-   - 如果在一个被@Transactional修饰的方法内启用多线程，那么该方法的事务与线程内的事务是两个完全不相关的事务
-   - 也就是说在@Transactional注解的方法会产生一个新的线程的情况下，事务是不会从调用者线程传播到新建线程的
-   - spring数据库连接信息都放在了ThreadLocal中，所以不同的线程享有不同的连接信息，所以不存在于同一个事务中
 
 
 
@@ -1660,6 +1723,144 @@ CommonAnnotationBeanPostProcessor在这个方法中对@Resource标注的字段�
 ---
 
 ## Spring应用上下文生命周期
+
+
+
+---
+
+## 静态、动态代理
+
+为什么需要代理？
+
+通过代理类去访问目标对象，在有其他额外增加需求的时候，只需要修改代理类的代码，就能方便的进行扩展了
+
+
+
+加入要给系统中所有接口或类都加上耗时功能的统计，需要怎么办？
+
+1. 给每个接口或类创建一个代理类？
+   - 此时的工作量是非常庞大的
+2. 写一个通用的代理类？
+
+通用代理类的实现方式：JDK动态代理、Cglib代理
+
+
+
+### JDK动态代理
+
+只能对接口进行代理
+
+主要有两个类Proxy、InvocationHandler
+
+
+
+### Cglib代理
+
+对普通类和接口都能进行代理
+
+实现原理：本质上是通过**动态的生成一个子类去覆盖要代理的类**，直接对字节码进行操作
+
+最重要的一个类：Enhancer
+
+Enhancer创建一个被代理对象的子类并且拦截所有的方法调用（包括从Object中继承的toString和hashCode方法）。Enhancer不能够拦截final方法，例如Object.getClass()方法，这是由于Java final方法语义决定的。基于同样的道理，Enhancer也不能对final类进行代理操作
+
+
+
+MethodInterceptor方法拦截
+
+---
+
+
+
+## Spring中基于Aop的应用
+
+
+
+### @Transactional
+
+1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式实现。本质是对方法的前后进行拦截，然后在目标方法开始之前创建或加入一个事务，执行完目标方法之后根据执行情况提交或回滚事务
+
+2. 通过该注解就能让spring为我们管理事务，免去了重复的事务管理逻辑，减少对业务代码的侵入，使得开发人员能够专注于业务层面开发
+
+3. ![image-20220315212611513](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152126724.png)
+
+   
+
+4. @Transactional(rollbackFor=Exception.class)：如果方法抛出异常，就会回滚，数据库里面的数据也会回滚。如果不配置rollbaceFor属性，则事务只会在遇到运行时异常RuntimeException才会回滚
+
+   
+
+
+
+#### Transactional失效场景
+
+结合：Spring事务的传播机制及原因分析
+
+https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
+
+1. Transactional注解标注在非public方法上时
+   - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
+2. 在一个类中A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
+   - spring默认的传播机制：Propagation_Required，即：支持当前事务，如果当前没有事务，就新建一个事务。
+   - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
+   - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
+3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
+4. rollbackFor 可以指定能够触发事务回滚的异常类型。**Spring默认抛出了未检查unchecked异常（继承自 RuntimeException 的异常）或者 Error才回滚事务**；其他异常（uncheck异常）不会触发回滚事务。如果在事务中抛出其他类型的异常，但却期望 Spring 能够回滚事务，就需要指定rollbackFor属性
+5. 事务方法内部手动捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
+6. 多线程与Transaction
+   - 如果在一个被@Transactional修饰的方法内启用多线程，那么该方法的事务与线程内的事务是两个完全不相关的事务
+   - 也就是说在@Transactional注解的方法会产生一个新的线程的情况下，事务是不会从调用者线程传播到新建线程的
+   - spring数据库连接信息都放在了ThreadLocal中，所以不同的线程享有不同的连接信息，所以不存在于同一个事务中
+
+
+
+### spring异步处理：@EnableAsync
+
+### spring缓存技术：@EnableCaching
+
+
+
+### spring各种拦截器：@EnableAspectJAutoProxy
+
+自动为spring容器中符合条件的bean创建代理对象。该注解结合@Aspect一起使用
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
