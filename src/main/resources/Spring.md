@@ -1265,15 +1265,45 @@ Spring会在事务开始时，根据当前环境中设置的隔离级别，调�
 
 spring支持编程式事务管理和声明式事务管理
 
+
+
 ###### 编程式事务管理
 
-使用：Transaction Template
+使用：TransactionTemplate或PlatformTransactionManager都可以实现
+
+
 
 ###### 声明式事务管理
+
+声明式事务：通过配置的方式，比如xml或注解，告诉spring哪些方法需要spring来帮忙管理事务，开发者只需要关注业务代码即可，而事务的控制由Spring给我们管理控制
+
+声明式事务的底层还是使用上面两种方式来进行事务控制的，不过对其进行了封装，使用起来更加简便
+
+
 
 1. 声明式事务管理建立在Aop之上。本质是通过Aop功能，对方法前、后进行拦截，将事务处理的功能编织到拦截的方法中，也就是在目标方法开始之前启动一个事务，在执行目标方法之后根据执行情况提交或回滚事务
 2. 声明式事务最大的优点：不需要在业务代码中参杂事务管理的代码，只需要在配置文件中做相关的事务规则声明或通过@Transaction注解的方式，便可以将事务规则应用到业务逻辑中，减少业务代码的污染。
 3. 不足：最细粒度只能作用到方法级别，无法做到像编程式事务那样可以作用到代码块级别
+
+
+
+##### 事务管理器
+
+事务交给spring管理，那么你肯定要创建一个或者多个事务管理者，由这些管理者来管理具体的事务，比如启动事务、提交事务、回滚事务，这些都是管理者来负责的
+
+spring中使用PlatformTransactionManager这个接口来表示事务管理者，PlatformTransactionManager多个实现类，用来应对不同的环境
+
+**JpaTransactionManager**：如果你用jpa来操作db，那么需要用这个管理器来帮你控制事务。
+
+**DataSourceTransactionManager**：如果你用是指定数据源的方式，比如操作数据库用的是：JdbcTemplate、mybatis、ibatis，那么需要用这个管理器来帮你控制事务。
+
+**HibernateTransactionManager**：如果你用hibernate来操作db，那么需要用这个管理器来帮你控制事务。
+
+**JtaTransactionManager**：如果你用的是java中的jta来操作db，这种通常是分布式事务，此时需要用这种管理器来控制事务。
+
+
+
+
 
 ##### Spring的事务传播机制
 
@@ -1778,6 +1808,16 @@ MethodInterceptor方法拦截
 
 ### @Transactional
 
+
+
+#### @EnableTransactionManagement
+
+当spring容器启动的时候，发现有@EnableTransactionManagement注解，此时会拦截所有bean的创建，扫描看一下bean上是否有@Transaction注解（类、或者父类、或者接口、或者方法中有这个注解都可以），如果有这个注解，spring会通过aop的方式给bean生成代理对象，代理对象中会增加一个拦截器，拦截器会拦截bean中public方法执行，会在方法执行之前启动事务，方法执行完毕之后提交或者回滚事务
+
+
+
+
+
 1. transactional是spring声明式事务管理的注解配置方式，底层通过AOP的方式实现。本质是对方法的前后进行拦截，然后在目标方法开始之前创建或加入一个事务，执行完目标方法之后根据执行情况提交或回滚事务
 
 2. 通过该注解就能让spring为我们管理事务，免去了重复的事务管理逻辑，减少对业务代码的侵入，使得开发人员能够专注于业务层面开发
@@ -1816,7 +1856,77 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 ### spring异步处理：@EnableAsync
 
+@EnableAsync需要添加在配置类上开启bean方法的异步调用，才能使@Async异步生效
+
+使用场景：**方法之间无关联的可以采用异步的方式，并行去获取，最终耗时为最长的那个方法，整体相对于同步的方式性能提升不少**
+
+常见使用方式
+
+1. 无返回值
+   - 
+2. 有返回值
+   - 异步方法会返回一个Future类型的值
+
+
+
+默认情况下，@EnableAsync使用了内置的线程池来进行异步调用，当然我们也可以自定义异步执行的线程池
+
+有两种方式实现：
+
+1. spring容器中定义一个线程池类型的bean，但是bean的名称必须为taskExecutor
+
+   - ~~~java
+     @Bean
+     public Executor taskExecutor() {
+         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+         executor.setCorePoolSize(10);
+         executor.setMaxPoolSize(100);
+         executor.setThreadNamePrefix("my-thread-");
+         return executor;
+     }
+     ~~~
+
+2. 实现AsyncConfigurer接口，并实现getAsyncExecutor方法
+
+   
+
+#### 异步方法异常处理
+
+1. 当返回值是Future的时候，方法内部有异常的时候，异常会向外抛出，可以对Future.get采用try..catch来捕获异常
+2. 当返回值不是Future的时候，可以自定义一个bean，实现AsyncConfigurer接口中的getAsyncUncaughtExceptionHandler方法，返回自定义的异常处理器
+
+
+
+#### 线程池隔离
+
+一个系统中可能有很多业务，比如充值服务、提现服务或者其他服务，这些服务中都有一些方法需要异步执行，默认情况下他们会使用同一个线程池去执行，如果有一个业务量比较大，占用了线程池中的大量线程，此时会导致其他业务的方法无法执行，那么我们可以采用线程隔离的方式，对不同的业务使用不同的线程池，相互隔离，互不影响
+
+@Async有一个value参数，用于指定线程池的bean名称，方法运行时，可以采用指定的线程池来执行目标方法
+
+
+
+使用方式：
+
+1. 在spring容器中，自定义线程池相关的bean
+2. @Async(“线程池bean名称”)
+
+
+
+#### @EnableAsync原理
+
+内部使用aop实现的
+
+@EnableAsync会引入一个bean后置处理器：AsyncAnnotationBeanPostProcessor，将其注册到spring容器，这个bean后置处理器在所有bean创建过程中，判断bean的类上是否有@Async注解或者类中是否有@Async标注的方法，如果有，会通过aop给这个bean生成代理对象，会在代理对象中添加一个切面：org.springframework.scheduling.annotation.AsyncAnnotationAdvisor，这个切面中会引入一个拦截器：AnnotationAsyncExecutionInterceptor，方法异步调用的关键代码就是在这个拦截器的invoke方法中实现的
+
+---
+
+
+
 ### spring缓存技术：@EnableCaching
+
+原理：通过Aop对需要使用缓存的bean创建代理对象，通过代理对象拦截目标方法的执行。会在代理中添加一个拦截器`org.springframework.cache.interceptor.CacheInterceptor`，这个类中的`invoke`方法是关键，会拦截所有缓存相关的目标方法的执行，实现缓存功能
+
+
 
 
 
