@@ -229,6 +229,45 @@ RPC框架的通信与具体的协议无关，具体可基于Http或Tcp协议实�
 
 传输方式和序列化会之间影响RPC的性能，不同的Rpc框架可以在序列化方式上采用不同的技术，从而提高性能
 
+#### 常用序列化方式
+
+JDK原生序列化：Serializable接口
+
+
+
+Json序列化：Jackson、Gson、FastJson
+
+
+
+Hessian序列化
+
+是一个支持跨语言传输的二进制文本序列化协议，对比`Java`默认的序列化，`Hessian`的使用较简单，并且性能较高，现在的主流远程通讯框架几乎都支持`Hessian`，比如`Dubbo`，默认使用的就是Hessian，不过是Hessian的重构版
+
+
+
+ProtoBuf序列化
+
+是一种轻便高效的结构化数据存储格式，可以用于结构化数据序列化。适合做数据存储或 RPC 数据交换格式。可用于通讯协议、数据存储等领域的语言无关、平台无关、可扩展的序列化结构数据格式
+
+
+
+Kyro序列化：广泛使用在大数据组件
+
+
+
+### RPC与Http的差异
+
+#### 相同点
+
+1. 都是基于TCP协议的点对点通信
+2. 都可以在不同编程语言(应用系统)间进行通信
+
+#### 不同点
+
+1. 数据编码格式不同
+2. 一般情况下：RPC是长连接，Http是短链接
+3. 一般情况下：Rpc的传输效率高于Http
+
 -----
 
 
@@ -699,6 +738,7 @@ ribbon:
    - FeignAutoConfiguration的条件注解
 3. 生成的实现/代理类如何实现Http请求应答序列化和反序列化
    - Feign提供了Decoder和Encoder两个接口
+   - 使用Jackson对http进行序列化与反序列化（feign底层还是http、okhttp等）
 4. 生成的实现/代理类如何注入Spring容器
    - @EnableFeignClients
    - 扫描@FeignClient，给这些接口创建代理对象，并将代理对象注入Spring容器，再使用时候其实是对代理对象的使用
