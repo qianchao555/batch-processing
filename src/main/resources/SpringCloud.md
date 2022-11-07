@@ -655,6 +655,11 @@ Feign真正发送Http请求是委托为feign.client来做的
 ~~~yaml
 #换底层http客户端
 feign.httpclient.enabled: true
+
+#也可以使用okhttp
+feign:
+	okhttp:
+		enable: true
 ~~~
 
 
@@ -687,6 +692,14 @@ RestTemplate+ribbon
 - 它在Http客户端库(例如：HttpURLConnection、HttpComponents、okHttp等)的基础上，封装了简单易用的模板方法API
 - restTemplate处理异常：ResponseErrorHandler、DefaultResponseErrorHandler等几个类
 
+
+
+#### 重试组件
+
+Retryer是负责重试的组件，Feign内置了重试器，当Http请求出现异常时，Feign会限定一个最大重试次数来进行重试操作
+
+
+
 #### Feign超时配置控制
 
 其服务调用以及负载均衡是依靠底层Ribbon实现的，因此超时控制通过Ribbon来设置
@@ -696,6 +709,18 @@ ribbon:
   ReadTimeout: 6000  #建立连接后，服务器读取到可用资源的时间 
   ConnectionTimeout: 6000  #建立连接所用的时间，适用于网络状况正常的情况下，两端连接所用的时间
 ~~~
+
+
+
+#### InvocationHandlerFactory
+
+InvocationHandlerFactory 采用 JDK 的动态代理方式生成代理对象，我们定义的 Feign Client 是接口，当我们调用这个接口中定义的方法时，实际上是要去调用远程的 HTTP API，这里用了动态代理方式，当调用某个方法时，会进入代理中真正的去调用远程 HTTP API
+
+
+
+#### RequestInterceptor请求拦截器
+
+可以外Feign添加多个拦截器，在请求执行前设置一些扩展的参数信息
 
 
 
@@ -711,7 +736,7 @@ ribbon:
 
 它是 Spring 官方推出的一种声明式服务调用与负载均衡组件，它的出现就是为了替代进入停更维护状态的 Feign
 
-核心作用：为Http形式的RestAPI提供了简洁高效的RPC调用方式，像调用一个本地方法一样，调用远端的RestApi接口，完全是RPC形式
+核心作用：为Http形式的RestAPI提供了简洁高效的伪RPC调用方式，像调用一个本地方法一样，调用远端的RestApi接口，完全是RPC形式
 
 1. 里面集成了ribbon、feign的封装、hystrix
 1. feign不支持SpringMvc注解，所有OpenFeign在Feign的基础上支持SpringMvc的注解，例如@RequestMapping等等
@@ -732,8 +757,8 @@ ribbon:
 
 #### 工作原理
 
-1. @FeignClient如何根据接口生成实现（代理)类
-   - openFeign使用JDK动态代理
+1. spring扫描@FeignClient，生成对应接口的代理对象（实现类，其还会做负载均衡），并注入Spring容器中。当远程接口的方法被调用时，由代理实例去完成真正的远程访问
+   - openFeign使用JDK动态代理，在构建BeanDefinition的时候，传入FeignClientFactoryBean类型，FeiginClient会被动态代理成为一个FeignClientFactoryBean，放在容器中
 2. 生成的实现（代理）类如何适配各种Http组件？
    - FeignAutoConfiguration的条件注解
 3. 生成的实现/代理类如何实现Http请求应答序列化和反序列化
@@ -744,6 +769,12 @@ ribbon:
    - 扫描@FeignClient，给这些接口创建代理对象，并将代理对象注入Spring容器，再使用时候其实是对代理对象的使用
 
 当请求发生时，对接口的调用，被统一转发到Feign实现的InvacationHandler中，由其负责将接口中的入参等信息转换为http形式，发送到服务器，最后再解析Http响应，将结果转换为对象后返回
+
+
+
+
+
+
 
 ---
 
