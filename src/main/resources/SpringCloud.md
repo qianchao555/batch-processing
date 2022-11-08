@@ -636,6 +636,14 @@ public class ApplicationContext {
 
 
 
+
+
+项目怎么使用的？
+
+自定义RibbonConfiguration，然后自定义负载均衡规则-》
+
+在选择server后，整合自定义的Nocas负载规则进行选择
+
 ---
 
 
@@ -648,7 +656,13 @@ public class ApplicationContext {
 
 它底层是基于http协议，是一个http请求调用的轻量级框架，可以以Java接口注解的方式调用Http请求，Feign通过处理注解，将请求模板化，当时就调用的时候，传入参数，再应用到请求上，从而转化成真正的请求，封装了http调用流程
 
-Feign默认使用JDK原生的URLConnection发送Http请求，没有连接池、对每个请求地址会保持一个长连接。建议换用Apache HttpClient作为底层的http client包，从而获取连接池、超时时间等与性能相关的控制能力
+
+
+Feign默认使用JDK原生的URLConnection发送Http请求，没有连接池、对每个请求地址会保持一个长连接。若采用原生HttpUrlConnection没有连接池、性能和效率比较低，可能会遇到性能问题导致系统崩溃
+
+建议换用Apache HttpClient作为底层的http client包，从而获取连接池、超时时间等与性能相关的控制能力，或者采用okHttpClient
+
+
 
 Feign真正发送Http请求是委托为feign.client来做的
 
@@ -665,6 +679,15 @@ feign:
 
 
 使用方法：定义一个服务接口，然后在上面添加注解
+
+~~~java
+//name和url同时指定的时候，url生效
+//url：指定了默认值为 空（注意冒号），当配置信息feign.url.qianchao不存在时，就会走注册中心根据服务名来查找
+@Feignclient(name="qianchaoProduct",url="${feign.url.qianchao:}")
+public interface QianchaoTestApi{
+    
+}
+~~~
 
 
 
