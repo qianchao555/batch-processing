@@ -505,7 +505,9 @@ Spring BeanFacoty容器中管理两种bean：
 
 
 
- FactoryBean也是一个接口，为Ioc容器中Bean的实现提供了更加灵活的方式，当在IOC容器中的Bean实现了FactoryBean时，通过getBean(String BeanName)获取到的Bean对象并不是FactoryBean的实现类对象，而是这个实现类中的getObject()方法返回的对象。要想获取FactoryBean的实现类，就要getBean(&BeanName)，在BeanName之前加上& 。
+ FactoryBean也是一个接口，为Ioc容器中Bean的实现提供了更加灵活的方式，**当在IOC容器中的Bean实现了FactoryBean接口时，那么根据该Bean的名称获取到的实际上是getObject()返回的对象，而不是这个Bean自身实例，如果要获取这个Bean自身实例，那么需要在名称前面加上’&’符号**
+
+
 
 当调用getBean("car")时，Spring通过反射机制发现CarFactoryBean实现了FactoryBean的接口，这时Spring容器就调用接口方法CarFactoryBean#getObject()方法返回。如果希望获取FactoryBean的实例，则需要在使用getBean(beanName)方法时在beanName前显示的加上"&"前缀：如getBean("&car")
 
@@ -595,6 +597,8 @@ public class Demo1 {
 2. Mybatis中的SqlSessionFactoryBean
 
 3. Hibernate中的SessionFactoryBean
+
+3. Feign中的FeignClientFactoryBean
 
 4. Dubbo中的Consumer
 
