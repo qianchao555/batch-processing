@@ -1,4 +1,4 @@
-package com.springbootproject;
+package com;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
@@ -13,9 +13,9 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
  */
 //默认扫描启动程序所在包，以及子包
 //@ComponentScan(basePackages ={"com.springbootproject"})
-//@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
-@SpringBootApplication
-@MapperScan("com.springbootproject.dao")
+@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+//@SpringBootApplication
+//@MapperScan("com.springbootproject.dao")
 public class SpringBootRun {
 
     public static void main(String[] args) {
