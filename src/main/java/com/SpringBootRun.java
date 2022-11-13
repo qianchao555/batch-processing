@@ -1,9 +1,11 @@
 package com;
 
-import org.mybatis.spring.annotation.MapperScan;
+import com.bootthinking.EnableMyTestAnnotation;
+import com.bootthinking.MySelectorService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * @description:
@@ -12,15 +14,26 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
  * @version:1.0
  */
 //默认扫描启动程序所在包，以及子包
-//@ComponentScan(basePackages ={"com.springbootproject"})
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
-//@SpringBootApplication
+//@ComponentScan(basePackages ={"com"})
+//@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+@SpringBootApplication
 //@MapperScan("com.springbootproject.dao")
-public class SpringBootRun {
+//@EnableFeignClients
+@EnableAsync
+@EnableMyTestAnnotation
+public class SpringBootRun   {
+
+
 
     public static void main(String[] args) {
         SpringApplication springApplication = new SpringApplication(SpringBootRun.class);
         springApplication.run(args);
+        AnnotationConfigApplicationContext anno=new AnnotationConfigApplicationContext(SpringBootRun.class);
+        anno.getBean(MySelectorService.class).printTestSelector();
+        String[] beanDefinitionNames = anno.getBeanDefinitionNames();
+        for (String beanDefinitionName : beanDefinitionNames) {
+            System.out.println(beanDefinitionName);
+        }
 
     }
 
