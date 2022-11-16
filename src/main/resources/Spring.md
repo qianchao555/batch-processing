@@ -1946,7 +1946,21 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 
 
+---
 
+## Spring AOP实现原理
+
+
+
+注解切面代理创建类：AnnotationAwareAspectJAutoProxyCreator
+
+BeanPostProcessor
+
+1. postProcessBeforeInstantiation()
+   - 处理使用了@Aspect注解的切面类，将切面类的所有切面方法根据使用的注解生成对应的Advice(通知)
+   - 将Adivice连同切入点匹配器和切面类等信息封装为Advisor
+2. postProcessAfterInitaialzaion()
+   - 有了Advisor，注入到合适位置，并交给代理去实现
 
 
 
