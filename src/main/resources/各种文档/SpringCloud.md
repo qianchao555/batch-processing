@@ -270,21 +270,23 @@ Kyro序列化：广泛使用在大数据组件
 
 -----
 
-
-
 ## SpringCloud
+
+
 
 ### 什么是微服务架构
 
 1. 将单体的应用程序分为多个应用程序，每一个应用程序就是一个微服务模块
 2. 每个微服务运行在自己的进程里，使用轻量级的机制通信
 
+
+
 ### SpringCloud是什么
 
 1. springcloud是一系列框架的有序集合
 2. 它利用springboot的开发便利性巧妙地简化了分布式系统基础设施的开发
 
-### SpringCloud优缺点
+
 
 ### SpringBoot和SpringCloud区别
 
@@ -293,33 +295,11 @@ Kyro序列化：广泛使用在大数据组件
 3. 为各个微服务之间提供：配置管理、服务发现、断路器、路由、分布式回话等等集成服务
 4. springboot可以离开springcloud独立使用开发项目，但是springcloud离不开springboot，属于依赖的关系
 
-### Springboot和springcloud之间版本对于关系
 
-| springboot | springcloud |
-| ---------- | ----------- |
-| 2.2.x      | Hoxton      |
-| 2.1.x      | Greenwich   |
-| 2.0.x      | Finchley    |
-| Edgware    | 1.5.x       |
-| Dalston    | 1.5.x       |
-
-### SpringCloud中的组件有哪些
-
-Spring Cloud Eureka：服务注册与发现
-
-Spring Cloud Zuul：网关
-
-Spring Cloud Ribbon：客户端负载均衡
-
-Spring Cloud Feign：声明式web服务 客户端
-
-Spring Cloud Hystrix：断路器
-
-Spring Cloud Config：分布式统一配置管理中心
-
-等等。。
 
 ### 使用SpringBoot开发分布式微服务时，面临的问题
+
+
 
 
 
@@ -1095,6 +1075,8 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 2. 网关常见的功能：**路由转发、权限校验、限流控制等等**
 3. 基于Spring5、SpringBoot2、Project Reactor等技术开发的高性能API网关组件
 
+![img](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202211212050416.png)
+
 #### SpringCloud gateway三大核心概念
 
 ##### 路由(Route)
@@ -1102,6 +1084,10 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 网关最基本的模块，由一个Id、一个目标Url、一组断言(Predicate)和一组过滤器(Filter)组成
 
 ##### 断言(Predicate)
+
+断言先于filter执行，因为断言为真时，才进行路由匹配
+
+Predicate就是事先定义好的一组匹配规则，方便请求过来找到对应的Route进行处理
 
 1. 路由转发的判断条件，SpringCloud Gateway通过断言来实现路由的匹配规则，也就是只有满足了断言的条件，才会被转发到指定的服务上进行处理
 2. 我们可以通过Predicate的Http请求进行匹配，例如：请求方式、请求路径、请求头、参数等等，如果请求与断言匹配成功，则将请求转发到相应的服务
@@ -1149,6 +1135,18 @@ lb://service-name
 #lb:uri的协议，表示开启springcloud gateway的负载均衡功能
 #service-name:服务名，springcloud gateway会根据它获取到的具体微服务地址
 ~~~
+
+
+
+#### 黑白名单添加
+
+自定义过滤器实现
+
+
+
+
+
+
 
 
 
@@ -2120,4 +2118,22 @@ SocketChannel(用于TCP)
 
 
 
-k
+----------------
+
+## Nginx
+
+### 与SpringCloud gateway区别
+
+1. gateway是前端到后端服务器之间的对内网关，nginx是用户到前端工程的对外网关
+
+### Nginx在微服务中的地位
+
+![image-20221121232654871](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202211212326914.png)
+
+外部请求首先经过Nginx层进行代理，代理分发到网关服务，网关服务在分发请求给具体的机器
+
+
+
+### 反向代理
+
+反向代理指的是：以代理服务器来接受网络上的请求，然后将请求转发给内部网络上的服务器，并将服务器上得到的结果返回给网络上连接的客户端，此时代理服务器对外就表现为一个反向代理服务器
