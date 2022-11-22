@@ -37,7 +37,15 @@
 3. 使用最少线程
    - 避免创建不需要的线程，比如任务很少，但是创建了很多线程来处理，这样会造成大量线程都处于等待状态
 
+#### 多线程的风险
 
+线程安全问题是微妙且出乎意料的，在没有充分进行同步的情况下，多线程中的各个操作的顺序是不可预测的
+
+常见的并发危险：
+
+1. 共享数据
+2. 竞争条件
+3. 性能问题：上面说的上下文切换问题
 
 #### 死锁
 
@@ -53,6 +61,38 @@ t1和t2两个线程互相等待对方释放锁
 2. 避免一个线程在锁内同时占有多个资源，尽量保证每个锁只占用一个资源
 3. 使用定时锁，例如：lock.tryLock（timeout)来替代内部锁机制
 4. 对于数据库锁，加锁和解锁必须在一个数据库连接里，否则会出现解锁失败的情况
+
+
+
+----
+
+### 性能的思考
+
+使用线程最主要的原因是提高性能
+
+改进性能意味着：用更少的资源做更多的事情
+
+资源：对于给定的活动而言，一些特定的资源通常是缺乏的，无论是CPU、内存、网络带宽、IO带宽、数据库请求、磁盘空间等等。
+
+当活动的运行因某个特定的资源受阻时，称：**受限于该资源**。例如：受限于CPU、受限于数据库等等
+
+
+
+使用多线程总是会引入一些性能的开销。例如：上下文切换，线程的创建、调度、销毁等
+
+当线程被过度使用后，这些开销会变得更大，甚至比单线程的顺序执行的性能更差
+
+
+
+#### 可伸缩性
+
+当增加计算资源(例如：增加额外的CUP数量、内存、存储器、I/O带宽等)的时候，吞吐量和生产量能够相应的得以改进
+
+
+
+
+
+
 
 ----
 
@@ -1901,39 +1941,6 @@ ps：好像IDEA可以配置连接到远程环境，不过配置比较繁琐，�
 
 
 
-### ThreadLocal
-
-线程安全的解决思路
-
-1. 互斥同步：synchronized、Lock
-2. 非阻塞同步：CAS、atomic包
-3. 无同步方案：ThreadLocal(本地存储)、栈封闭、可重入代码
-   - 线程隔离是通过副本保证线程访问资源安全性，他不保证线程之间还存在共享关系的狭义上的安全
-
-ThreadLocal：在每个线程中，对共享变量会创建一个副本，即每个线程内部都会有一个该变量，且在线程内部任何地方都可以使用，线程之间互不影响，这样就不存在线程安全问题，也不会严重影响程序性能
-
-是一个以Thread
-
-#### 如何实现线程隔离(原理)
-
-主要是用到了一个ThreadLocalMap类型的变量threadLocals，负责存储当前线程
-
-##### ThreadLocalMap
-
-1. ThreadLocal的一个静态内部类
-2. ThreadLocalMap的Entry实现继承了WeakReference<ThreadLocal<?>>
-3. 用一个Entry数组来存储k-v，Entry不是链表形式，而是每个bucket里面放一个Entry
-4. 
-
-#### 应用场景
-
-1. 每个线程维护一个序列号
-   - 例如：希望某个类将状态(例如用户id、事务id等)与线程关联起来
-2. Session的管理
-   - 经典例子：mybatis的session
-
-
-
 ### 线程的中断
 
 在Java中，**停止一个线程的主要机制是中断，中断并不是强迫终止 一个线程，它是一种协作机制，是给线程传递一个取消信号，但是由线程来决定如何以及何时退出**
@@ -1964,4 +1971,137 @@ ThreadLocal：在每个线程中，对共享变量会创建一个副本，即每
 2. Waiting/Timed_Waiting：线程在等待某个条件或超时
 3. Blocked：线程在等待锁，阻塞状态
 4. New/Terminated：线程还未启动或已结束
+
+
+
+
+
+
+
+
+
+### ThreadLocal
+
+ThreadLocal对象可以提供线程局部变量，每个线程Thread都拥有一份自己的副本变量，多个线程互不干扰
+
+线程安全的解决思路
+
+1. 互斥同步：synchronized、Lock
+2. 非阻塞同步：CAS、atomic包
+3. 无同步方案：ThreadLocal(本地存储)、栈封闭、可重入代码
+   - 线程隔离是通过副本保证线程访问资源安全性，他不保证线程之间还存在共享关系的狭义上的安全
+
+ThreadLocal：在每个线程中，对共享变量会创建一个副本，即每个线程内部都会有一个该变量，且在线程内部任何地方都可以使用，线程之间互不影响，这样就不存在线程安全问题，也不会严重影响程序性能
+
+
+
+Thread Local的数据结构
+
+![image-20221122215048504](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202211222150789.png)
+
+#### 如何实现线程隔离(原理)
+
+Thread类中，有一个ThreadLocal.ThreadLocalMap threadLocals类型的实例变量threadLocals，负责存储当前线程，也就是说每一个线程都有一个自己的ThreadLocalMap
+
+```java
+/**
+*Thread类型
+*/
+
+//字段
+ThreadLocal.ThreadLocalMap threadLocals=null;
+```
+
+
+
+##### ThreadLocalMap
+
+1. ThreadLocal的一个静态内部类
+2. ThreadLocalMap的Entry实现继承了WeakReference<ThreadLocal<?>>
+3. 用一个Entry数组来存储k-v，Entry不是链表形式，而是每个bucket里面放一个Entry。k为ThreadLocal，v为放入的实际值
+
+即：每个线程往ThreadLocal中放值的时候，都会往自己的ThreadLocalMap里面存放，读取也是以ThreadLocal作为引用，在自己的map里面找到对应的key，从而实现线程隔离
+
+注意：Entry，它的key是ThreadLocal<?> ，继承自WeakReference，即：弱引用类型
+
+强软弱虚、强软弱虚、强软弱虚
+
+
+
+弱引用：弱引用对象，只要发生GC，**若**这个对象**只是被弱引用指向**，那么就会被回收
+
+
+
+
+
+#### ThreadLocalMap的Hash算法
+
+利用hash算法来解决散列表数组的冲突问题
+
+~~~java
+int i=key.threadLocalHashCode & (len -1)
+    
+    
+//关键点：threadLocalHashCode
+    
+
+    private static final int HASH_INCREMENT = 0x61c88647;
+
+    /**
+     * Returns the next hash code.
+     */
+    private static int nextHashCode() {
+        return nextHashCode.getAndAdd(HASH_INCREMENT);
+    }
+~~~
+
+每创建一个ThreadLocal对象时，ThreadLocal.nexHashCode都会自增：0x61c88647
+
+这是一个特殊的值，是一个斐波那契数列，也叫黄金分割数。hash增量为这个数字，好处就是**分布非常均匀**
+
+
+
+#### hash冲突
+
+ThreadLocal并没有采用像HashMap类似的链表结构来解决冲突，而是采用向后槽位查找的算法，当查找到空槽位则将当前元素放入槽位中
+
+
+
+#### InheritableThreadLocal
+
+在异步场景中，无法给子线程共享父线程中创建的线程副本数据，为此JDK为了解决这个问题，给出了这个解决方案
+
+实现原理是：子线程是通过在父线程中通过调用`new Thread()`方法来创建子线程，`Thread#init`方法在`Thread`的构造方法中被调用。在`init`方法中**拷贝父线程数据到子线程中**
+
+
+
+但`InheritableThreadLocal`仍然有缺陷，一般我们做异步化处理都是使用的线程池，而`InheritableThreadLocal`是在`new Thread`中的`init()`方法给赋值的，而线程池是线程复用的逻辑，所以这里会存在问题。
+
+当然，有问题出现就会有解决问题的方案，阿里巴巴开源了一个`TransmittableThreadLocal`组件就可以解决这个问题
+
+
+
+#### 经典应用场景
+
+1. 每个线程维护一个序列号
+   - 例如：希望某个类将状态(例如用户id、事务id等)与线程关联起来
+2. Session的管理
+   - 经典例子：mybatis的session
+3. 解决线程安全问题
+   - 单例的Controller中要使用共享数据时候，采用ThreadLocal
+
+
+
+#### ThreadLocal内存泄漏问题
+
+当GC发生时，软引用中的key并没有依赖强引用对象，此时的软引用key被回收，而value永远存在，导致内存泄漏
+
+例如：
+
+~~~java
+new ThreadLocal<>().set("abc");
+//此时，创建的ThreadLocal没有任何指向，也就没有任何引用
+~~~
+
+推荐手动调用一下remove()方法，可以放置内存溢出情况发生
 

@@ -1062,6 +1062,10 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 
 [参考文章](http://c.biancheng.net/springcloud/gateway.html)
 
+构建在Spirng5生态上，基于WebFlux实现，而WebFlux框架底层使用了Reactor模式通信框架Netty，gateway还支持Websocket并且与Spring紧密集成
+
+
+
 #### API网关
 
 1. 网关是一个服务器，也可以说是进入系统的唯一节点。网关负责请求转发、合成和协议转换等等
@@ -1113,6 +1117,8 @@ Predicate就是事先定义好的一组匹配规则，方便请求过来找到�
    <img src="https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202204072311361.png" alt="image-20220407231132016" style="zoom:150%;" />
 
 #### SpringCloud Gateway工作流程
+
+gateway启动时，基于Netty Server监听一个指定的端口(该端口可通过server.port自定义)，当客户端发送一个请求到网关时，网关会根据一系列Predicate的匹配结果来决定访问哪个Route，然后根据过滤器链进行请求的处理
 
 ![Spring Cloud Gateway 工作流程](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/101P45T2-1.png)
 
@@ -2134,6 +2140,29 @@ SocketChannel(用于TCP)
 
 
 
+### 正向代理
+
+一般是客户端直接向目标服务器发送请求并获取内容，使用正向代理后，客户端改为向代理服务器发送请求，并且指定目标服务器，然后由代理服务器和原始服务器（目标服务器）进行通信，转交请求并获取内容，再返回给客户端
+
+正向代理隐藏了真实的客户端，为客户端收发请求，使真实客户端对目标服务器不可见
+
+例子：国内访问google等网站，这个时候需要一个代理服务器来帮助访问google，代理服务器与google进行通信，并返回数据
+
 ### 反向代理
 
-反向代理指的是：以代理服务器来接受网络上的请求，然后将请求转发给内部网络上的服务器，并将服务器上得到的结果返回给网络上连接的客户端，此时代理服务器对外就表现为一个反向代理服务器
+反向代理指的是：使用反向代理后，代理服务器接收网络上的请求，然后将请求转发给内部网络上真正进行处理的服务器，并将服务器上得到的结果返回给网络上连接的客户端，此时代理服务器对外就表现为一个反向代理服务器
+
+反向代理隐藏了真实处理的服务器，为服务器收发请求，使得真实处理的服务器对客户端不可见 
+
+
+
+![image-20221122095905315](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202211220959406.png)
+
+
+
+### 负载均衡
+
+Nginx实现负载均衡，一般来说是将请求**转发给服务器集群**
+
+
+
