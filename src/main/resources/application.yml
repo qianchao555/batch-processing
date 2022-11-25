@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8080
 #------------------------------------------spring--------------------
 spring:
   application:
@@ -46,4 +46,4 @@ mybatisPlus:
 #这里的配置会覆盖logback-spring中的日志打印级别
 logging:
   level:
-    root: info
+    root: debug

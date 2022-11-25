@@ -270,21 +270,23 @@ Kyro序列化：广泛使用在大数据组件
 
 -----
 
-
-
 ## SpringCloud
+
+
 
 ### 什么是微服务架构
 
 1. 将单体的应用程序分为多个应用程序，每一个应用程序就是一个微服务模块
 2. 每个微服务运行在自己的进程里，使用轻量级的机制通信
 
+
+
 ### SpringCloud是什么
 
 1. springcloud是一系列框架的有序集合
 2. 它利用springboot的开发便利性巧妙地简化了分布式系统基础设施的开发
 
-### SpringCloud优缺点
+
 
 ### SpringBoot和SpringCloud区别
 
@@ -293,33 +295,11 @@ Kyro序列化：广泛使用在大数据组件
 3. 为各个微服务之间提供：配置管理、服务发现、断路器、路由、分布式回话等等集成服务
 4. springboot可以离开springcloud独立使用开发项目，但是springcloud离不开springboot，属于依赖的关系
 
-### Springboot和springcloud之间版本对于关系
 
-| springboot | springcloud |
-| ---------- | ----------- |
-| 2.2.x      | Hoxton      |
-| 2.1.x      | Greenwich   |
-| 2.0.x      | Finchley    |
-| Edgware    | 1.5.x       |
-| Dalston    | 1.5.x       |
-
-### SpringCloud中的组件有哪些
-
-Spring Cloud Eureka：服务注册与发现
-
-Spring Cloud Zuul：网关
-
-Spring Cloud Ribbon：客户端负载均衡
-
-Spring Cloud Feign：声明式web服务 客户端
-
-Spring Cloud Hystrix：断路器
-
-Spring Cloud Config：分布式统一配置管理中心
-
-等等。。
 
 ### 使用SpringBoot开发分布式微服务时，面临的问题
+
+
 
 
 
@@ -1082,6 +1062,10 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 
 [参考文章](http://c.biancheng.net/springcloud/gateway.html)
 
+构建在Spirng5生态上，基于WebFlux实现，而WebFlux框架底层使用了Reactor模式通信框架Netty，gateway还支持Websocket并且与Spring紧密集成
+
+
+
 #### API网关
 
 1. 网关是一个服务器，也可以说是进入系统的唯一节点。网关负责请求转发、合成和协议转换等等
@@ -1095,6 +1079,8 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 2. 网关常见的功能：**路由转发、权限校验、限流控制等等**
 3. 基于Spring5、SpringBoot2、Project Reactor等技术开发的高性能API网关组件
 
+![img](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202211212050416.png)
+
 #### SpringCloud gateway三大核心概念
 
 ##### 路由(Route)
@@ -1102,6 +1088,10 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 网关最基本的模块，由一个Id、一个目标Url、一组断言(Predicate)和一组过滤器(Filter)组成
 
 ##### 断言(Predicate)
+
+断言先于filter执行，因为断言为真时，才进行路由匹配
+
+Predicate就是事先定义好的一组匹配规则，方便请求过来找到对应的Route进行处理
 
 1. 路由转发的判断条件，SpringCloud Gateway通过断言来实现路由的匹配规则，也就是只有满足了断言的条件，才会被转发到指定的服务上进行处理
 2. 我们可以通过Predicate的Http请求进行匹配，例如：请求方式、请求路径、请求头、参数等等，如果请求与断言匹配成功，则将请求转发到相应的服务
@@ -1128,6 +1118,8 @@ SpringCloud Bus会使用一个轻量级的消息代理来构建一个公共的�
 
 #### SpringCloud Gateway工作流程
 
+gateway启动时，基于Netty Server监听一个指定的端口(该端口可通过server.port自定义)，当客户端发送一个请求到网关时，网关会根据一系列Predicate的匹配结果来决定访问哪个Route，然后根据过滤器链进行请求的处理
+
 ![Spring Cloud Gateway 工作流程](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/101P45T2-1.png)
 
 1. 客户端将请求发送到SpringCloud Gateway上
@@ -1149,6 +1141,18 @@ lb://service-name
 #lb:uri的协议，表示开启springcloud gateway的负载均衡功能
 #service-name:服务名，springcloud gateway会根据它获取到的具体微服务地址
 ~~~
+
+
+
+#### 黑白名单添加
+
+自定义过滤器实现
+
+
+
+
+
+
 
 
 
@@ -2126,4 +2130,45 @@ SocketChannel(用于TCP)
 
 
 
-k
+----------------
+
+## Nginx
+
+### 与SpringCloud gateway区别
+
+1. gateway是前端到后端服务器之间的对内网关，nginx是用户到前端工程的对外网关
+
+### Nginx在微服务中的地位
+
+![image-20221121232654871](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202211212326914.png)
+
+外部请求首先经过Nginx层进行代理，代理分发到网关服务，网关服务在分发请求给具体的机器
+
+
+
+### 正向代理
+
+一般是客户端直接向目标服务器发送请求并获取内容，使用正向代理后，客户端改为向代理服务器发送请求，并且指定目标服务器，然后由代理服务器和原始服务器（目标服务器）进行通信，转交请求并获取内容，再返回给客户端
+
+正向代理隐藏了真实的客户端，为客户端收发请求，使真实客户端对目标服务器不可见
+
+例子：国内访问google等网站，这个时候需要一个代理服务器来帮助访问google，代理服务器与google进行通信，并返回数据
+
+### 反向代理
+
+反向代理指的是：使用反向代理后，代理服务器接收网络上的请求，然后将请求转发给内部网络上真正进行处理的服务器，并将服务器上得到的结果返回给网络上连接的客户端，此时代理服务器对外就表现为一个反向代理服务器
+
+反向代理隐藏了真实处理的服务器，为服务器收发请求，使得真实处理的服务器对客户端不可见 
+
+
+
+![image-20221122095905315](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springcloud_img/202211220959406.png)
+
+
+
+### 负载均衡
+
+Nginx实现负载均衡，一般来说是将请求**转发给服务器集群**
+
+
+

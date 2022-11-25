@@ -1,11 +1,10 @@
 package com;
 
-import com.bootthinking.EnableMyTestAnnotation;
 import com.bootthinking.MySelectorService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 /**
  * @description:
@@ -15,12 +14,12 @@ import org.springframework.scheduling.annotation.EnableAsync;
  */
 //默认扫描启动程序所在包，以及子包
 //@ComponentScan(basePackages ={"com"})
-//@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
-@SpringBootApplication
+@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+//@SpringBootApplication
 //@MapperScan("com.springbootproject.dao")
 //@EnableFeignClients
-@EnableAsync
-@EnableMyTestAnnotation
+//@EnableAsync
+//@EnableMyTestAnnotation
 public class SpringBootRun   {
 
 
