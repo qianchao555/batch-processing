@@ -1526,6 +1526,12 @@ Nacos客户端有一个HostReactor类，他的功能是实现服务的动态更�
 
 Nacos本地会维护一个存储服务信息的缓存文件，每次客户端从注册中心获取新的服务信息时都会进行本地化的处理，包括更新缓存服务、发布事件、更新本地文件
 
+
+https://blog.csdn.net/liyanan21/article/details/89088603
+心跳：5s一次
+
+查找服务、发送心跳
+最终都会调用：nacos提供的SDK
 ---
 
 ### Sentinel
