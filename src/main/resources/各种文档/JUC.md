@@ -689,6 +689,14 @@ Lock接口的实现基本上都是通过聚合了一个AbstractQueuedSynchronize
 
 参考文章：Java并发编程的艺术=>经典之作
 
+AbstractQueueSynchronizer  
+
+抽象：抽象类，只实现一些主要逻辑，有些方法由子类实现
+
+队列：使用队列存储数据
+
+同步器：实现了同步的功能
+
 
 
 AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组件的基础框架，它使用了一个int的成员变量表示同步状态（volatile state)，通过内置的FIFO队列来完成资源获取线程的排队工作。
@@ -699,7 +707,7 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 
 同步器是实现锁的关键，锁是面向使用者的，同步器是面向锁的实现者、它简化了锁的实现方式,屏蔽了同步状态管理、线程的排队、等待与唤醒等底层操作
 
-同步器基于模板方法模式，基于AQS可以实现自己的很多锁类，比如ReentrantLock等等
+同步器基于模板方法模式，基于AQS可以实现自己的很多锁类，比如ReentrantLock、Semaphore、ReentrantReadWriteLock等等
 
 
 
@@ -727,13 +735,15 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 
 ##### AQS核心思想/实现原理
 
-一句话理解：AQS是基于CLH队列，用volatile修饰共享变量state，线程通过CAS去改变状态，成功则获取锁成功，失败则进入队列等待，等待被唤醒。AQS是自旋锁，在等待被唤醒的时候，经常会使用自旋( while(!cas() )的方式，不停的尝试获取锁，直到被其他线程获取成功
+一句话理解：AQS是基于CLH队列(同步队列），用volatile修饰共享变量state，线程通过CAS去改变状态，成功则获取锁成功，失败则进入队列等待，等待被唤醒。AQS是自旋锁，在等待被唤醒的时候，经常会使用自旋( while(!cas() )的方式，不停的尝试获取锁，直到被其他线程获取成功
 
 实现了AQS的锁有：自旋锁、互斥锁、读写锁、信号量、栅栏等等都是AQS的衍生物
 
 ###### 同步队列
 
-同步器依赖内部的同步队列（一个 FIFO 双向队列）来完成同步状态的管理，当前线程获取同步状态失败时，同步器会将当前线程以及等待状态等信息构造成为一个节点 （Node）并将其加入同步队列，同时会阻塞当前线程，当同步状态释放时，会把首节点中的线程唤醒，使其再次尝试获取同步状态
+同步器依赖内部的同步队列（一个 FIFO 双向队列）来完成同步状态的管理，当前线程获取同步状态失败时，同步器会将当前线程以及等待状态等信息构造成为一个节点 （Node）并将其加入同步队列，同时会阻塞当前线程，当同步状态释放时，会把首节点中的线程唤醒（公平锁），使其(首节点)(公平锁)再次尝试获取同步状态
+
+
 
 这个队列即：CLH队列
 
@@ -775,6 +785,10 @@ AQS定义了两种资源共享方式：
 2. 共享：多个线程可以同时执行，例如Semaphore、CountDownLatch、ReadWriteLock、CyclicBarrier
 3. 不同的自定义的同步器争用资源的方式也不同
 
+
+
+
+
 ###### 独占式同步状态获取与释放
 
 1. 获取同步状态
@@ -801,7 +815,7 @@ AQS定义了两种资源共享方式：
 2. 独占式释放同步状态
 
    - 当前线程获取同步状态并执行了相应逻辑之后，就需要释放同步状态，使得后续节点能够继续获取同步状态
-   - release(int args)，执行该方法后会唤醒后继节点线程，使用LockSupport来唤醒处于等待状态的线程
+   - release(int args)，执行该方法后会，释放锁的线程会将首节点中第一个不取消执行的线程唤醒，使用LockSupport来唤醒处于等待状态的线程，让其可以尝试获取同步状态
 
 3. 总结
 
@@ -842,11 +856,64 @@ AQS定义了两种资源共享方式：
 
 释放锁：如果该锁被获取了 n 次，那么前(n-1)次 tryRelease(int releases)方法必须返回 false，而只有同步状态完全释放了，才能返回 true。可以看到，该方法将同步状态是否为 0 作为最终释放的条件，当同步状态为 0 时，将占有线程设置为 null，并返回 true，表示释放成功
 
-**ReentrantLock公平锁与非公平锁区别**
+##### ReentrantLock公平锁与非公平锁
 
 1. 公平性针对获取锁而言，如果一个锁是公平的，那么锁的获取顺序就应该符合请求的绝对时间顺序，也就是 FIFO
 2. 对于非公平锁，只要CAS 设置同步状态成功，则表示当前线程获取了锁，而公平锁实现则不同，唯一不同的位置为判断条件多了hasQueuedPredecessors()方法，即加入了同步队列中当前节点是否有前驱节点的判断，如果该方法返回 true，则表示有线程比当前线程更早地请求获取锁，因此需要等待前驱线程获取并释放锁之后才能继续获取锁。如果该方法返回 true，则表示有线程比当前线程更早地请求获取锁，因此需要等待前驱线程获取并释放锁之后才能继续获取锁
 3. 非公平锁效率更高，因为公平锁为了保证FIFO，需要进行大量的线程切换。虽然非公平锁可能造成线程饥饿现象，但是线程极小的切换，保证了更大的吞吐量
+
+
+
+##### CLH是FIFO的，ReentrantLock怎么实现非公平锁
+
+获取同步状态时，直接利用CAS参与争夺。初次抢占失败后，非公平锁会再tryAcquire()方法中再次尝试抢占，而非公平锁没有判断节点是否有前驱节点获取这个锁资源，这样就实现了非公平的抢占。没有抢占成功则进入到同步队列，乖乖去排队吧
+
+~~~java
+ final boolean nonfairTryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                if (compareAndSetState(0, acquires)) {
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0) // overflow
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            return false;
+        }
+~~~
+
+
+
+公平锁：会判断是否有前驱节点   hasQueuedPredecessors()
+
+~~~java
+protected final boolean tryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            int c = getState();
+            if (c == 0) {
+                if (!hasQueuedPredecessors() &&
+                    compareAndSetState(0, acquires)) {
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            else if (current == getExclusiveOwnerThread()) {
+                int nextc = c + acquires;
+                if (nextc < 0)
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            return false;
+        }
+~~~
 
 
 
