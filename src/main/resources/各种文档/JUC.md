@@ -1079,15 +1079,118 @@ ReentantReadWriteLock不支持锁升级。目的：保证数据的可见性，�
 
 ### LockSupport工具
 
-LockSupport定义了一组的公共静态方法，这些方法提供了最基本的线程阻塞和唤醒功能，而LockSupport也成为构建同步组件的基础工具
+LockSupport定义了一组的公共静态方法，这些方法**提供了最基本的线程阻塞和唤醒功能**，而LockSupport也成为构建同步组件的基础工具，可以**唤醒当前线程以及唤醒指定被阻塞的线程**
 
 LockSupport定义了一组以park开头的方法用来阻塞当前线程，以及unpark(Thread thread)方法来唤醒一个被阻塞的线程。
 
 **简单的说：LockSupport就是用来和AQS配合阻塞和唤醒线程的**
 
+其中，Lock的Condition的 awiat/signal阻塞和唤醒是采用它实现的
+
+
+
 park开头的方法用来阻塞当前线程
 
 unpark(Thread t)方法来唤醒一个被阻塞的线程
+
+
+
+Object、Condition、LockSupport三者等待/唤醒区别
+
+Object、Conditon局限性：线程需要先获取锁、唤醒方法需要在等待方法之后否则不能进行唤醒
+
+LockSupport：没有上述两个限制
+
+---
+
+### Thread的相关方法
+
+#### Sleep()
+
+当前线程休眠，进入阻塞状态，若在休眠状态被中断会抛出InterruptedException中断异常
+
+若占有锁对象，调用该方法并不会释放锁的占用
+
+#### Join()
+
+若在A线程中执行了threadB.join()，其含义：当前A线程等待threadB线程终止后才从threadB.join处返回
+
+实现原理：等待/通知机制
+
+~~~java
+public final synchronized void join(long millis)
+    throws InterruptedException {
+        long base = System.currentTimeMillis();
+        long now = 0;
+
+        if (millis < 0) {
+            throw new IllegalArgumentException("timeout value is negative");
+        }
+
+        if (millis == 0) {
+            //条件不满足继续等待
+            while (isAlive()) {
+                wait(0);
+            }
+            //条件符合，方法返回
+        } else {
+            while (isAlive()) {
+                long delay = millis - now;
+                if (delay <= 0) {
+                    break;
+                }
+                wait(delay);
+                now = System.currentTimeMillis() - base;
+            }
+        }
+    }
+~~~
+
+
+
+---
+
+### 线程的中断
+
+在Java中，**停止一个线程的主要机制是中断，中断并不是强迫终止 一个线程，它是一种协作机制，是给线程传递一个取消信号，但是由线程来决定如何以及何时退出**
+
+**其他线程调用该线程的interrupt()方法对其进行中断操作**
+
+
+
+中断机制的特性是：线程通过检查自身是否被中断来进行响应，而且**可以决定是否响应中断的请求**。所以线程可以忽略中断请求并且继续运行
+
+每一个线程都有一个标志位，表示该线程是否被中断了
+
+1. public void interrupt()
+   - 此方法并不能中断线程，只是告诉该线程外部已经有中断请求了，至于是否中断，取决于线程自己
+   - 此方法为实例方法，告诉线程外部有中断请求，并将线程的中断状态设置为true
+2. public static boolean interrupted()
+   - 此方法是类方法，对当前线程的中断标识进行复位
+   - 返回当前线程中断标志位是否为true，但是他有一个副作用就是清除线程的中断标志位，也就是说，**连续两次调用 interrupted（），第一次返回的结果为true，第二次一般就是false（除非 同时又发生了一次中断）**
+3. public boolean isInterrupted
+   - 此方法是实例方法，检查线程是否已经中断，返回对应的中断标志位是否为true
+   - 线程的中断状态不受该方法的影响
+
+
+
+#### 线程对中断的反应
+
+ **interrupt（）对线程的影响与线程的状态和在进行的IO操作有关。** 我们主要考虑线程的状态，IO操作的影响和具体IO以及操作系统有关， 我们就不讨论了
+
+线程状态有：
+
+1. Runnable：线程在运行或具备运行条件只是在等待操作系统调度
+2. Waiting/Timed_Waiting：线程在等待某个条件或超时
+3. Blocked：线程在等待锁，阻塞状态
+4. New/Terminated：线程还未启动或已结束
+
+
+
+### 安全的终止线程
+
+1. 中断
+2. volatile + 设置标志位来控制是否停止任务并终止该线程
 
 ---
 
@@ -1125,17 +1228,19 @@ Condition 定义了等待/通知两种类型的方法，当前线程调用这些
 
 当调用 await()方法后，当前线程会释放锁并在此等待，而其他线程调用 Condition 对象的 signal()方法，通知当前线程后，当前线程才从 await()方法返回，并且在返回前已经获取了锁
 
+
+
 #### Condition实现原理
 
 ConditionObject是AQS的内部类，每个Condition对象都包含一个队列(等待队列)，该队列是Conditon对象实现等待/通知功能的关键
 
 ##### 等待队列
 
-是一个FIFO的队列，在队列中的每个节点都包含了一个线程引用，该线程就是在 Condition 对象上等待的线程，如果一个线程调用了 Condition.await()方法，那么该线程将会释放锁、构造成节点加入等待队列并进入等待状态
+是一个FIFO的队列，在队列中的每个节点都包含了一个线程引用，该线程就是在 Condition 对象上等待的线程，如果一个线程调用了 Condition.await()方法，那么该线程将会**释放锁、构造成节点加入等待队列并进入等待状态**
 
 节点的定义复用了同步器中节点的定义，也就是说，同步队列和等待队列中节点类型都是同步器的静态内部类 AbstractQueuedSynchronizer.Node
 
-Condition对象拥有首尾节点，当前线程调用Condition.await()，将会以当前线程构造节点，并将节点从尾部加入等待队列
+一个Condition包含一个等待队列，Condition对象拥有首尾节点，当前线程调用Condition.await()，将会以当前线程构造节点，并将节点从尾部加入等待队列。这里更新节点的过程并没有像普通Lock.lock那样采用CAS来处理，原因是因为调用await的时候，该线程必定是已经获取到锁了，所以是安全的
 
 等待队列的基本结构如下：
 
@@ -1165,7 +1270,7 @@ Condition拥有首尾节点，新增节点只需要将原有的尾节点nextWait
 
 从队列（同步队列和等待队列）的角度看 await()方法，当调用 await()方法时，相当于同步队列的首节点（获取了锁的节点）移动到 Condition 的等待队列中，然后释放同步状态，唤醒同步队列中的后继节点，然后当前线程进入等待状态
 
-同步队列的首节点并不会直接加入等待队列，而是通过addConditionWaiter()方法把当前线程构造成一个新的节点并将其加入等待队列中
+**同步队列的首节点并不会直接加入等待队列，而是通过addConditionWaiter()方法把当前线程构造成一个新的节点并将其加入等待队列中**
 
 ![image-20220703155950871](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207031559984.png)
 
@@ -1177,9 +1282,11 @@ Condition拥有首尾节点，新增节点只需要将原有的尾节点nextWait
 
 ![image-20220703161059033](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207031610154.png)
 
-通过调用同步器的 enq(Node node)方法，等待队列中的头节点线程安全地移动到同步队列。当节点移动到同步队列后，当前线程再使用 LockSupport 唤醒该节点的线程。
+通过调用同步器的 enq(Node node)方法，等待队列中的头节点线程安全地移动到同步队列。**当节点移动到同步队列后(队尾），当前线程再使用 LockSupport.unPark 唤醒该节点的线程**
 
-被唤醒后的线程，将从 await()方法中的 while 循环中退出（isOnSyncQueue(Node node)方法返回 true，节点已经在同步队列中），进而调用同步器的 acquireQueued()方法加入到获取同步状态的竞争中。
+
+
+被唤醒后的线程，将从 await()方法中的 while 循环中退出（isOnSyncQueue(Node node)方法返回 true，节点已经在同步队列中），进而调用同步器的 acquireQueued()方法**加入到获取同步状态的竞争中**。
 
 成功获取同步状态（或者说锁）之后，被唤醒的线程将从先前调用的 await()方法返回，此时该线程已经成功地获取了锁
 
@@ -1192,8 +1299,6 @@ Condition 的 signalAll()方法，相当于对等待队列中的每个节点均�
 ##### Lock+Condition使用场景
 
 1. 实现一个消息队列，多个线程往队列写消息，同时多个线程从队列里读取消息，队列大小固定，例如：队列大小50
-
-条件：
 
 **条件：**
 
@@ -2238,48 +2343,19 @@ ps：好像IDEA可以配置连接到远程环境，不过配置比较繁琐，�
 
 
 
+---
+
+
+
+4. 
 
 
 
 
 
 
-### 线程的中断
 
-在Java中，**停止一个线程的主要机制是中断，中断并不是强迫终止 一个线程，它是一种协作机制，是给线程传递一个取消信号，但是由线程来决定如何以及何时退出**
-
-中断机制的特性是：线程需要检查是否被中断，而且还可以决定是否响应结束的请求。所以线程可以忽略中断请求并且继续运行
-
-每一个线程都有一个标志位，表示该线程是否被中断了
-
-1. public void interrupt()
-   - 此方法并不能中断线程，只是告诉该线程外部已经有中断请求了，至于是否中断，取决于线程自己
-   - 此方法为实例方法，告诉线程外部有中断请求，并将线程的中断状态设置为true
-2. public static boolean interrupted()
-   - 此方法是类方法，测试当前线程是否已经中断
-   - 返回当前线程中断标志位是否为true，但是他有一个副作用就是清除线程的中断标志位，也就是说，**连续两次调用 interrupted（），第一次返回的结果为true，第二次一般就是false（除非 同时又发生了一次中断）**
-3. public boolean isInterrupted
-   - 此方法是实例方法，测试线程是否已经中断，返回对应的中断标志位是否为true
-   - 线程的中断状态不受该方法的影响
-
-
-
-#### 线程对中断的反应
-
- **interrupt（）对线程的影响与线程的状态和在进行的IO操作有关。** 我们主要考虑线程的状态，IO操作的影响和具体IO以及操作系统有关， 我们就不讨论了
-
-线程状态有：
-
-1. Runnable：线程在运行或具备运行条件只是在等待操作系统调度
-2. Waiting/Timed_Waiting：线程在等待某个条件或超时
-3. Blocked：线程在等待锁，阻塞状态
-4. New/Terminated：线程还未启动或已结束
-
-
-
-
-
-
+---
 
 
 
