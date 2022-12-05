@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
  * @ClassName TestBoundedQueue
  * @Author qianchao
  * @Date 2022/12/1
- * @Version OPRA V1.0
+ * @Version   V1.0
  **/
 public class TestBoundedQueue {
     static BoundedQueue boundedQueue = new BoundedQueue(10);

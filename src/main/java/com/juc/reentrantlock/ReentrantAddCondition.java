@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @ClassName ReentrantAddCondition
  * @Author qianchao
  * @Date 2022/12/1
- * @Version OPRA V1.0
+ * @Version   V1.0
  **/
 public class ReentrantAddCondition {
     ReentrantLock reentrantLock = new ReentrantLock();

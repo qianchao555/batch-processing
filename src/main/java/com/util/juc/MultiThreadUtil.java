@@ -21,10 +21,20 @@ import java.util.concurrent.*;
  * D传入被处理的数据，R返回的数据类型
  **/
 public abstract class MultiThreadUtil<D, R> {
+
+
     private ExecutorService executorService;
+
+
     private final BlockingQueue<Future<R>> futureBlockingQueue = new LinkedBlockingQueue<>();
+
+    //启动门，用于控制任务准备完毕后，统一放开去执行
     private final CountDownLatch startCountDownLatch = new CountDownLatch(1);
+
+    //结束门，等待所有任务执行完成
     private final CountDownLatch endCountDownLatch;
+
+
     //被处理的数据
     private List<D> listData;
 
@@ -36,7 +46,9 @@ public abstract class MultiThreadUtil<D, R> {
     public MultiThreadUtil(List<D> list) {
         if (!CollectionUtils.isEmpty(list)) {
             this.listData = list;
+            //这里有问题，具体场景具体分析，不能利用List的大小来创建线程个数
             this.executorService = Executors.newFixedThreadPool(list.size());
+
             this.endCountDownLatch = new CountDownLatch(list.size());
         } else {
             listData = null;
@@ -51,6 +63,7 @@ public abstract class MultiThreadUtil<D, R> {
     private abstract class DataProcessTask implements Callable<R> {
         //当前线程号
         private int currentThread;
+
         //当前线程处理的数据
         private D data;
 
@@ -65,17 +78,23 @@ public abstract class MultiThreadUtil<D, R> {
          */
         @Override
         public R call() throws Exception {
-            //任务阻塞，只要等待countdownLatch计数器为0后才开始执行
+            //线程启动后，当前线程阻塞，等待startCountDownLatch计数器为0后才开始执行
             startCountDownLatch.await();
-            R r = executeTask(currentThread, data);
-//            R r = businessCodeExecute(currentThread, data);
-            //当前线程处理完成，结束控制计数器减1
-            endCountDownLatch.countDown();
+
+            //执行任务
+            // R r = businessCodeExecute(currentThread, data);
+            R r = null;
+            try {
+                r = executeTask(currentThread, data);
+            } finally {
+                //当前线程处理完成，结束控制计数器减1
+                endCountDownLatch.countDown();
+            }
             return r;
         }
 
         /**
-         * 每一个线程执行的功能，这一层可要可不要
+         * 每一个线程执行的功能
          *
          * @param currentThread
          * @param data
@@ -87,11 +106,11 @@ public abstract class MultiThreadUtil<D, R> {
     /**
      * 业务代码开始执行，即每一个线程执行的功能，需要调用者实现
      *
-     * @param currentThread
-     * @param data
-     * @return
+     * @param currentThread 线程号
+     * @param data          每个线程需要处理的数据
+     * @return R 传入数据data的处理结果
      */
-    public abstract R businessCodeExecute(int currentThread, D data);
+    public abstract R businessCodeExecuteTask(int currentThread, D data);
 
     /**
      * 启动每一个线程，并得到返回结果
@@ -103,26 +122,28 @@ public abstract class MultiThreadUtil<D, R> {
         if (listData != null && listData.size() > 0) {
             try {
                 int nThread = listData.size();
+
+                //将任务提交到线程池，执行
                 for (int i = 0; i < nThread; i++) {
                     //提交任务给线程池
                     Future<R> future = executorService.submit(new DataProcessTask(i, listData.get(i)) {
                         @Override
                         public R executeTask(int currentThread, D data) {
-                            return businessCodeExecute(currentThread,data);
+                            return businessCodeExecuteTask(currentThread, data);
                         }
                     });
-//                    //提交任务给线程池
-//                    Future<R> future = executorService.submit(
-//                            new DataProcessTask(i, listData.get(i)) {
-//                            });
-                    //每一个线程的返回结果
-                    futureBlockingQueue.offer(future);
+
+                    //将Future实例添加至队列
+                    futureBlockingQueue.add(future);
                 }
-                //所有任务都准备完毕,启动门计数器减1,此时计数器为0,所有线程开始执行任务
+                //所有任务都准备完毕,启动门计数器减1,此时计数器为0,唤醒call()方法，所有线程开始执行任务
                 startCountDownLatch.countDown();
+
                 //主线程阻塞等待所有子线程执行完毕
                 endCountDownLatch.await();
-                //统计计算结果
+
+
+                //最后统计计算结果
                 for (Future<R> future : futureBlockingQueue) {
                     R r = future.get();
                     resultList.add(r);

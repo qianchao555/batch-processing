@@ -21,7 +21,7 @@ public class MultiThreadProcessDataTest {
         }
         MultiThreadUtil<Integer,Integer> multiThreadUtil=new MultiThreadUtil<Integer, Integer>(moneyInteger) {
             @Override
-            public Integer businessCodeExecute(int currentThread, Integer data) {
+            public Integer businessCodeExecuteTask(int currentThread, Integer data) {
                 return data+10;
             }
         };
