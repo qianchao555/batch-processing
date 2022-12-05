@@ -26,6 +26,7 @@ public abstract class MultiThreadUtil<D, R> {
     private ExecutorService executorService;
 
 
+    //阻塞队列，入队、出队实现原理：都用到了Lock锁的多条件Condition阻塞控制
     private final BlockingQueue<Future<R>> futureBlockingQueue = new LinkedBlockingQueue<>();
 
     //启动门，用于控制任务准备完毕后，统一放开去执行
@@ -47,7 +48,8 @@ public abstract class MultiThreadUtil<D, R> {
         if (!CollectionUtils.isEmpty(list)) {
             this.listData = list;
             //这里有问题，具体场景具体分析，不能利用List的大小来创建线程个数
-            this.executorService = Executors.newFixedThreadPool(list.size());
+//            this.executorService = Executors.newFixedThreadPool(list.size());
+            this.executorService = Executors.newFixedThreadPool(8);
 
             this.endCountDownLatch = new CountDownLatch(list.size());
         } else {
@@ -78,7 +80,10 @@ public abstract class MultiThreadUtil<D, R> {
          */
         @Override
         public R call() throws Exception {
-            //线程启动后，当前线程阻塞，等待startCountDownLatch计数器为0后才开始执行
+            //线程启动后，当前线程阻塞，当前任务阻塞在这里，等待startCountDownLatch计数器为0后才开始执行
+
+            //初次阻塞在这里的任务数量受制于cpu的核心数，待startCountDownLatch计数器0后，后续任务不再阻塞
+            System.out.println("我是线程："+currentThread+"的call(),开始调用我了。。。。");
             startCountDownLatch.await();
 
             //执行任务
@@ -88,6 +93,7 @@ public abstract class MultiThreadUtil<D, R> {
                 r = executeTask(currentThread, data);
             } finally {
                 //当前线程处理完成，结束控制计数器减1
+                System.out.println("当前线程"+currentThread+"处理结束，处理结果：%s,调用countDown()"+r);
                 endCountDownLatch.countDown();
             }
             return r;
@@ -133,11 +139,17 @@ public abstract class MultiThreadUtil<D, R> {
                         }
                     });
 
-                    //将Future实例添加至队列
+                    //将每个线程得到的Future实例添加至队列
                     futureBlockingQueue.add(future);
                 }
+
+                TimeUnit.SECONDS.sleep(5);
+
                 //所有任务都准备完毕,启动门计数器减1,此时计数器为0,唤醒call()方法，所有线程开始执行任务
                 startCountDownLatch.countDown();
+
+
+                TimeUnit.SECONDS.sleep(10);
 
                 //主线程阻塞等待所有子线程执行完毕
                 endCountDownLatch.await();

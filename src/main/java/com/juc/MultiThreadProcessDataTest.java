@@ -5,6 +5,7 @@ import com.util.juc.MultiThreadUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @ClassName MultiThreadProcessDataTest
@@ -22,6 +23,11 @@ public class MultiThreadProcessDataTest {
         MultiThreadUtil<Integer,Integer> multiThreadUtil=new MultiThreadUtil<Integer, Integer>(moneyInteger) {
             @Override
             public Integer businessCodeExecuteTask(int currentThread, Integer data) {
+                try {
+                    TimeUnit.SECONDS.sleep(2);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 return data+10;
             }
         };
