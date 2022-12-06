@@ -1,6 +1,7 @@
 package com.util.juc;
 
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.concurrent.*;
  * 4. 顶一个countdownlatch用于控制，主线程等待所有线程计算完毕后统计数据
  * D传入被处理的数据，R返回的数据类型
  **/
+@Slf4j
 public abstract class MultiThreadUtil<D, R> {
 
 
@@ -48,8 +50,8 @@ public abstract class MultiThreadUtil<D, R> {
         if (!CollectionUtils.isEmpty(list)) {
             this.listData = list;
             //这里有问题，具体场景具体分析，不能利用List的大小来创建线程个数
-//            this.executorService = Executors.newFixedThreadPool(list.size());
-            this.executorService = Executors.newFixedThreadPool(8);
+            this.executorService = Executors.newFixedThreadPool(list.size());
+//            this.executorService = Executors.newFixedThreadPool(20);
 
             this.endCountDownLatch = new CountDownLatch(list.size());
         } else {
@@ -83,7 +85,7 @@ public abstract class MultiThreadUtil<D, R> {
             //线程启动后，当前线程阻塞，当前任务阻塞在这里，等待startCountDownLatch计数器为0后才开始执行
 
             //初次阻塞在这里的任务数量受制于cpu的核心数，待startCountDownLatch计数器0后，后续任务不再阻塞
-            System.out.println("我是线程："+currentThread+"的call(),开始调用我了。。。。");
+            log.info("我是线程："+currentThread+"的call(),开始调用我了。。。。");
             startCountDownLatch.await();
 
             //执行任务
@@ -93,7 +95,7 @@ public abstract class MultiThreadUtil<D, R> {
                 r = executeTask(currentThread, data);
             } finally {
                 //当前线程处理完成，结束控制计数器减1
-                System.out.println("当前线程"+currentThread+"处理结束，处理结果：%s,调用countDown()"+r);
+                log.info("当前线程号"+currentThread+"处理结束，处理结果为：{},并调用了countDown()",r);
                 endCountDownLatch.countDown();
             }
             return r;
@@ -143,16 +145,18 @@ public abstract class MultiThreadUtil<D, R> {
                     futureBlockingQueue.add(future);
                 }
 
-                TimeUnit.SECONDS.sleep(5);
+                TimeUnit.SECONDS.sleep(2);
 
                 //所有任务都准备完毕,启动门计数器减1,此时计数器为0,唤醒call()方法，所有线程开始执行任务
                 startCountDownLatch.countDown();
 
 
-                TimeUnit.SECONDS.sleep(10);
+//                TimeUnit.SECONDS.sleep(5);
 
                 //主线程阻塞等待所有子线程执行完毕
+                log.info("等待当前List块大小为{}的所有线程处理任务中。。。。。",listData.size());
                 endCountDownLatch.await();
+                log.info("当前List块大小为{}的所有线程处理完成！",listData.size());
 
 
                 //最后统计计算结果
