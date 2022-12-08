@@ -1,9 +1,32 @@
 ### Java8
 
+Java8的好处：把函数式编程中一些最好的想法融入到了Java语法中
+
+
+
 #### Lambda
+
+lambda和方法引用，简明理解：**将代码或方法作为参数传递**
+
+lambda表达式可以被赋值给一个变量，或传递给一个接受函数式接口作为参数的方法  ！！！！！
+
+~~~java
+1: Runnble r =()->sout("hello world");
+
+2: process(r);
+2: process(()->sout("hello world"))
+
+public void process(Runnable r){
+    r.run();
+}
+~~~
+
+
 
 1. lambda是一个匿名函数，理解成是一段**可以传递的代码**（将函数像数据一样传递）
 2. 更紧凑的代码风格，提高阅读性
+
+
 
 ##### 语法
 
@@ -17,7 +40,28 @@
    - (x,y)-> x+y;
 5. 参数列表数据类型可以不用写，JVM编译器能通过上下文推断出
 
+
+
+##### 在哪里使用Lambda表达式
+
+1. 函数式接口
+2. 函数描述符(lambda表达式的签名)
+
+例如:
+
+| 函数式接口           | 函数描述符  | 原始类型特化                     |
+| -------------------- | ----------- | -------------------------------- |
+| Predicate\<T>        | T->boolean  | IntPredicate、LongPredicate..... |
+| Consumer\<T>         | T->void     | IntConsumer....                  |
+| BiConsumer<T,U>      | (T,U)->void |                                  |
+| Function\<T，R>      | T->R        |                                  |
+| BiFunction\<T，U，R> | (T，U)->R   |                                  |
+
+
+
 ##### 四大核心函数式接口
+
+函数式接口：**只定义一个抽象方法的接口**，即使接口中含有默认方法，它仍然是一个函数式接口
 
 1. 消费型接口
 
@@ -29,7 +73,7 @@
 2. 供给型接口
 
    - ~~~java
-     Supplier(T) 
+     Supplier<T>
          T get();
      ~~~
 
@@ -47,9 +91,81 @@
      	boolean test(T t);
      ~~~
 
+
+
+其他常见函数式接口
+
+Runnable、Callable、Comparator、EventListener等等
+
+
+
+##### 函数式接口能做什么
+
+Lambda表达式允许直接**以内联的形式为函数式接口的抽象方法提供实现**，并把整个表达式作为函数式接口的实例
+
+
+
+##### 编译器对Lambda的检查
+
+lambda可以为函数式接口生成一个实例。然而，Lambda表达式本身并不包含它在实现哪个函数式接口的信息。为了全面了解Lambda表达式，你应该知道Lambda的实际类型是什么
+
+###### Lambda实际类型
+
+Lambda的类型是**从使用Lambda的上下文推断出来的**，上下文中Lambda表达式需要的类型称为目标类型
+
+
+
+###### 类型检查过程：
+
+~~~java
+//调用
+List<Apple> filterWeightList=filter(appleList,(Apple a)->a.getWeight>100);
+
+//定义
+filter(List<Apple> appleList,Predicate<Apple> p){}
+
+~~~
+
+1. Lambda上下文是什么？
+   - 看filter方法
+   - 上下文：变量赋值上下文、方法调用上下文(参数和返回值)、类型转换上下文
+   - 可以从上面的上下文中获得响应的目标类型
+2. filter(List\<Apple> appleList，Predicate\<Apple> p)
+   - 得出目标类型：Predicate\<Apple>
+3. Predicate\<Apple>的抽象方法是什么？
+   - boolean test(Apple apple);
+   - 接受一个Apple返回boolean
+   - 函数描述符 即：Apple->boolean
+4. filter的任何实际参数都必须匹配这个函数描述符要求
+
+
+
+###### 类型推断
+
+~~~java
+//参数a 没有显示的类型， Java编译器会通过类型推断出它是Apple类型
+List<Apple> filterList =
+    filter(appleList,a->"green".equals(a.getColor())); 
+
+~~~
+
+
+
+
+
 ---
 
 #### 方法引用
+
+
+
+##### 作用
+
+可以**重复使用现有的方法定义**，并像Lambda表达式一样传递它们
+
+可以被看作是仅仅调用特定方法的Lambda的一种快捷写法
+
+
 
 1. 若Lambda体中的内容已经有方法实现了，那么可以使用方法引用
 2. 可以理解为：Lambda表达式的另外一种表现形式
@@ -57,6 +173,7 @@
 ##### 三种语法格式
 
 1. 对象：：实例方法名
+   - (arg)->expr.instanceMethod(arg)    => expr::instanceMethod
 2. 类：：静态方法名
    - 注意事项
    - 调用类的静态方法
@@ -64,14 +181,50 @@
 3. 类：：实例方法名
    - 使用规则
    - 第一个参数是实例方法的调用者，第二个参数是实例方法的参数时 例如：String::equals
+   - (arg0，a)->arg0.instanceMethod(a)    arg0是ClassName类型的    则=>ClassName::instanceMethod
+
+
+
+例如：
+
+~~~java
+Apple::getWeight   没有括号，因为实际上并没有调用这个方法
+  
+(Apple a)->a.getWeight()的快捷写法
+~~~
+
+
+
+
 
 ---
 
 #### 构造器引用
 
+对于一个现有的构造函数，可以利用它的名称和关键字new来创建它的一个方法引用
+
 1. ClassName::new 
-2. 创建对象的意思
-3. 需要
+2. 功能：创建对象的意思
+
+~~~java
+//不带参数的构造函数
+Supplier<Apple> c1= Apple::new;
+Apple a1= c1.get();
+
+//等价于
+Supplier<Apple> c1 =()->new Apple();    //构建Lambda表达式
+Apple a1=c1.get();					  //调用get方法会产生一个Apple实例
+
+
+//带参数的构造函数
+Function<Integer,Apple> c2= Apple::new;
+Apple a2=c2.apply(100);
+
+Function<Integer,Apple> c2=(Integer i)->new Apple(i);
+Apple a2=c2.apply(100);
+~~~
+
+
 
 ---
 
@@ -81,7 +234,36 @@ Type::new
 
 ---
 
+
+
+#### 函数式编程范式基石
+
+1. 没有共享的可变数据
+2. 将方法或函数(即:代码)传递给其他方法的能力
+
+
+
+---
+
+
+
 #### Stream
+
+流：一系列数据项，一次只生成一项。程序可以从输入流中一个一个读取数据项，然后以同样的方式将数据项写入输出流。一个程序的输出流可能是另一个程序的输入流
+
+可以看作：比较**花哨的迭代器**
+
+
+
+##### 行为参数化
+
+用行为参数化把代码传递给方法
+
+Stream API就是构建在通过**传递代码**使操作行为实现参数化的思想上
+
+
+
+
 
 1. 对集合、数组等数据进行操作
 2. 一系列流水线式的中间操作、数据源并不会改变，会产生一个新的流
@@ -90,12 +272,32 @@ Type::new
 5. 操作是延迟执行的
    - 触发终止操作后才会去执行一系列中间操作
 
-#### 并行流
+##### 并行流
 
 		1. fork/join框架   java7
-  		2. parallel并行流   底层fork/join
+		2. parallel并行流   底层fork/join
+
+
+
+##### Stream与Collection
+
+Collection处理元素需要使用for-each这样的循环来迭代处理元素，这种方式称为**外部迭代**；
+
+- Collection主要是为了**存储和访问数据**
+
+Stream的数据处理是在库内部进行的，这种思想称为**内部迭代**；
+
+- Stream主要用于描述**对数据的计算**
+
+
 
 ---
+
+
+
+
+
+
 
 #### Optional
 
@@ -107,12 +309,20 @@ Type::new
 
 #### 接口中默认方法
 
+用default修饰的方法，并且带有方法体；实现接口的类里面可以覆写/不覆写默认方法
+
+
+
 1. default修饰
 2. 可以实现默认方法
 3. 默认方法可以有多个
-4. 接口中还可以有静态方法
+4. 接口中可以包含默认方法，还可以有静态方法
 
 类优先、接口冲突
+
+
+
+作用：支持库设计师，让他们能够写出更容易改进的接口；而且，真正需要编写默认方法的程序员很少很少
 
 #### 新时间API
 
