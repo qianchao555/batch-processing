@@ -54,6 +54,10 @@ public class DishTest {
 
 
         List<Integer> numbers1 = Arrays.asList(1, 2, 3);
+
+        Integer reduce = numbers1.stream().reduce(0, (a, b) -> a * b);
+        System.out.println(reduce);
+
         List<Integer> numbers2 = Arrays.asList(3, 4);
 
         List<Integer[]> collect = numbers1.stream().flatMap(i -> numbers2.stream().map(j -> new Integer[]{i, j})).collect(Collectors.toList());
