@@ -28,7 +28,7 @@ public class MultiThreadProcessDataTest {
             moneyInteger.add((int) (Math.random() * i));
         }
         //list太大需要分割成块，来对每一个块分别计算
-        List<List<Integer>> blockLists = splitList(moneyInteger, 1500);
+        List<List<Integer>> blockLists = splitList(moneyInteger, 150);
 
         //统计最终结果
         List<Integer> sumList = new ArrayList<>();
