@@ -1,4 +1,4 @@
-package com.java8.optional;
+package com.java8.optionaldemo;
 
 import java.util.Objects;
 

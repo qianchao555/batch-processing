@@ -1,12 +1,15 @@
 package com.java8;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.counting;
-import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.*;
 
 /**
  * @ClassName DishTest
@@ -80,7 +83,51 @@ public class DishTest {
                 .collect(groupingBy(Dish::getDishType, counting()));
         System.out.println(collect);
 
+
+        //分区函数partitionBy:将List分为2个list,即：一个符合分区条件的list,一个不符合分区条件的list
+        //将菜单按照素食和非素食分开
+        System.out.println("将菜单按照素食和非素食分开：");
+        Map<Boolean, List<Dish>> partitionVegetarian = menu.stream()
+                .collect(partitioningBy(Dish::isVegetarian));
+        System.out.println(partitionVegetarian);
+
+        //多级分组
+        menu.stream()
+                .collect(partitioningBy(Dish::isVegetarian,partitioningBy(x->x.getCalories()>500)));
+
+        int x1=10_000;
+        System.out.println(x1);
+
+
+
+
+
     }
+
+    /**
+     * 并行流
+     */
+    @Test
+    public void testParStream(){
+        List<Dish> menu = Arrays.asList(
+                new Dish("pork", false, 800, Dish.DishType.MEAT),
+                new Dish("beef", false, 700, Dish.DishType.MEAT),
+                new Dish("chicken", false, 400, Dish.DishType.MEAT),
+                new Dish("french fries", true, 530, Dish.DishType.OTHER),
+                new Dish("rice", true, 350, Dish.DishType.OTHER),
+                new Dish("season fruit", true, 120, Dish.DishType.OTHER),
+                new Dish("pizza", true, 550, Dish.DishType.OTHER),
+                new Dish("prawns", false, 300, Dish.DishType.FISH),
+                new Dish("salmon", false, 450, Dish.DishType.FISH));
+
+        //ForkJoin
+
+
+    }
+
+
+
+
 
 
 }

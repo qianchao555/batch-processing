@@ -1,4 +1,4 @@
-package com.java8.optional;
+package com.java8.optionaldemo;
 
 import org.junit.jupiter.api.Test;
 
@@ -58,6 +58,20 @@ public class Demo {
         Optional<List<String>> strings = employeeList.map(list -> list.stream().map(Employee::getName).collect(Collectors.toList()));
         System.out.println(strings.get());
 
+    }
+
+    @Test
+    public void test4(){
+        Car car=new Car();
+
+        //方式一
+        Optional<Car> optionalCar1=Optional.empty();
+
+        //方式二
+        Optional<Car> optionalCar2 = Optional.of(car);
+
+        //方式三:推荐
+        Optional<Car> optionalCar3 = Optional.ofNullable(car);
     }
 
 }
