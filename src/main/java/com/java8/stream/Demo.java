@@ -25,21 +25,40 @@ public class Demo {
     @Test
     public void test1() {
         //集合提供的stream()
-        List<String> list = new ArrayList<>();
-        Stream<String> stream1 = list.stream();
+//        List<String> list = new ArrayList<>();
+//        Stream<String> stream1 = list.stream();
 
         //Arrays.stream()获取流
-        Employee[] emps = new Employee[10];
-        Stream<Employee> stream2 = Arrays.stream(emps);
-
-        //Stream.of()
+//        Employee[] emps = new Employee[10];
+//        Stream<Employee> stream2 = Arrays.stream(emps);
+//
+//        //Stream.of()
         Stream<String> stream3 = Stream.of("abc", "bbc", "ccc");
+        stream3.forEach(System.out::print);
+
+        //抛异常：流只能遍历一次，遍历完后，这个流就被消费掉 关闭了
+//        stream3.forEach(System.out::print);
+
+
+
+        List<String> list = Arrays.asList("abc", "bbc", "ccc");
 
 //        //无限流--迭代
-//        Stream.iterate(0, (x) -> x + 2)
+        Stream.iterate(0, (x) -> x + 2)
+                .limit(7)
+                .map(x -> list.stream().collect(Collectors.toList()))
+                .forEach(System.out::println);
+        System.out.println("------------------------");
+
+        //每一个元素映射成想要的
+
+//        List<List<String>> collect = Stream.iterate(0, (x) -> x + 2)
 //                .limit(7)
-//                .forEach(System.out::println);
-//        System.out.println("------------------------");
+//                //每一个元素映射成想要的
+//            .map(x -> list.stream().collect(Collectors.toList()))
+//                .filter(a -> !a.isEmpty())
+//                .collect(Collectors.toList());
+
 //        //无限流--生成
 //        Stream.generate(()->Math.random())
 //                .limit(7)
