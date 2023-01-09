@@ -24,11 +24,11 @@ public class MultiThreadProcessDataTest {
     public static void main(String[] args) {
         List<Integer> moneyInteger = new ArrayList<>();
 
-        for (int i = 0; i <= 1500; i++) {
+        for (int i = 0; i < 50; i++) {
             moneyInteger.add((int) (Math.random() * i));
         }
         //list太大需要分割成块，来对每一个块分别计算
-        List<List<Integer>> blockLists = splitList(moneyInteger, 1500);
+        List<List<Integer>> blockLists = splitList(moneyInteger, 10);
 
         //统计最终结果
         List<Integer> sumList = new ArrayList<>();
