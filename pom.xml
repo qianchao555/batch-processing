@@ -112,6 +112,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.16.6</version>
+        </dependency>
+
+
         <!--mybatis-plus-->
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -257,6 +265,11 @@
 <!--            <version>2.0.0.RELEASE</version>-->
 <!--        </dependency>-->
 
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.11</version>
+        </dependency>
 
 
 
