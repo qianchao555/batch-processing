@@ -57,7 +57,7 @@ public class ChatGptDemo001 {
             //发送请求
             HttpResponse response = HttpRequest.post("https://api.openai.com/v1/images/generations")
                     .headerMap(headers, false)
-                    .bearerAuth("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")
+                    .bearerAuth("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")
                     .body(String.valueOf(json))
                     .timeout(5 * 60 * 1000)
                     .execute();
