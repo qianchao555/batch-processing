@@ -1,7 +1,3 @@
-/*
- * Copyright (c) ACCA Corp.
- * All Rights Reserved.
- */
 package com.worksummary.year2022;
 
 import com.baomidou.mybatisplus.annotation.TableField;

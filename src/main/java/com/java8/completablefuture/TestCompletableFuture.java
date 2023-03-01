@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
  * @ClassName TestCompletableFuture
  * @Author qianchao
  * @Date 2022/12/29
- * @Version OPRA V1.0
+ * @Version   V1.0
  **/
 public class TestCompletableFuture {
     public static void main(String[] args) {
