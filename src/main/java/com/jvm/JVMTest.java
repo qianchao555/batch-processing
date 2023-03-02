@@ -41,4 +41,21 @@ public class JVMTest implements WebMvcConfigurer {
         }
     }
 
+
+    /**
+     * 测试 对象优先分配Eden区
+     * VM参数：-verbose:gc -Xms20M -Xmx20M -Xmn10M -XX:+PrintGCDetails -XX:SurvivorRatio=8
+     * -XX:+UseConcMarkSweepGC   启用CMS垃圾收集器观测与默认垃圾收集器的区别
+     */
+    @Test
+    public void testAllocation() throws InterruptedException {
+        int _1MB = 1024 * 1024;
+        byte[] allocation1, allocation2, allocation3, allocation4;
+        allocation1 = new byte[2 * _1MB];
+        allocation2 = new byte[2 * _1MB];
+        allocation3 = new byte[2 * _1MB];
+        allocation4 = new byte[4 * _1MB];
+        Thread.sleep(3000);
+    }
+
 }
