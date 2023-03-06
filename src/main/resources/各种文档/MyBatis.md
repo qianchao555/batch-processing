@@ -199,6 +199,18 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
 
    - 在JDBC编码的过程中我们创建了Connection、ResultSet等资源，这些资源在使用完毕之后是一定要进行关闭的。关闭的过程中遵循从里到外的原则
 
+### 总体架构设计
+
+![image-20230306170448304](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202303061704172.png)
+
+
+
+
+
+
+
+
+
 
 
 ---
