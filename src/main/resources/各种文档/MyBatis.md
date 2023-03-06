@@ -205,9 +205,42 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
 
 
 
+#### 接口层
+
+和数据库交互的方式，Mybatis和数据库交互有2种方式
+
+1. 使用传统的Mybatis提供的API
+2. **使用Mapper接口**
+
+使用Mapper接口中：将<mapper>节点抽象为一个接口，而这个接口中声明的方法跟<mapper>节点的<select |update|delete|insert>节点项对应，即节点的id值为Mapper接口中方法的名称
 
 
 
+#### 数据处理层
+
+数据处理层可以说是Mybatis的核心，它主要完成2个功能
+
+1. 通过传入参数构建动态SQL语句
+   - Mybatis通过传入的参数值，使用Ognl来动态地构造SQL语句，使得Mybatis有很强的灵活性和扩展性
+   - 参数映射：指的是对于Java数据类型和JDBC数据类型之间的转换。其中，查询阶段将Java类型的数据转换成JDBC类型的数据，通过preparedStatement.setXXX来设值。另外一个是对resultset查询结果集的JdbcType数据转换从Java数据类型
+2. SQL语句的执行以及封装查询结果集成List<E>
+   - 动态SQL语句生成后，Mybatis将执行sql语句，并将可能返回的结果集转换成List<E>。
+   - Mybatis对结果集的处理中，支持结果集一对多、多对一的转换，并且有2种支持，一个是嵌套语句的查询、一个是嵌套结果集的查询
+
+
+
+#### 框架支持层
+
+1. 事物管理机制
+2. 连接池管理机制
+3. 缓存机制
+4. SQL语句的配置方式
+
+
+
+#### 引导层
+
+是配置和启动Mybatis配置信息的方式，支持xml配置文件和Java API方式
 
 
 
@@ -356,30 +389,7 @@ ${}：是字符串替换，#{}：是预处理
 
 
 
-### Mybatis分页
 
-Mybatis分页是基于内存的分页，即先查询出所有记录，再按偏移量和limit取出结果，在大数据量的情况下这样的分页是没有用的
-
-这里指的是JVM内存
-
-#### Mybatis如何分页
-
-mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行的内存分页，而非物理分页。可以在sql内直接书写带有物理分页参数了完成分页功能，也可以使用分页插件来完成物理分页
-
-1. RowBounds：内存分页，不太实用
-2. PageHelper分页插件，自定义分页插件，进行物理分页
-2. Mybatis-plus分页组件：
-2. Spring-data分页：
-
-还可以自定义Page，组合Mybatis-plus的分页信息、还可以将Mybatis-plus的分页信息 封装后 转换为spring-data的分页
-
-
-
-#### Mybatis分页插件原理
-
-基本原理是：使用mybatis提供的插件接口，实现自定义插件，在插件的拦截方法内拦截待执行的sql，然后重写sql，根据dialect方言，添加对应的物理分页语句和物理分页参数
-
----
 
 
 
@@ -426,7 +436,7 @@ Mybatis数据源DataSource对象的创建发生在Mybatis初始化过程中，My
 
 #### 为什么使用连接池
 
-创建一个java.sql.Connection对象是一个耗时的过程，可能创建一个Connection对象就需要200-300毫秒，这对于计算机来说是非常奢侈的了
+创建一个java.sql.**Connection对象是一个耗时的过程**，可能创建一个Connection对象就需要200-300毫秒，这对于计算机来说是非常奢侈的了
 
 若仅仅创建一个Connection连接就需要那么大代价，那么在web应用中，用户的每一个请求就操作一次数据库，那么当有10000人在线用户，并发操作的话，仅仅创建Connection对象就需要10000*250ms=2500s=41分钟！！！！
 
@@ -757,9 +767,31 @@ MyBatis二级缓存的一个重要特点：松散的Cache缓存管理和维护
 
 ### MyBatis动态sql
 
-Mybatis动态sql可以在Xml映射文件内以标签的形式编写动态sql，执行原理是根据表达式的值完成逻辑判断，并且动态拼接sql功能
+Mybatis动态sql可以在Xml映射文件内以标签的形式编写动态sql，**执行原理是根据表达式的值完成逻辑判断，并且动态拼接sql功能**
 
 sql标签有：trim、where、set、foreach、if、choose、when、otherwise、bind
+
+
+
+#### 动态sql原理
+
+关于动态SQL的接口和类：
+
+SqlNode接口：简单理解就是xml中的每一个标签，例如sql中的update、trim、if等等
+
+SqlSouce：Sql源接口，代表从xml文件或注解映射的sql内容。主要用于构建BoundSql
+
+BoundSql类：封装Mybatis最终产生的sql类，包括sql语句、参数、参数源数据等等参数
+
+XNode：一个Dom API中的Node接口的扩展类
+
+BaseBuilder接口以及实现类：这些Builder用于构造sql
+
+
+
+
+
+
 
 ---
 
@@ -792,7 +824,9 @@ list<Stu> stuList=mapper.selectLike(val);
 
 
 
-### Mybatis如何扩展一个mybatis插件
+### Mybatis插件机制
+
+mybatis提供了一个插件的功能，**虽然叫插件，但是它的实质是拦截器的功能**
 
 Mybatis插件存在的目的：相当于JavaWeb中的拦截器，可拦截要操作的四大对象，包装对象额外添加内容，使得Mybatis的灵活性更强
 
@@ -800,21 +834,35 @@ Mybatis支持用插件对四大核心对象进行拦截，对mybatis来说插件
 
 #### 四大对象
 
-Executor：执行增删改查操作
+Executor(update,query,flushStatements,commit,rollback,close,isClosed,getTransaction)：执行增删改查操作，**拦截执行器的方法**
 
-StatementHandler：处理sql语句预编译，用于执行sql语句
+ParameterHandler(getParameterObject,setParameters)：处理SQL的参数对象，**拦截参数的处理**
 
-ParameterHandler：处理SQL的参数对象
+ResultSetHandler(handleResultSets,handleOutputParameters)：处理SQL的返回结果集，**拦截结果集的处理**
 
-ResultSetHandler：处理SQL的返回结果集
+StatementHandler(prepare,parameterize,batch,update,query)：处理sql语句预编译，用于执行sql语句。**拦截sql语法构建的处理**
 
-创建动态代理的时候，是按照插件配置顺序创建层层代理对象，执行目标方法是按照逆向顺序执行
+
+
+
 
 #### 插件原理
 
-1. Mybatis的插件借助责任链模式进行拦截的处理
+Mybatis采用责任链模式，通过动态代理组织多个拦截器(插件)，通过这些拦截器可以改变mybatis的默认行为(例如sql重写之类的)
+
+1. Mybatis的插件借助**责任链模式**进行拦截的处理
 2. 使用动态代理对目标对象进行包装，达到拦截的目的
 3. 作用于Mybatis的作用域对象之上
+
+
+
+#### 代理链的生成
+
+Mybatis支持对Executor、StatementHandler、ParameterHandler和ResultSetHandler进行拦截，也就是说会对这4种对象进行代理。通过查看Configuration类的源代码我们可以看到，每次都对目标对象进行代理链的生成
+
+创建动态代理的时候，是按照插件配置顺序创建层层代理对象，执行目标方法是按照逆向顺序执行
+
+
 
 
 
@@ -852,7 +900,34 @@ SqlSession ->MapperProxy(被代理对象的方法的访问都会落实到代理�
 
 
 
+---
 
+
+
+### Mybatis分页-插件分页
+
+Mybatis的分页功能很弱，是基于内存的分页，即先查询出所有记录，再按偏移量和limit取出结果，在大数据量的情况下这样的分页是没有用的
+
+这里指的是JVM内存
+
+
+
+#### Mybatis如何分页
+
+mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行的内存分页，而非物理分页。可以在sql内直接书写带有物理分页参数了完成分页功能，也可以使用分页插件来完成物理分页
+
+1. RowBounds：内存分页，不太实用
+2. PageHelper分页插件，自定义分页插件，进行物理分页
+3. Mybatis-plus分页组件：
+4. Spring-data分页：
+
+还可以自定义Page，组合Mybatis-plus的分页信息、还可以将Mybatis-plus的分页信息 封装后 转换为spring-data的分页
+
+
+
+#### Mybatis分页插件原理
+
+基本原理是：使用mybatis提供的插件接口，实现自定义插件，在插件的拦截方法内拦截待执行的sql，然后重写sql，根据dialect方言，添加对应的物理分页语句和物理分页参数
 
 
 
