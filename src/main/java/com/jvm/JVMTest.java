@@ -1,5 +1,6 @@
 package com.jvm;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import org.junit.Test;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -56,6 +57,33 @@ public class JVMTest implements WebMvcConfigurer {
         allocation3 = new byte[2 * _1MB];
         allocation4 = new byte[4 * _1MB];
         Thread.sleep(3000);
+    }
+
+    static abstract class Human {
+    }
+    static class Man extends Human {
+    }
+    static class Woman extends Human {
+    }
+
+    public void sayHello(Human guy) {
+        System.out.println("hello,guy!");
+    }
+    public void sayHello(Man guy) {
+        System.out.println("hello,gentleman!");
+    }
+    public void sayHello(Woman guy) {
+        System.out.println("hello,lady!");
+    }
+    @Test
+    public void testStaticDispath(){
+
+
+        Human man = new Man();
+        Human woman = new Woman();
+        JVMTest sr = new JVMTest();
+        sr.sayHello((Man) man);
+        sr.sayHello((Woman) woman);
     }
 
 }
