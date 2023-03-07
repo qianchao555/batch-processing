@@ -480,15 +480,33 @@ PooledConnection对象内持有一个真正的数据库连接java.sql.Connection
 
 
 
-#### 一级缓存
+#### 一级缓存（本地缓存）
 
-对于SqlSession级别的缓存称为一级缓存
+对于Session(SqlSession)级别的缓存称为一级缓存
+
+**Mybatis会在表示会话的SqlSession对象中将一个简单的缓存，将每次查询到的结果缓存起来。当下次查询的时候，如果判断有一个完全一样的查询，会直接从缓存中将结果取出，不需要再进行一次数据库查询了。**
+
+
 
 ![image-20221020162658425](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210201627715.png)
 
-1. SqlSession对象只是一个门面，真正干活的是Executor执行器，Mybatis将缓存和对缓存相关的操作封装在Cache接口中，SqlSession、Executor、Cache之间的关系图为：
+1. SqlSession对象只是一个门面，真正干活的是Executor执行器，当创建一个SqlSession对象时，Mybatis会为这个SqlSession对象创建一个新的Excutor执行器，缓存信息就维护在这个Excutor中。
+1. Mybatis将缓存和对缓存相关的操作封装在Cache接口中，SqlSession、Executor、Cache之间的关系图为：
 
 ![image-20221020162958732](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210201630530.png)
+
+
+
+Executor接口的实现类BaseExecutor中拥有一个Cache接口的实现类PerpetualCache**，对于BaseExecutor对象而言，它将使用PerpetualCache对象维护缓存**。
+
+~~~java
+
+public abstract class BaseExecutor implements Executor {
+    private static final Log log = LogFactory.getLog(BaseExecutor.class);
+    ....
+    protected PerpetualCache localCache;
+   ........
+~~~
 
 
 
@@ -500,9 +518,27 @@ PooledConnection对象内持有一个真正的数据库连接java.sql.Connection
 
 SqlSession级别的一级缓存实际上就是使用PerpetualCache维护的，底层就是一个普通的HashMap来存放的。
 
-Cache最核心的实现其实就是一个Map，将本次查询使用的特征值作为key，将查询结果作为value存储到Map中。现在最核心的问题出现了：怎样来确定一次查询的特征值？换句话说就是：怎样判断某两次查询是完全相同的查询？也可以这样说：如何确定Cache中的key值？
+~~~java
+public class PerpetualCache implements Cache {
+    private final String id;
+    private final Map<Object, Object> cache = new HashMap();
 
-MyBatis认为，对于两次查询，如果以下条件都完全一样，那么就认为它们是完全相同的两次查询：
+    public PerpetualCache(String id) {
+        this.id = id;
+    }
+    ......
+
+~~~
+
+
+
+
+
+##### SqlSession一级缓存的工作流程
+
+一级缓存中，Cache最核心的实现其实就是一个Map，将本次查询使用的特征值作为key，将查询结果作为value存储到Map中。现在最核心的问题出现了：怎样来确定一次查询的特征值？换句话说就是：怎样判断某两次查询是完全相同的查询？也可以这样说：如何确定Cache中的key值？
+
+MyBatis认为，**对于两次查询，如果以下条件都完全一样，那么就认为它们是完全相同的两次查询**：
 
 - 传入的 statementId
 - 查询时要求的结果集中的结果范围 （结果的范围通过rowBounds.offset和rowBounds.limit表示）
@@ -511,12 +547,12 @@ MyBatis认为，对于两次查询，如果以下条件都完全一样，那么�
 
 **现在分别解释上述四个条件**：
 
-- 传入的statementId，对于MyBatis而言，你要使用它，必须需要一个statementId，它代表着你将执行什么样的Sql；
-- MyBatis自身提供的分页功能是通过RowBounds来实现的，它通过rowBounds.offset和rowBounds.limit来过滤查询出来的结果集，这种分页功能是基于查询结果的再过滤，而不是进行数据库的物理分页；
-- 由于MyBatis底层还是依赖于JDBC实现的，那么，对于两次完全一模一样的查询，MyBatis要保证对于底层JDBC而言，也是完全一致的查询才行。而对于JDBC而言，两次查询，只要传入给JDBC的SQL语句完全一致，传入的参数也完全一致，就认为是两次查询是完全一致的。
-- 上述的第3个条件正是要求保证传递给JDBC的SQL语句完全一致；第4条则是保证传递给JDBC的参数也完全一致；即3、4两条MyBatis最本质的要求就是：调用JDBC的时候，传入的SQL语句要完全相同，传递给JDBC的参数值也要完全相同。
+1. 传入的statementId，对于MyBatis而言，你要使用它，必须需要一个statementId，**它代表着你将执行什么样的Sql**
+2. MyBatis自身提供的分页功能是通过RowBounds来实现的，它通过rowBounds.offset和rowBounds.limit来过滤查询出来的结果集，这种分页功能是基于查询结果的再过滤，而不是进行数据库的物理分页；
+3. 由于MyBatis底层还是依赖于JDBC实现的，那么，对于两次完全一模一样的查询，MyBatis要保证对于底层JDBC而言，也是完全一致的查询才行。而对于JDBC而言，两次查询，只要传入给JDBC的SQL语句完全一致，传入的参数也完全一致，就认为是两次查询是完全一致的。
+4. 上述的第3个条件正是要求保证传递给JDBC的SQL语句完全一致；第4条则是保证传递给JDBC的参数也完全一致；即3、4两条MyBatis最本质的要求就是：调用JDBC的时候，传入的SQL语句要完全相同，传递给JDBC的参数值也要完全相同。
 
-综上所述,CacheKey由以下条件决定：**statementId + rowBounds + 传递给JDBC的SQL + 传递给JDBC的参数值**；
+综上所述,**Cache-Key**由以下条件决定：**statementId + rowBounds + 传递给JDBC的SQL + 传递给JDBC的参数值**；
 
 ##### CacheKey对象创建
 
@@ -531,15 +567,15 @@ MyBatis认为，对于两次查询，如果以下条件都完全一样，那么�
 
 ##### 一级缓存的生命周期
 
-MyBatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个新的Executor对象，Executor对象中持有一个新的PerpetualCache对象；当会话结束时，SqlSession对象及其内部的Executor对象还有PerpetualCache对象也一并释放掉
+MyBatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个新的Executor对象，Executor对象中持有一个新的PerpetualCache对象；**当会话结束时，SqlSession对象及其内部的Executor对象还有PerpetualCache对象也一并释放掉**
+
+
 
 **一级缓存是一个粗粒度的缓存，没有更新缓存和缓存过期的概念**
 
-1. 默认情况下，mybatis只启用了本地的会话缓存，它仅仅对一个会话中的数据进行缓存。这就是Mybatis的一级缓存，其作用域是SqlSession
+1. **默认情况下，mybatis只启用了本地的会话缓存，它仅仅对一个会话中的数据进行缓存**。这就是Mybatis的一级缓存，其作用域是SqlSession
 
-2. 一级缓存运行过程：MyBatis一次会话: 一个SqlSession对象中创建一个本地缓存(local cache)，对于每一次查询，都会尝试根据查询的条件去本地缓存中查找是否在缓存中，如果在缓存中，就直接从缓存中取出，然后返回给用户；否则，从数据库读取数据，将查询结果存入缓存并返回给用户
-
-2. 但是一旦执行新增或更新或删除操作，缓存就会被清除
+2. 一级缓存运行过程：MyBatis一次会话: 一个SqlSession对象中创建一个本地缓存(local cache)，对于每一次查询，都会尝试根据查询的条件去本地缓存中查找是否在缓存中，如果在缓存中，就直接从缓存中取出，然后返回给用户；否则，从数据库读取数据，将查询结果存入缓存并返回给用户，但是，一旦执行新增或更新或删除操作，缓存就会被清除
 
 3. ~~~xml
    <!--
@@ -550,21 +586,57 @@ MyBatis在开启一个数据库会话时，会创建一个新的SqlSession对象
    </select>
    ~~~
 
-4. 
-
-6. 一级缓存没有过期时间，只有生命周期，mybatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个Executor对象，Executor对象中持有一个PerpetualCache对象（HashMap本地缓存），如果SqlSession调用了close()则会释放掉一级缓存PerpetualCache对象，一级缓存将不可用。在这个SqlSession中执行了update、delete、insert操作，都会清空PerpetualCache对象里面的数据，但是该对象可以继续使用
+6. 一级缓存没有过期时间，只有生命周期，mybatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个Executor对象，Executor对象中持有一个PerpetualCache对象（HashMap本地缓存），如果SqlSession调用了close()则会释放掉一级缓存PerpetualCache对象，一级缓存将不可用。在这个SqlSession中执行了update、delete、insert操作，都会清空PerpetualCache对象里面的数据，但是该SqlSession对象可以继续使用
 
 
 
-#### 二级缓存
+##### 一级缓存的性能分析
+
+1. 如果一直使用某一个SqlSession对象查询数据，这样会不会导致HashMap过大，从而导致OOM?
+
+答：为什么这样设计：
+
+1. 一般SqlSession的生成时间很短，一般情况下，使用一个SqlSession对象执行的操作不会太多，执行完就会消亡
+2. 对于一个SqlSession而言，只有执行Update操作(update、insert、delete)，都会将这个SqlSession对象中对应的一级缓存情况，所以一般情况下不会出现缓存过大导致OOM问题
+3. 可以手动释放SqlSession对象中的缓存
+
+
+
+##### SqlSession的生命周期
+
+SqlSession应该存活于一个业务请求中，处理完整个请求后，会关闭这条连接。即：请求数据库处理完**一整个事务**的过程
+
+比如：在加了事务的一个方法中，存在多次请求数据库的情况，但是，只会创建一个SqlSession连接
+
+
+
+
+
+#### 二级缓存（全局缓存）
+
+Mybatis二级缓存是Application级别的缓存，它可以提高数据库查询的效率，以提升应用的性能。但是并不是简单地对整个Application就只有一个Cache对象，而是更加细分到Mapper级别，即：每一个Mapper都可以拥有一个Cache对象
+
+
 
 ##### mybatis二级缓存出现的原因
 
 1. 一级缓存中不同的SqlSession进行相同SQL查询的时候，是查询两次数据库，显然是一种浪费，既然sql相同那就没有必要再次查库了，直接利用缓存数据即可，这种思想就是Mybatis二级缓存的初衷
 
-2. Spring整合Mybatis后，每次查询后都要进行关闭SqlSession（同一个线程未开启事务的情况下每次查询会关闭旧的sqlSession而创建新的SqlSession。开启事务情况下，spring使用ThreadLocal获取当前资源绑定同一个SqlSession，此时一级缓存是有效的），关闭之后，数据被清空。所有Mybatis和Spring整合之后，一级缓存就没有意义了。如果开启二级缓存，关闭SqlSession后，会把该SqlSession一级缓存中的数据添加到mapper namespace的二级缓存中。这样，缓存在SqlSession关闭之后依然存在
+2. Spring整合Mybatis后，每次查询后都要进行关闭SqlSession（同一个线程未开启事务的情况下每次查询会关闭旧的sqlSession而创建新的SqlSession。开启事务情况下，spring使用ThreadLocal获取当前资源绑定同一个SqlSession，此时一级缓存是有效的），关闭之后，数据被清空。所以Mybatis和Spring整合之后，一级缓存就没有意义了。如果开启二级缓存，关闭SqlSession后，会把该SqlSession一级缓存中的数据添加到mapper namespace的二级缓存中。这样，缓存在SqlSession关闭之后依然存在
 
-3. mybatis默认只启动了本地的会话缓存，即：一级缓存。要启用全局的二级缓存，需要在xml文件中 添加一行：<cache/>  或者全局缓存配置
+3. Mybatis整合Spring后，一级缓存失效
+
+   - 结论：Spring将MyBatis的DefaultSqlSession类替换成了SqlSessionTemplate。
+
+     MyBatis的一级缓存是基于SqlSession来实现的，对应MyBatis中sqlSession接口的默认实现类是DefaultSqlSession，如果执行的SQL相同时，并且使用的是同一个SqlSession对象，那么就会触发对应的缓存机制。
+
+     但是在Spring整合MyBatis后，Spring使用MyBatis不再是直接调用MyBatis中的信息，而是通过调用调用mybatis-spring.jar中的类，继而达到间接调用MyBatis的效果。但在mybatis-spring.jar中，引入了一个SqlSessionTemplate类，它和Spring的事务管理器共同配合，创建对应的SqlSession连接。
+
+     **即在没有添加@Transactional注解的情况下，每调用一次查询SQL，就会通过SqlSessionTemplate去创建sqlSession，即相当于新创建一次连接，故而每次查询在调试结果看来就是一级缓存失效。**
+
+     如果我们添加了@Transactional注解，Spring在执行了第一次查询后，会将当前线程的事务情况存储到synchronizations 的集合中，当第二次再执行查询的时候，能够在缓存中直接获取到当前的事务情况（包含sqlSession对象），即不会再去调用openSession方法，继而创建一个新的sqlSession对象，而是使用缓存中的sqlSession对象。这就保证了在添加@Transactional注解的情况下，能够走MyBatis的一级缓存
+
+4. mybatis默认只启动了本地的会话缓存，即：一级缓存。要启用全局的二级缓存，需要在xml文件中 添加一行：<cache/>  或者全局缓存配置
 
    ~~~xml
    <!--全局配置方式  mybatis-config.xml 文件中配置-->
@@ -613,15 +685,19 @@ CachingExecutor对于查询请求，会判断该查询请求在Application级别
 
 CachingExecutor是Executor的装饰者，以增强Executor的功能，使其具有缓存查询的功能。（采用Mybatis插件功能对Executor进行增强）
 
-##### 二级缓存的划分
+
+
+
+
+##### Mybatis二级缓存的划分
 
 Mybatis并不是简单的对整个Application就有一个Cache缓存对象，它将缓存划分的更细，即：Mapper级别 。即：每一个Mapper都可以拥有一个Cache对象，也可以多个Mapper共用一个Cache缓存对象
 
-1. 为每一个Mapper分配一个Cache缓存对象（使用\<cache>节点配置）
-   - Mybatis将Application级别的二级缓存细分到Mapper级别，即：对于每一个Mapper.xml，如果在其中使用了\<cache>节点，则会为这个Mapper创建一个Cache缓存对象
+1. **为每一个Mapper分配一个Cache缓存对象（使用\<cache>节点配置）**
+   - Mybatis将Application级别的二级缓存细分到Mapper级别，即：**对于每一个Mapper.xml**，如果在其中使用了\<cache>节点，则会为这个Mapper创建一个Cache缓存对象
    - ![image-20221019231215583](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192312703.png)
 2. 多个Mapper共用一个Cache缓存对象（使用\<cache-ref>节点配置）
-   - 想让多个Mapper公用一个Cache的话，可以使用\<cache-ref namespace="">节点，来指定这个Mapper使用那一个Mapper的缓存
+   - 想让**多个Mapper公用一个Cache**的话，可以使用\<cache-ref namespace="">节点，来指定这个Mapper使用那一个Mapper的缓存
    - ![image-20221019231237319](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/202210192312414.png)
 
 
@@ -646,15 +722,7 @@ Mybatis并不是简单的对整个Application就有一个Cache缓存对象，它
 2. 开启Mapper分开关：在Mapper中配置\<cache> 或\<cache-ref>节点，并且有效
 3. \<select>节点配置参数：useCache=true
 
-##### mybatis整合SpringBoot
 
-1. mybatis整合Springboot后，直接在Mapper.xml中添加 \<cache> .... \</cache> 表示开启二级缓存
-
-2. Mapper.xml里面 的select查询都具有缓存功能
-
-3. 可以针对单个\<select id="xxx"   useCache="false">，取消单个查询的二级缓存
-
-   
 
 
 
@@ -676,9 +744,9 @@ MyBatis对二级缓存的设计非常灵活，它自己内部实现了一系列�
 
 总之有三种选择：
 
-1. Mybatis自生提供的二级缓存机制实现
-2. 用户自定义Cache接口实现
-3. 整个第三方内存缓存库集成
+1. **Mybatis自生提供的二级缓存机制实现**
+2. **用户自定义Cache接口实现**
+3. **整个第三方内存缓存库集成**
 
 
 
@@ -728,7 +796,7 @@ MyBatis对二级缓存的设计非常灵活，它自己内部实现了一系列�
 
 总结来看，就是：
 
-对于某些使用了 join连接的查询，如果其关联的表数据发生了更新，join连接的查询由于先前缓存的原因，导致查询结果和真实数据不同步；
+对于某些使用了 join连接的查询，如果其关联的表数据发生了更新，join连接的查询由于先前缓存的原因，导致查询结果和真实数据不同步；出现脏读的情况！！！
 
 从MyBatis的角度来看，这个问题可以这样表述：
 
@@ -935,11 +1003,27 @@ mybatis使用RowBounds对象进行分页，它是针对ResultSet结果集执行�
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Mybatis-Plus
 
 ### 特性
 
-1. 无侵入：只做增强不做改变
+1. 无侵入：只在Mybatis的基础上做增强，不做改变
 2. 强大的curd：内置通用Mapper、通用Service
    - 可以不使用Mybatis-plus提供的 IService
    - 可以自己定义顶层Service，结合mapper，完成Service的框架封装
@@ -983,6 +1067,10 @@ MyBats-Plus在一开始就给大家提供了很多通用的方法，在DefaultSq
 
 
 -----
+
+
+
+
 
 ## SpringData
 
