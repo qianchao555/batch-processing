@@ -1022,6 +1022,24 @@ replication bufffer：
 
 
 
+#### 主-从-从
+
+并不是1主2从模式，而是从库还有从库的设计
+
+主从库模式中，所有的从库都是和主库连接，所有的全量复制也都是和主库进行的。现在，我们可以通过“主 - 从 - 从”模式**将主库生成 RDB 和传输 RDB 的压力，以级联的方式分散到从库上**
+
+简单来说，我们在部署主从集群的时候，可以手动选择一个从库（比如选择内存资源配置较高的从库），用于级联其他的从库。然后，我们可以再选择一些从库（例如三分之一的从库），在这些从库上执行如下命令，让它们和刚才所选的从库，建立起主从关系
+
+
+
+这样一来，这些从库就会知道，在进行同步时，不用再和主库进行交互了，只要和级联的从库进行写操作同步就行了，这就可以减轻主库上的压力
+
+那么，一旦主从库完成了全量复制，它们之间就会一直维护一个网络连接，主库会通过这个连接将后续陆续收到的命令操作再同步给从库，这个过程也称为基于长连接的命令传播，可以避免频繁建立连接的开销
+
+![image-20230310095849407](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303100958061.png)
+
+
+
 
 
 #### 主从复制下-读写分离中的问题
@@ -1080,6 +1098,8 @@ Redis3.2中，从节点在读取数据时，增加了对数据是否过期的判
 参考：
 
 使用主从的读写分离前，可以考虑其他方法增加redis的读写负载能力：使用redis集群同时提高读负载和写负载能力。若使用读写分离，可以使用哨兵模式，使得主从节点的故障切换尽可能自动化
+
+
 
 
 
@@ -1745,6 +1765,10 @@ private final int CACHE_SIZE;
 
 ### 基于Redis的分布式锁
 
+分布式锁：分布式系统中，通过加锁来控制共享资源在多个客户端之间的互斥访问，保证数据一致性
+
+
+
 目前拆分四个微服务。前端请求进来时，会被转发到不同的微服务。假如前端接收了 10 W 个请求，每个微服务接收 2.5 W 个请求，假如缓存失效了，每个微服务在访问数据库时加锁，通过锁（`synchronzied` 或 `lock`）来锁住自己的线程资源，从而防止`缓存击穿`。
 
 ![image-20220322142942618](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220322142942618.png)
@@ -1773,178 +1797,58 @@ private final int CACHE_SIZE;
 
 #### 使用Redis实现分布式锁
 
-1. 利用setnx+expire命令：错误的做法，因为setnx和expire是分开的两个步骤，不具有原子性，如果执行完第一条指令应用异常或者重启了，锁将无法过期。改善方案：使用Lua脚本保证原子性(包含setnx和expire，将这两个命令设置为原子的)
+1. 利用setnx+expire命令：错误的做法，因为setnx和expire是分开的两个步骤，不具有原子性，如果执行完加锁指令后，应用异常或者重启了，锁将无法过期。
+
+   - **但是**，占锁和设置过期时间是分两步执行的，在拿到lock之后，设置过期时间之前可能出现异常情况，那么也会导致锁永远不会过期，出现死锁情况。redis服务重启后，加锁的数据又被恢复了，这样又出现了死锁的现象
+   - 改善方案：使用Lua脚本保证原子性(包含setnx和expire，将这两个命令设置为原子的)
+
 2. setex key seconds value：不存在方案一的问题，这个命令保证了设置值和超时时间是原子操作
-2. Redisson客户端实现分布式锁
+
+3. **set key value px milliseconds nx：面试频率非常高**
+
+   - **命令如上是原子指令** ，将占锁+设置锁过期时间 放在一个原子操作中执行
+   - **value要具有唯一性**，释放锁时，要验证value值，不能把别人的锁给解锁了
+
+4. 上述3个方案本质是setnx，该方案的缺陷：
+
+   1. 都是在一台redis机器上加锁，当出现redis主从或主从+哨兵模式时，那么就会出现redis锁失效的情况
+      - 解决1：zk分布式锁，它是基于CP强一致性的
+      - 解决2：Redisson的RedLock
+   2. 锁过期时间和业务处理时间如何管理？（锁提前释放）
+      - 解决一：Redisson设置key的时候不设置过期时间，触发看门狗机制
+      - 解决2：在释放锁之前进行校验，当前锁的持有者是自己才能释放
+
+   
+
+Redisson客户端实现分布式锁
+
+1. 普通方式也是针对单台redis的，想要解决可以通过2
+2. 想要解决4提出的问题：需要用到RedLock
 
 
 
-[参看文章博客](https://weishihuai.blog.csdn.net/article/details/103653906)
-
-##### setnx key value
-
-1. set if not exist：当key不存在时，设置key的值，存在时什么都不做
-   - 命令：以下两个一样的
-   - setnx key value
-   - set key value nx   
-
-~~~java
-public void getTypeEntityListByRedisDistributedLock(){
-    // 1.先抢占锁
-    Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", "123");
-    if(lock) {
-      // 2.抢占成功，执行业务
-      List<TypeEntity> typeEntityListFromDb = getDataFromDB();
-      // 3.解锁
-      redisTemplate.delete("lock");
-      return typeEntityListFromDb;
-    } else {
-      // 4.休眠一段时间？为什么？  因为该程序存在递归调用，可能会导致栈空间溢出
-      sleep(100);
-      // 5.抢占失败，等待锁释放
-      return getTypeEntityListByRedisDistributedLock();
-    }
-}
-~~~
-
-- 缺陷：从技术的角度看，setnx 占锁成功，但是业务代码出现异常或者服务器宕机，没有执行删除锁的逻辑，就造成了 死锁
-- 如何规避：设置锁的  自动过期时间，过一段时间后，自动删除锁，这样其他线程就能获取到锁了
-
-
-
-当业务代码异常或服务宕机，上述可能出现死锁情况，所有加一个自动过期时间
-
-~~~java
-// 1.先抢占锁
-Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", "123");
-if(lock) {
-    // 2.在 10s 以后，自动清理 lock
-    redisTemplate.expire("lock", 10, TimeUnit.SECONDS);
-    // 3.抢占成功，执行业务
-    List<TypeEntity> typeEntityListFromDb = getDataFromDB();
-    // 4.解锁
-    redisTemplate.delete("lock");
-    return typeEntityListFromDb;
-}
-~~~
-
-
-
-但是占锁和设置过期时间是分两步执行的，在拿到lock之后，设置过期时间之前可能出现异常情况，那么也会导致锁永远不会过期，出现死锁情况
-
-解决方案：原子指令 ，将占锁+设置锁过期时间 放在一步中执行
-
-set key value PX <多少毫秒> NX  或者   set key value EX <多少秒> NX 
-
-setex key value ：是一个原子操作，将key和过期时间两个动作在同一时间完成
-
-set key value nx ex  过期时间秒：例如 set k1 v1 10    nx    =》k1这个键10秒后过期
-
-~~~java
-Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", "123", 10, TimeUnit.SECONDS);
-~~~
-
-
-
-存在缺陷：
-
-1. 用户A抢占锁，并且设置了这个锁10秒后自动开锁，锁的编号为123
-2. 10秒后，A还在执行任务，此时锁被自动打开了  (过期删除)
-3. 用户B抢占锁，锁的编号123，并设置锁的时间10秒  
-4. 但是同一时间只允许一个用户执行这个任务，所有用户A和用户B产生了冲突
-5. A用户在15秒后完成了任务，此时用户B还在执行任务。A主动打开了编号为123的锁？为什么打开(finaly 方法中unlock），因为锁的编号都叫做 `“123”`，用户 A 只认锁编号，看见编号为 `“123”`的锁就开，结果把用户 B 的锁打开了，此时用户 B 还未执行完任务
-6. 此时B还是在执行任务，但是锁已经被打开了。
-7. 用户C强制到锁，开始执行任务，此时BC冲突
-
-
-
-解决上述问题：给每个锁设置不同的编号
-
-~~~java
-// 1.生成唯一 id
-String uuid = UUID.randomUUID().toString();
-// 2. 抢占锁
-Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", uuid, 10, TimeUnit.SECONDS);
-if(lock) {
-    System.out.println("抢占成功：" + uuid);
-    // 3.抢占成功，执行业务
-    List<TypeEntity> typeEntityListFromDb = getDataFromDB();
-    // 4.获取当前锁的值
-    String lockValue = redisTemplate.opsForValue().get("lock");
-    // 5.如果锁的值和设置的值相等，则清理自己的锁
-    if(uuid.equals(lockValue)) {
-        System.out.println("清理锁：" + lockValue);
-        redisTemplate.delete("lock");
-    }
-    return typeEntityListFromDb;
-} else {
-    System.out.println("抢占失败，等待锁释放");
-    // 4.休眠一段时间
-    sleep(100);
-    // 5.抢占失败，等待锁释放
-    return getTypeEntityListByRedisDistributedLock();
-}
-~~~
-
-
-
-此方案的缺陷：第4步获取锁的值，和第5步比较不是原子性的。
-
-- 时刻：0s。线程 A 抢占到了锁。
-- 时刻：9.5s。线程 A 向 Redis 查询当前 key 的值。
-- 时刻：10s。锁自动过期。
-- 时刻：11s。线程 B 抢占到锁。
-- 时刻：12s。线程 A 在查询途中耗时长，终于拿多锁的值。
-- 时刻：13s。线程 A 还是拿自己设置的锁的值和返回的值进行比较，值是相等的，清理锁，但是这个锁其实是线程 B 抢占的锁
-
-线程 A 查询锁和删除锁的逻辑不是`原子性`的，所以将查询锁和删除锁这两步作为原子指令操作就可以了
-
-解决方案：Redis+Lua脚本
-
-
-
-###### Redis+Lua脚本
-
-我们先来看一下这段 Redis 专属脚本：
-
-```lua
-if redis.call("get",KEYS[1]) == ARGV[1]
-then
-    return redis.call("del",KEYS[1])
-else
-    return 0
-end
-```
-
-这段脚本和上面方案的获取key，删除key的方式很像。先获取 KEYS[1] 的 value，判断 KEYS[1] 的 value 是否和 ARGV[1] 的值相等，如果相等，则删除 KEYS[1]。
-
-那么这段脚本怎么在 Java 项目中执行呢？
-
-分两步：先定义脚本；用 redisTemplate.execute 方法执行脚本。
-
-```java
-// 脚本解锁
-String script = "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end";
-redisTemplate.execute(new DefaultRedisScript<Long>(script, Long.class), Arrays.asList("lock"), uuid);
-```
-
-上面的代码中，KEYS[1] 对应`“lock”`，ARGV[1] 对应 `“uuid”`，含义就是如果 lock 的 value 等于 uuid 则删除 lock
+##### Redis+Lua脚本
 
 
 
 ###### Lua脚本
 
+> Lua脚本是高并发、高性能的必备脚本，大部分的开源框架例如：Redisson中的分布式锁都是用lua脚本实现的
+
+Redis 2.6开始，提供了Lua脚本功能，保证脚本里面的命令以原子方式执行，当某个脚本在执行的时候，不会有其他脚本或Redis命令被执行
+
 1. Lua脚本类似Redis事务，有一定的原子性，不会被其他命令插队，可以完成一些redis事务性的操作
-2. Redis 2.6以上的版本才能使用
 3. 利用lua脚本解决争抢问题，实际上是redis利用单线程的特性，用任务队列的方式解决多任务并发问题
 
 
 
-##### Redis集群环境下分布式锁有什么问题
+
+
+##### Redis集群环境下(主要针对主从、主从+哨兵这种方式)分布式锁有什么问题
 
 我们知道，在Redis集群中，Master主节点和Slave从节点之间是异步方式进行数据同步的。这样其实就有一个问题，举个例子：
 
-1. 客户端A在Master节点拿到了锁；
+1. 因为写是针对master的，当客户端A在Master节点拿到了锁；
 2. 这时候Master需要将锁的信息异步方式同步给Slave从节点，但是这个时候，还没同步完成【把客户端A创建的key写入Slave时】，Master节点挂了，锁没同步成功，这时候Redis会触发Master选举；
 3. 此时Slave从节点升级成为新的Master主节点，注意此时新的master上面没有客户端A设置的key值，新master并不知道其实客户端A现在已经获取了锁；
 4. 其他客户端，如客户端B判断到新Master上面没有那个key，直接set成功，客户端B也获取到和客户端A持有相同的key的锁；
@@ -1988,19 +1892,33 @@ Redisson实现了Redis文档中提到的分布式锁Lock。此外，还在分布
 
 
 
+[分布式锁过期了，业务没执行完怎么办法？](https://zhuanlan.zhihu.com/p/421843030)
+
+
+
 ##### Redisson锁续约   （看门狗机制）
 
-WatchDog
+> Redisson提供的分布式锁是支持锁自动续期的，如果线程仍旧没有执行完，那么redisson会自动给redis中的目标key延长超时时间，这就是Redisson中被称为WatchDog的看门狗机制。但是，需要设置key没有过期时间，才会触发看门狗机制
 
-1. 如果负责存储这个分布式锁的Redis节点宕机，而这个锁正好处于锁住的状态，那么这个锁就会出现锁死的状态。为了避免这种情况发生，Redisson内部提供了一个监控锁的**看门狗**它的作用是在Redisson实例被关闭前，不断的延长锁的有效期。
+这个看门狗监控程序是运行在客户端的(我们本地程序)
+
+
+
+1. 如果负责存储这个分布式锁的Redis节点宕机，而这个锁正好处于锁住的状态，那么这个锁就会出现锁死的状态。为了避免这种情况发生，锁都会设置一个过期时间
 
 2. 为了某种场景下保证业务不受影响，如：任务执行超时但未结束，锁已经释放的问题。
 
    - 当一个线程持有了一把锁，由于并未设置超时时间leaseTime，Redisson默认配置了30S，开启watchDog，每10S对该锁进行一次续约，维持30S的超时时间，直到任务完成再删除锁。也即：在第20s的时候会去重置成30s，以此类推
-
+   - Redisson内部提供了一个**监控锁的看门狗**它的作用是在Redisson实例被关闭前，不断的延长锁的有效期，也就是说如果一个拿到锁的线程业务逻辑一直没有执行完，那么看门狗会不断的延长锁超时时间，锁不会因为超时而释放
+   
    
 
-如果我们未制定 lock 的超时时间，就使用 **30 秒作为看门狗的默认时间**。只要占锁成功，就会启动一个定时任务：每隔 10 秒重新给锁设置过期的时间，过期时间为 30 秒
+如果我们未制定 lock 的超时时间，就使用 **30 秒作为看门狗的默认时间**。只要占锁成功，就会启动一个定时任务：每隔 10 秒检查一遍这个锁释放释放了，如果没有释放，则重新给锁设置过期时间为 30 秒
+
+**若：客户端宕机了，那么定时任务就跑不了了，就续不了期，只能等到30s后，锁自动解开**
+
+- 如果想要立即解除锁，则需要增加哨兵机制(非redis哨兵而是业务系统自己的哨兵)，让哨兵来维护redis客户端列表
+- 哨兵定期去监控客户端释是否宕机，如果宕机，立即删除客户端的锁
 
 ~~~java
 @ResponseBody
@@ -2029,13 +1947,15 @@ public String TestLock() {
 
 
 
+
+
 可以指定leaseTime参数的加锁方法来指定加锁的时间。超过这个时间后锁便自动解开了，不会延长锁的有效期，此时看门狗不会启动
 
 ~~~java
 lock.lock(15,TimeUnit.SECONDS);
 ~~~
 
-上述代码为手动设置锁过期时间，如果业务代码执行超过15s，手动释放锁会报错。所有如果设置了锁的自动过期时间，则业务代码执行的时间一定要小于锁的自动过期时间，否则会报错
+上述代码为手动设置锁过期时间，如果业务代码执行超过15s，手动释放锁会报错。所以如果设置了锁的自动过期时间，则业务代码执行的时间一定要小于锁的自动过期时间，否则会报错
 
 
 
@@ -2600,7 +2520,7 @@ client.execute_command("bf.reserve", "keyname", 0.001, 50000)
 分布式锁通常要满足以下特性：
 
 1. 互斥性：同一时刻，多个客户端对共享资源的访问存在互斥性
-2. 防死锁：对锁设置超时时间，防止客户端一直占用锁，即防止死锁
+2. **防死锁：对锁设置超时时间，防止客户端一直占用锁，即防止死锁**
 3. 可重入性：一个客户端上的同一个线程如果获取锁后还可以再次获取这个锁
 4. 持锁人解锁：客户端自己加的锁，需要自己解除，不能将别人加的锁删除掉
 
@@ -2870,7 +2790,27 @@ latch.countDown();
 
 ## Redis公司架构
 
- 主-从-从 + 哨兵模式
+三大航共用的机器：
+
+nginx内网访问：1主1从
+
+nginx Internet访问：4台nginx集群
+
+redis部署采用：1主2从+哨兵
+
+es：3台集群
+
+kafka：5台集群
+
+hadoop集群
+
+三大航独用：
+
+数据库是单独隔离开的，不同模块使用适合自己业务的数据库，有：Oracle、GP（多postgresql)
+
+
+
+
 
 
 
