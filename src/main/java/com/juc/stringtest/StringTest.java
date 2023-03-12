@@ -30,8 +30,8 @@ public class StringTest {
     public void testRedisson() throws InterruptedException {
         Config config = new Config();
         config.useSingleServer()
-                .setAddress("redis://1.14.61.28:6379")
-                .setPassword("991618ab@123");
+                .setAddress("redis://主机:6379")
+                .setPassword("密码");
         RedissonClient client = Redisson.create(config);
         RLock lock=client.getLock("sss");
         lock.lock(15, TimeUnit.SECONDS);
