@@ -1,5 +1,14 @@
 package com.juc.stringtest;
 
+import jodd.util.ThreadUtil;
+import org.junit.jupiter.api.Test;
+import org.redisson.Redisson;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -12,8 +21,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class StringTest {
     public static AtomicInteger race = new AtomicInteger(0);
     private static final int THREADS_COUNT = 5;
+    @Autowired
+    RedissonClient redissonClient;
+
+    private int a;
+
+    @Test
+    public void testRedisson() throws InterruptedException {
+        Config config = new Config();
+        config.useSingleServer()
+                .setAddress("redis://1.14.61.28:6379")
+                .setPassword("991618ab@123");
+        RedissonClient client = Redisson.create(config);
+        RLock lock=client.getLock("sss");
+        lock.lock(15, TimeUnit.SECONDS);
+        ThreadUtil.sleep(20000);
+        lock.unlock();
+
+        //基于Redisson的分布式布隆过滤器
+        client.getBloomFilter("sampleBloomFilter");
+    }
 
     public static void increase() {
+
         race.incrementAndGet();
     }
 
@@ -32,19 +62,9 @@ public class StringTest {
 //        }
 //        Thread.sleep(2000);
 //        System.out.println(race);
-        Integer a = 1;
-        Integer b = 2;
-        Integer c = 3;
-        Integer d = 3;
-        Integer e = 321;
-        Integer f = 321;
-        Long g = 3L;
-        System.out.println(c == d);
-        System.out.println(e == f);
-        System.out.println(c == (a + b));
-        System.out.println(c.equals(a + b));
-        System.out.println(g == (a + b));
-        System.out.println(g.equals(a + b));
+       Object MyObject=new Object();
+        System.out.println(MyObject);
+
     }
 
 }
