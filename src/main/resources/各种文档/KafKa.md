@@ -313,59 +313,92 @@ https://blog.csdn.net/peng_2297731313/article/details/124099789
 
 #### Topic注册
 
-topic会被分为多个partition并分配到多个broker上，分区的信息以及broker的分布情况，都保存在zk中，根节点路径为：/brokers/topics，每个topic都会在topics下建立独立的子节点，每个topic节点都会包含分区以及broker的对应信息
+topic会被分为多个partition并分配到多个broker上，分区的信息以及broker的对应关系，都保存在zk中。ZK中，专门的节点来记录这些信息，节点路径为：/brokers/topics{topic_name}，每个topic都会在topics下建立独立的子节点，每个topic节点都会包含分区以及broker的对应信息。并且，topic创建的节点也是临时节点
+
+#### 维护分区与消费者的关系
+
+
+
+#### 记录消息消费的进度Offset
+
+消费者对指定的消息分区进行消费的过程中，需要定时的将分区消息的消费进度offset记录到Zk中，以便在该消费者进行重启或其他消费者重新接管该消息分区的消息消费后，能从之前的进度开始继续进行消费
+
+offset在zk中是由一个专门的节点进行记录的，节点路径为：/consumer/[group_id]/offsets/[topic]/[broker_id_partition_id]，节点内容就是offset的值
+
+
+
+#### 消费者注册
+
+新的消费者组注册到zookeeper中时，zookeeper会创建专用的节点来保存相关信息，其节点路径为 /consumers/{group_id}，其节点下有三个子节点，分别为[ids, owners, offsets]。
+
+ids节点：记录该消费组中当前正在消费的消费者；
+
+owners节点：记录该消费组消费的topic信息；
+
+offsets节点：记录每个topic的每个分区的offset；
 
 ---
 
 
 
-## 数据可靠性- ack机制
 
-kafka采用ack机制保证数据可靠性
 
-kafka的ack机制：topic的每个partition所在的broker收到producer发送的数据后会向producer发送ack消息。如果producer没有收到ack，将会触发重试机制
+## kafka数据可靠性- ack机制
+
+kafka采用ack机制保证数据可靠性，类似与TCP的三次握手四次挥手
+
+
+
+### 生产者的可靠性
+
+> 1. 存储层方面：前面提到的为每个partition设置副本，即leader和follower
+> 2. 发送层面：生产者向broker发送消息后，broker上的leader会向生产者发送ack确认消息，如果生产者没有收到ack，将会触发重试机制
+
+
+
+
+
+生产者的ISR机制
+
+生产者把消息发送到服务器的leader后，leader将消息同步给自己所有的follower。默认情况下，kafka默认当所有follower都完成同步消息后，再给生产者返回ack。但是当其中的一个follower发生故障后，迟迟不能同步完成，此时leader就会一致等下去。这个问题该怎么办？kafka利用ISR机制解决这个问题。
+
+![image-20230315210138770](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303152101882.png)
+
+
+
+
+
+在kafka中，一个主题的**分区的所有的副本集合称之为AR**(Assigned Replicas)。AR=ISR+OSR
+
+**leader节点维护了一个动态的集合，即in-sync replica set (ISR)**，指的是：和leader保持一定程度同步的follower集合(包括leader节点在内)。
+
+**与leader副本同步滞后过多的副本组成OSR(Out-of-Sync Replicas)集合**
+
+因此AR=ISR+OSR。正常情况下所有的follower都应该和leader保持一定程度的同步，即AR=ISR
 
 
 
 kafka何时给生产者返回ack相应：kafka根据用户配置的ack级别来确认何时返回客户端ack消息
 
-
-
-在kafka中，一个主题的分区中所有的副本集合称之为AR(Assigned Replicas)。leader节点维护了一个动态的集合，即in-sync replica set (ISR)，指的是和leader保持一定程度同步的follower集合(包括leader节点在内)。与leader副本同步滞后过多的副本组成OSR(Out-of-Sync Replicas)集合，因此AR=ISR+OSR。正常情况下所有的follower都应该和leader保持一定程度的同步，即AR=ISR
-
-
-
-acks参数：用来指定分区中有多少副本收到这条消息后，生产者才能确认这条消息是写入成功的，这直接影响kafka集群的吞吐量和消息可靠性
+**acks参数：用来指定分区中有多少副本收到这条消息后，生产者才能确认这条消息是写入成功的**，这直接影响kafka集群的吞吐量和消息可靠性
 
 
 
 ack有3个可选值0、1、-1
 
-1. ack=1：默认值1
-   - producer发送消息后，只要分区的leader副本成功写入消息，就会收到服务器的ack成功响应
+1. ack=1：默认值1，可能出现消息丢失
+   - producer发送消息后，只要**分区的leader成功写入消息后，就会收到服务器的ack成功响应**
    - 如果消息写入leader失败，比如leader挂了，正在重新选举，此时生产者客户端会收到错误相应，可以进行重发
    - 如果leader成功写入后，还没有来得及把数据同步到follower节点就挂了，这时候消息就丢失了。
-   - ack=1是kafKa消息可靠性和吞吐量之间的折中方案，也是默认的配置
-2. ack=0
-   - 就是producer发送一次就不再发送了，不管是否发送成功
-   - 如果在消息从发送到写入Kafka 的过程中出现某些异常，导致Kafka 并没有收到这条消息，那么生产者也无从得知，消息也就丢失了
-   - ack=0使得kafka达到最大的吞吐量
+   - ack=1是kafKa消**息可靠性和吞吐量之间的折中方案**，也是默认的配置
+2. ack=0，可能出现消息丢失
+   - 就是生产者不等待broker响应。这种情况模式下延迟最低，但是可能丢失数据。**适合高吞吐量、接受消息丢失的场景。**
 3. ack=-1 或 ack=all：
-   - producer只要收到分区内所有副本的成功写入的通知才认为推送消息成功了
+   - producer**需要收到分区内所有副本的成功写入的通知才认为推送消息成功了**
    - 即：生产者在消息发送之后，需要等待ISR 中的所有副本都成功写入消息之后才能够收到来自服务端的ack响应
-   - ack=-1可以达到最高的数据可靠性
+   - ack=-1可以达到最高的数据可靠性，但是，在所有follower成功写入后，leader发送ack之前，leader挂了，此时生产者认为发送失败了，此时重新发送数据给新的leader，造成数据重复发送
 
-#### 消息传送机制
 
-kafka支持3中消息投递语义，通常使用At least once模型
-
-1. At most once：最多一次，消息可能会丢失，但不会重复
-   - ack=0，可以保证每天消息只会发送一次，不会重复
-2. At least once：最少一次，消息不会丢失，可能会重复
-   - ack=-1，可以保证生产者和broker之间不丢失数据，但是可能会重复
-3. Exactly once：只且一次，消息不丢失不重复，只且消费一次
-   - 开启kafka幂等性，enable.idompotence=true
-   - 但是kafka幂等性无法保证跨分区、跨会话
 
 ---
 
@@ -497,14 +530,18 @@ producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(
 
 ### 生产者分区
 
-所有分区提高了topic的处理性能，提高了topic的并发性。我们可以将kafka生产者发送的数据封装成ProducerRecord对象，该对象中有partition属性，每条ProducerRecord会被发送到特定的partition中
+> 分区提高了topic的处理性能，提高了topic的并发性。kafka生产者发送的数据封装成ProducerRecord对象，该对象中有partition属性，每条ProducerRecord会被发送到特定的partition中
+>
+> **消息写入到哪个分区是由生产者决定的**，在发送消息时，可以指定分区，否则用默认分区器计算。因为分区可能会调整，通常，不会指定固定的分区，而是依靠分区计算器来分派到具体的分区
+
+
 
 **分区的好处**
 
 1. 便于合理使用存储资源，每个分区在一个Broker上存储，可以把海量的数据按照分区切割成一块一块数据存储在多台Broker上。合理控制分区的任务，可以实现负载均衡的效果
 2. 提高并行度，生产者可以以分区为单位发送数据，消费者可以以分区为单位进行消费数据
 
-**分区原则**
+**（默认？）分区原则**
 
 1. 构造器中指明partiton时，直接将指定值作为partition值
 2. 没有指明partition值但是有key的情况，将key的hash值与topic的partition数进行取余得到partiton值
@@ -514,7 +551,7 @@ producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(
 
 1. 默认的分区器DefaultPartitioner
 
-2. 自定义分区器
+2. 自定义分区器，每次计算出不同的分区
 
    - 实现Partitioner接口
 
@@ -540,11 +577,13 @@ producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(
 
 ### 生产者如何提高吞吐量
 
+通过修改参数配置：缓冲区大小
+
 RecordAccumulator:缓冲区大小，修改为64m
 
 
 
-### 数据可靠性
+### 生产者数据可靠性
 
 应答机制ack
 
@@ -567,57 +606,102 @@ ack=-1：一般用于传输和钱相关的数据，对可靠性要求高的场�
 
 
 
-### 数据重复写入性
+### 生产者的ExactlyOnce
+
+exactlyOnce：精确的一次、正好一次
+
+kafka能保证精准一次性吗？
+
+> 在交易业务里，对于精准一次性要求是比较高的，我们绝不能丢失交易数据，也不应该发起重复交易，这就是ExactlyOnce的定义
+
+
+
+#### 消息传送机制
+
+kafka支持3中消息投递语义，通常使用At least once模型
+
+1. At most once：最多一次，消息可能会丢失，但不会重复
+
+   - ack=0，可以保证每天消息只会发送一次，不会重复
+
+2. At least once：最少一次，消息不会丢失，可能会重复
+
+   - ack=-1，可以保证生产者和broker之间不丢失数据，但是可能会重复
+
+3. **Exactly once：只且一次，消息不丢失不重复，只且消费一次**
+
+   - **ack=-1，消息可能重复，所以只需要在at least once基础上保证幂等性即可**
+   - **开启kafka幂等性，enable.idompotence=true**
+
+   
+
+#### kafka如何保证幂等性
+
+> 对于每一个生产者，会分配一个唯一的Pid，在发送到同一个broker的消息会附带一个sequence number。sequence number是单调自增的，broker会对<pid,partitionId,Seq num>做一个缓存，当具有相同主键的消息提交时，kafka只会持久化一条。
+>
+> 但是，Pid会随着生产者的重启而分配一个新的，并且不同的partition对应的partitionId也不相同，所以kafka的幂等性无法保证跨分区、跨会话
+>
+> 所以，kafka幂等性只能保证单分区会话内不重复
+
+
+
+### Producer数据重复写入性
 
 大多出现在ack=-1情况下
 
-例如：producer发送消息到broker，broker里的leader、follower已经落盘，准备回应producer的时候，突然这个leader挂了，ack没有发送出去，producer没有收到确认消息。这时候，会重新选举出一个leader，由于上一次leader未应答producer会重新发送消息到新的leader，这就造成了数据重复写入
+例如：producer发送消息到broker，broker里的leader、follower已经落盘，准备回应producer的时候，突然这个leader挂了，ack没有发送出去，producer没有收到确认消息。这时候，会重新选举出一个leader，由于上一次leader未应答，所以，producer会重新发送消息到新的leader，这就造成了数据重复写入
 
 
 
-幂等性 和事务
+#### 数据重复写入-解决方法
 
-kafka幂等性：指的producer无论向borker发送多少次重复数据，broker端只会持久化一条，保证了不重复
-
-重复数据判断标准：具有<pid,partition,Seqnumber>相同主键的消息提交时，broker只会持久化一条。其中pid是kafka每次重启都会分配一个新的，partition表示分区号，sequence number是单调自增的
-
-所以幂等性只能保证：单分区会话内不重复
-
-enable.idempotence=true  默认开启幂等性
-
-
-
-事务：开启事务，必须开启幂等性
+1. kafka自带方法：ack=-1 + 幂等性 + 事务
+   - kafka幂等性：见上面的解释。指的producer无论向borker发送多少次重复数据，broker端只会持久化一条，保证了不重复
+   - 默认是开启幂等性的，即：enable.idempotence=true  
+   - kafka事务：支持多分区，数据有唯一id，和所有分区比较，如果存在则不发送消息到broker。生产环境下使用少，容易造成数据积压。
+   - 开启事务，必须开启幂等性（没有看这里）
+2. 出现重复不可怕，怎么解决是关键。即：去重
+   - **可以利用Redis(BloomFilter)去重(公司项目就是这样搞得)，明天值得一看**
+   - 手段：分组、按照id开窗只取第一个值
 
 
 
----
+### Producer的数据一致性
 
-### 生产者数据有序性
+明天看
 
-生产者生产的消息是有序的，为了保证有序性，生产者采用了双端队列，保证最新消息发送失败也能最先发出
+
+
+
+
+### Producer数据有序性
+
+> 生产者生产的消息是有序的，为了保证有序性，生产者采用了双端队列，保证最新消息发送失败也能最先发出
 
 有序性分为全局有序和部分有序
+
+
+
+#### 部分有序
+
+1. 生产者将消息发送到指定的同一个partition分区
+2. kafka中每个分区中的消息在写入时都是有序的。生产者在发送消息时，可以指定需要保证顺序的消息发送到同一个分区中。这样消费者消费时，消息就是有序的
+
+但是，存在多分区时，分区与分区间的消息是无序的
+
+![image-20220505230242650](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205052302719.png)
 
 #### 全局有序
 
 如果要保证消息的全局有序，则只能由一个生产者往topic发送消息，并且一个topic内部只能有一个分区，消费者也必须是单线程消费这个队列，这样的消息就是全局有序的
 
-缺点：只能被一个consumer 消费，降低了性能，不适合高并发场景
-
-#### 部分有序
-
-生产者将消息发送到指定的同一个partition分区
-
-kafka默认保证同一个分区内的消息是有序的，则生产者可以在发送消息时，可以指定需要保证顺序的消息发送到同一个分区中，这样消费者消费时，消息就是有序的
-
-多分区时，分区与分区间无序
-
-![image-20220505230242650](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202205052302719.png)
+**缺点：只能被一个consumer 消费，降低了性能，不适合高并发场景**
 
 
 
-### 数据乱序
+
+
+### Producer数据乱序
 
 kafka1.x后，启用幂等后，kafka服务端会缓存producer发来的最近5个request的元数据，所以，无论如何都可以保证最近5个request的数据是有序的
 
@@ -629,13 +713,15 @@ kafka1.x后，启用幂等后，kafka服务端会缓存producer发来的最近5�
 
 ProducerInterceptor
 
-kafka producer会在消息序列化和计算分区之前调用拦截器的onSend方法，我们可以在此方法中进行消息发送前的业务定制
+**kafka 生产者会在消息序列化和计算分区之前调用拦截器**的onSend方法，我们可以在此方法中进行消息发送前的业务定制
 
 自己实现这个拦截器即可
 
 
 
 ---
+
+
 
 
 
