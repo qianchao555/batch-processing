@@ -420,11 +420,15 @@ ProducerRecord：每条数据都要封装成一个ProducerRecord对象
 
 ### 生产者发送消息流程
 
-将外部数据发送到kafka
-
-producer->send(ProducerRecord)->[Interceptors拦截器可有可无]->
-
-Serializer序列化器(kafka自己实现的，没有Java的)->Partitioner分区器(一个分区会创建一个队列)
+1. 生产者生成消息后，首先会经过一个或多个拦截器链
+   - producer->send(ProducerRecord)->[Interceptors拦截器可有可无]->
+2. 当消息通过所有拦截器链后，会根据key、value的序列化配置进行序列化消息内容。Serializer序列化器(kafka自己实现的，没有Java的)
+   - 生产者和消费者必须使用相同的k-v序列化方式
+3. 序列化后，根据自定义的分区器后默认分区器，进行获取消息的所属分区
+   - 一个分区会创建一个队列
+4. 获取到消息所属的分区后，消息会被追加放到消息缓冲区中  
+   - Java对象为：RecordAccumulator
+   - 可配置大小为：buffer.memory
 
 
 
@@ -432,11 +436,11 @@ sender线程
 
 Sender(读取数据)
 
-batch.size：只有数据累积到batac.size后，sender才会发送数据。默认16k
+batch.size：只有数据累积到batac.size后，sender才会发送数据这一批数据。默认16k
 
-linger.ms：如果数据迟迟未到batch.size，sender等待linger.ms设置的时间后就会发送数据。单位是ms，默认是0ms表示没有延迟
+linger.ms：如果数据迟迟未到batch.size，sender等待linger.ms设置的时间后就会发送数据。单位是ms，默认是0ms表示没有延迟，项目中配置的1ms
 
-kafka集群收到消息后，给sender应答（ack机制）
+broker收到消息后，给sender应答（ack机制）
 
 sender成功后，清理队列里的消息，失败会去重试
 
@@ -444,7 +448,15 @@ sender成功后，清理队列里的消息，失败会去重试
 
 ### 异步发送
 
-外部的数据发送到队列里面  采用异步发送
+> Kafka的**Producer发送消息采用的是异步发送的方式**，主要涉及main线程、sender线程以及一个线程共享变量RecordAccumulatro
+>
+> main线程将消息发送给RecordAccumulator，sender线程不断从它那里拉取消息发送给kafka
+
+![image-20230316162408650](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161624276.png)
+
+
+
+异步不带回调
 
 ~~~java
 public class MyProducer1 {
@@ -516,9 +528,9 @@ KafkaProducer设定参数retries，如果发送消息到broker时抛出异常，
 
 ### 同步发送
 
-指一条消息发送后会阻塞当前线程，直到返回ack消息
+指一条**消息发送后会阻塞当前线程，直到返回ack消息**
 
-producer的send方法返回对象是Future类型，因此可以通过调用Future对象的get()方法触发同步等待
+producer的send方法返回对象是Future类型，因此可以通过调用**Future对象的get()方法触发同步等待**
 
 ~~~java
 producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(i), "value:" + i)).get();
@@ -661,14 +673,28 @@ kafka支持3中消息投递语义，通常使用At least once模型
    - kafka事务：支持多分区，数据有唯一id，和所有分区比较，如果存在则不发送消息到broker。生产环境下使用少，容易造成数据积压。
    - 开启事务，必须开启幂等性（没有看这里）
 2. 出现重复不可怕，怎么解决是关键。即：去重
-   - **可以利用Redis(BloomFilter)去重(公司项目就是这样搞得)，明天值得一看**
+   - **可以利用Redis(BloomFilter)去重(公司项目就是这样搞得)**
    - 手段：分组、按照id开窗只取第一个值
 
 
 
 ### Producer的数据一致性
 
-明天看
+> 这里的数据一致性值得是：无论是老leader还是新选举的leader，消费者读到的都是一样的数据
+>
+> kafka利用了一个高水位机制解决：High water mark (木桶原理)
+
+![image-20230316164035982](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161640383.png)
+
+![image-20230316164712302](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161647509.png)
+
+
+
+1. follower故障
+   - follower发生故障后，会被踢出ISR。等待其回复后，follower读取本地记录的删除HW，并将log文件中高于HW的部分截取掉，从HW处开始向leader同步
+   - 等该follower的LEO大于等于该partition（leader）的HW，即follower追上leader之后，就可以重新加入ISR了
+2. leader故障
+   - 会从ISR中选取出一个新的leader，为了保证多副本之间的数据一致性，其余的follower会先将各自的log文件中高于HW的部分截取掉，然后从新的leader同步数据
 
 
 
@@ -749,7 +775,7 @@ kafka分区中的所有副本集合：AR assigned repllicas
 
 AR=ISR+OSR
 
-ISR：表示和Leader保持同步的**Follower集合**。如果Follower长时间未向Leader发送通信请求或同步数据，则Follower将被踢出ISR，该时间阈值默认30s，由replica.lag.time.max.ms设定。leader发生故障后，会从ISR中选举新的leader
+ISR：表示与Leader保持同步的**Follower集合**。如果Follower长时间未向Leader发送通信请求或同步数据，则Follower将被踢出ISR，该时间阈值默认30s，由replica.lag.time.max.ms设定。leader发生故障后，会从ISR中选举新的leader
 
 OSR：表示Follower与Leader副本同步时延迟过多的副本
 
@@ -757,30 +783,46 @@ OSR：表示Follower与Leader副本同步时延迟过多的副本
 
 ### kafka集群Leader选举流程
 
-kafka的leader选举是通过在zk上创建/controller临时节点来实现leader选举，并在该节点中写入当前broker的信息
+> Kafka集群中有一个或者多个broker，其中有一个broker会被选举为控制器(Kafka Controller)，也可以看作为（broker的leader，即controller leader）。它负责管理整个集群中所有分区和福本的状态
+>
+> 还有一种leader是分区leader
 
-kafka在所有broker中选出一个controller，所有partition的leader选举都由controller决定。
-
-1. 每台broker启动后，会在zk中注册
-2. zk的controller：谁先注册，谁说了算
-3. broker与zookeeper里面都有controller节点
-4. 由选举出来的controller（broker里面的）监听brokers节点变化
-5. controller决定leader选举
-   - 选举规则：在isr队列中存活为前提，按照AR中排在前面的优先
-   - 例如：ar[1,0,2]，isr[1,0,2]，那么leader就会按照1，0，2的顺序轮询
-   - AR:kafka分区中的所有副本统称
-6. controller将节点信息上传到zk
-7. 其他controller从zk同步相关信息
-8. 假设broker中的leader挂了，controller监听到节点的变化，从zk获取isr，选举新的leader
-9. 更新leader以及Isr
+- 当某个分区的leader出现故障时，由控制器负责为该分区选举出新的leader
+- 当检测到某个分区的ISR集合发生变化时，由控制器负责通知所有broker更新其元数据信息
+- 当使用kafka-topic.sh脚本为某个Topic增加分区数量时，由控制器负责让新分区被其他节点感知到
 
 
 
-### Follower故障处理
+#### Controller leader (broker leader)选举机制
 
-LEO：log end offset 每个副本的最后一个offset，其实就是最小的offset+1
+kafka集群启动时，会自动选举一台broker作为controller来管理整个集群。
 
-HW：high watermark 所有副本中最小的LEO
+选举过程是：**每个broker都尝试在zk上创建一个/controller的临时节点，zk会保证有且仅有一个broker能创建/controller节点成功。这个broker就是集群的总控器controller**
+
+
+
+具备controller身份的broker比其他普通的broker多一份职责
+
+1. 监听broker的相关变化
+2. 监听topic的相关变化
+3. 从zk中读取当前所有topic、partition、broker的相关信息并进行响应的管理
+4. 更新集群的元数据信息，同步到其他普通的broker节点中
+
+
+
+#### 分区follower副本选举leader机制
+
+controller感知到分区leader所在的broker挂了(controller监听了很多zk节点，可以感知到broker存活)之后，会根据设置来判断怎么选举leader
+
+1. 参数unclean.leader.election.enable=false的前提下
+   - controller会从ISR列表中挑选第一个broker作为leader(第一个broker最先放进ISR列表，可能是同步数据最多的副本)
+2. 参数unclean.leader.election.enable为true
+   - 代表ISR列表里面所有副本都挂了的时候，可以在ISR列表以外的副本中选举leader
+   - 这种设置可以提高可用性，但是，选举出的新leader可能数据少很多
+
+
+
+
 
 
 
