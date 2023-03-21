@@ -316,9 +316,114 @@ Thread.State定义的6中线程状态：
 
 
 
+
+
 ---
 
+### Thread的相关方法
 
+#### Sleep()
+
+当前线程休眠，进入阻塞状态，若在休眠状态被中断会抛出InterruptedException中断异常
+
+若占有锁对象，调用该方法并不会释放锁的占用
+
+#### Join()
+
+若在A线程中执行了threadB.join()，其含义：当前A线程等待threadB线程终止后才从threadB.join处返回
+
+实现原理：等待/通知机制
+
+~~~java
+public final synchronized void join(long millis)
+    throws InterruptedException {
+        long base = System.currentTimeMillis();
+        long now = 0;
+
+        if (millis < 0) {
+            throw new IllegalArgumentException("timeout value is negative");
+        }
+
+        if (millis == 0) {
+            //条件不满足继续等待
+            while (isAlive()) {
+                wait(0);
+            }
+            //条件符合，方法返回
+        } else {
+            while (isAlive()) {
+                long delay = millis - now;
+                if (delay <= 0) {
+                    break;
+                }
+                wait(delay);
+                now = System.currentTimeMillis() - base;
+            }
+        }
+    }
+~~~
+
+
+
+
+
+
+
+---
+
+### 线程的中断
+
+在Java中，**停止一个线程的主要机制是中断，中断并不是强迫终止 一个线程，它是一种协作机制，是给线程传递一个取消信号，但是由线程来决定如何以及何时退出**
+
+**其他线程调用该线程的interrupt()方法对其进行中断操作**
+
+
+
+中断机制的特性是：线程通过检查自身是否被中断来进行响应，而且**可以决定是否响应中断的请求**。所以线程可以忽略中断请求并且继续运行
+
+每一个线程都有一个标志位，表示该线程是否被中断了
+
+1. public void interrupt()
+   - 此方法并不能中断线程，只是告诉该线程外部已经有中断请求了，至于是否中断，取决于线程自己
+   - 此方法为实例方法，告诉线程外部有中断请求，并将线程的中断状态设置为true
+2. public static boolean interrupted()
+   - 此方法是类方法，对当前线程的中断标识进行复位
+   - 返回当前线程中断标志位是否为true，但是他有一个副作用就是清除线程的中断标志位，也就是说，**连续两次调用 interrupted（），第一次返回的结果为true，第二次一般就是false（除非 同时又发生了一次中断）**
+3. public boolean isInterrupted
+   - 此方法是实例方法，检查线程是否已经中断，返回对应的中断标志位是否为true
+   - 线程的中断状态不受该方法的影响
+
+
+
+#### 线程对中断的反应
+
+ **interrupt（）对线程的影响与线程的状态和在进行的IO操作有关。** 我们主要考虑线程的状态，IO操作的影响和具体IO以及操作系统有关， 我们就不讨论了
+
+线程状态有：
+
+1. Runnable：线程在运行或具备运行条件只是在等待操作系统调度
+2. Waiting/Timed_Waiting：线程在等待某个条件或超时
+3. Blocked：线程在等待锁，阻塞状态
+4. New/Terminated：线程还未启动或已结束
+
+
+
+### 安全的终止线程
+
+1. 中断
+2. volatile + 设置标志位来控制是否停止任务并终止该线程
+
+
+
+
+
+---
+
+### Java线程安全的实现方法有哪些
+
+1. 互斥同步：synchronized、Lock
+2. 非阻塞同步：CAS、AtomicXXX原子类
+3. 无同步方案：栈封闭、ThreadLocal
 
 
 
@@ -501,6 +606,117 @@ lock前缀的指令在多核处理器下会引发两件事：
 
 
 
+#### Volatile应用场景
+
+> 使用Volatile必须具备的条件
+>
+> 1. 对变量的写操作不依赖于当前值。例如：a=a+2、a++等就是出现了依赖当前值
+> 2. 该变量没有包含在具有其他变量的不变式中。例如：该变量用于其他多个方法中做大于、小于等的判断
+> 3. **只有在状态真正独立于程序内其他内容时，才能使用volatile**
+
+
+
+##### 做状态标志
+
+使用一个布尔类型的状态标志，用于指示发生了一个重要的一次性事件。例如：完成了初始化、请求开/关等等
+
+~~~java
+volatile boolean shutdownFlag;
+public void shutdown(){
+    shutdownFlag=true;
+}
+public void doWordk(){
+    //只要没有关闭，就一直工作
+    while(!shutdownFlag){
+        //工作
+    }
+}
+~~~
+
+
+
+##### 一次性安全发布
+
+
+
+##### 独立观察
+
+用于：定期发布、观察结果，供程序内部使用
+
+例如：有一种环境传感器能够感知环境温度。一个线程可能会每隔几秒读取一次传感器的温度，并更新值。然后其他线程可以读取这个变量，从而随时能看到最新的温度
+
+
+
+该模式的另一种应用程序就是：收集程序的统计信息
+
+如下代码展示了身份验证机制如何记忆最近一次登录的用户的名字。将反复使用`lastUser` 引用来发布值，以供程序的其他部分使用。（主要利用了volatile的可见性）
+
+~~~java
+public class UserManager {  
+    public volatile String lastUser; //发布的信息  
+  
+    public boolean authenticate(String user, String password) {  
+        boolean valid = passwordIsValid(user, password);  
+        if (valid) {  
+            User u = new User();  
+            activeUsers.add(u);  
+            lastUser = user;  
+        }  
+        return valid;  
+    }  
+}
+
+~~~
+
+
+
+##### volatile bean模式
+
+##### 开销较低的读-写策略
+
+~~~java
+public class CheesyCounter {  
+    
+    private volatile int value;  
+  
+    //读操作，没有synchronized，提高性能  
+    public int getValue() {   
+        return value;   
+    }   
+  
+    //写操作，必须synchronized。因为x++不是原子操作  
+    public synchronized int increment() {  
+        return value++;  
+    }  
+}
+~~~
+
+
+
+##### 单例-双重校验
+
+~~~java
+class Singleton {
+    private volatile static Singleton instance;
+    private Singleton() {
+    }
+    public static Singleton getInstance() {
+        if (instance == null) {
+            syschronized(Singleton.class) {
+                if (instance == null) {
+                    instance = new Singleton();
+                }
+            }
+        }
+        return instance;
+    } 
+}
+~~~
+
+
+
+
+
 ---
 
 
@@ -627,7 +843,19 @@ JSR-133使用 happens-before 的概念来指定两个操作之间的执行顺序
 
 
 
+---
 
+### JUC中主要包含哪些部分
+
+Lock框架
+
+Tools类：CountDownLatch、CyclicBarrier、Semaphore、Exchager
+
+Collections：并发集合
+
+Atomic：原子类
+
+Executors：线程池
 
 
 
@@ -828,17 +1056,29 @@ Lock是一个接口，它定义了锁获取和释放的基本操作，具体的�
 
 Lock接口的实现基本上都是通过聚合了一个AbstractQueuedSynchronizer同步器的子类来完成线程访问控制的
 
+
+
+
+
 ---
 
-#### 队列同步器AQS
+#### 抽象队列同步器AQS
 
 参考文章：https://blog.csdn.net/mulinsen77/article/details/84583716
 
 参考文章：https://www.cnblogs.com/waterystone/p/4920797.html
 
+参考文章：https://www.nenggz.com/md/java/thread/java-thread-x-lock-AbstractQueuedSynchronizer.html
+
 参考文章：Java并发编程的艺术=>经典之作
 
-AbstractQueueSynchronizer  
+
+
+> AbstractQueuedSynchronizer，抽象队列同步器是一个：用来构建锁和同步器的基础框架，使用AQS能简单且高效的构造出广泛大量的同步器。例如：ReentrantLock、Semphore、SynchronousQuequ、FuureTask等等都是基于AQS的
+>
+> 我们也可以利用AQS轻松构建出符合我们自己需求的同步器。**自定义同步器只需要实现共享资源state的获取方式与释放方式即可，至于具体线程等待队列的维护，AQS已经在上层帮我们实现好了**
+
+
 
 抽象：抽象类，只实现一些主要逻辑，有些方法由子类实现
 
@@ -865,7 +1105,7 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 1. 静态内部类(自定义同步器)继承自AQS
 2. 重写AQS中可重写的方法，例如：tryAcquire、tryRelease等等
 3. 将操作代理到我们自己的同步器上面
-4. 调用AQS提供的模板方法，有一些相应的模板方法会去调用我们重写的相关方法
+4. 调用AQS提供的模板方法，这些模板方法会去调用我们重写的方法
 
 
 
@@ -884,7 +1124,11 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 
 ##### AQS核心思想/实现原理
 
-一句话理解：AQS是基于CLH队列(同步队列），用volatile修饰共享变量state，线程通过CAS去改变状态，成功则获取锁成功，失败则进入队列等待，等待被唤醒。AQS是自旋锁，在等待被唤醒的时候，经常会使用自旋( while(!cas() )的方式，不停的尝试获取锁，直到被其他线程获取成功
+> 如果被请求的共享资源空闲，则将当前请求资源的线程设置为有效线程，并且将共享资源设置为锁定状态
+>
+> 如果被请求的共享资源被占有，那么就需要有一套线程阻塞等待以及被唤醒时锁的分配机制。这个机制AQS是用CLH队列实现的，即：将暂时获取不到锁的线程加入到队列中
+
+一句话理解：AQS是基于CLH队列(同步队列），用volatile修饰共享变量state，线程通过CAS去改变state状态，成功则获取锁成功，失败则进入队列等待，等待被唤醒。AQS是自旋锁，在等待被唤醒的时候，经常会使用自旋( while(!cas() )的方式，不停的尝试获取锁，直到被其他线程获取成功
 
 实现了AQS的锁有：自旋锁、互斥锁、读写锁、信号量、栅栏等等都是AQS的衍生物
 
@@ -898,7 +1142,7 @@ AbstractQueueSynchronizer  同步器，是用来构建锁或者其他同步组�
 
 ![image-20220414211911107](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207032112637.png)
 
-CLH：Craig Landin and Hagersten ，CLH队列（是FIFO）是一个虚拟的双向队列，虚拟的双向队列：即不存在队列实例，仅存在节点之间的关联关系
+CLH：Craig Landin and Hagersten ，CLH队列（是FIFO）是一个虚拟的双向队列，**虚拟的双向队列：即不存在队列实例，仅存在节点之间的关联关系**
 
 AQS是将每一条请求共享资源的线程封装成一个CLH锁队列的一个结点（Node），来实现锁的分配，每个节点保存获取同步状态失败的线程引用、等待状态、前驱后继节点等信息
 
@@ -928,9 +1172,11 @@ AQS是将每一条请求共享资源的线程封装成一个CLH锁队列的一�
 
 
 
-AQS定义了两种资源共享方式：
 
-1. 独占：只有一个线程能执行，例如ReentrantLock
+
+##### AQS定义了两种资源共享方式
+
+1. 独占：只有一个线程能执行，例如ReentrantLock。又可以分为公平锁和非公平锁，不指定都是非公平锁
 2. 共享：多个线程可以同时执行，例如Semaphore、CountDownLatch、ReadWriteLock、CyclicBarrier
 3. 不同的自定义的同步器争用资源的方式也不同
 
@@ -999,6 +1245,8 @@ AQS定义了两种资源共享方式：
 
 
 
+
+---
 
 #### ReentrantLock
 
@@ -1224,118 +1472,94 @@ ReentantReadWriteLock不支持锁升级。目的：保证数据的可见性，�
 
 ### LockSupport工具
 
-LockSupport定义了一组的公共静态方法，这些方法**提供了最基本的线程阻塞和唤醒功能**，而LockSupport也成为构建同步组件的基础工具，可以**唤醒当前线程以及唤醒指定被阻塞的线程**
+> LockSupport是一个核心基础类，AQS框架借助于两个类：Unsafe(提供CAS)+LockSupport(提供park/unpark)
+>
+> LockSupport主要作用：创建锁和其他同步类的基本线程阻塞和唤醒原语
+>
+> LockSupport提供了一组公共静态方法，这些方法**提供了最基本的线程阻塞和唤醒功能**，而LockSupport也成为构建同步组件的基础工具，可以**唤醒当前线程以及唤醒指定被阻塞的线程**
+
+
+
+#### LockSupport核心函数
 
 LockSupport定义了一组以park开头的方法用来阻塞当前线程，以及unpark(Thread thread)方法来唤醒一个被阻塞的线程。
 
-**简单的说：LockSupport就是用来和AQS配合阻塞和唤醒线程的**
-
-其中，Lock的Condition的 awiat/signal阻塞和唤醒是采用它实现的
 
 
+park：阻塞当前线程，并且该线程在**下列情况发生之前**都会被阻塞
 
-park开头的方法用来阻塞当前线程
-
-unpark(Thread t)方法来唤醒一个被阻塞的线程
+1. 调用unpark函数，释放线程的许可
+2. 该线程被中断
+3. 阻塞的时间到了
 
 
 
-Object、Condition、LockSupport三者等待/唤醒区别
+unpark：释放线程的许可，即激活调用park后阻塞的线程。这个函数是不安全的，调用这个函数时要确保线程依旧存活
 
-Object、Conditon局限性：线程需要先获取锁、唤醒方法需要在等待方法之后否则不能进行唤醒
 
-LockSupport：没有上述两个限制
 
----
-
-### Thread的相关方法
-
-#### Sleep()
-
-当前线程休眠，进入阻塞状态，若在休眠状态被中断会抛出InterruptedException中断异常
-
-若占有锁对象，调用该方法并不会释放锁的占用
-
-#### Join()
-
-若在A线程中执行了threadB.join()，其含义：当前A线程等待threadB线程终止后才从threadB.join处返回
-
-实现原理：等待/通知机制
+**实际上：这两个核心函数，是调用的Unsafe类的park、unpark函数**
 
 ~~~java
-public final synchronized void join(long millis)
-    throws InterruptedException {
-        long base = System.currentTimeMillis();
-        long now = 0;
 
-        if (millis < 0) {
-            throw new IllegalArgumentException("timeout value is negative");
-        }
+    public static void unpark(Thread thread) {
+        if (thread != null)
+            UNSAFE.unpark(thread);
+    }
 
-        if (millis == 0) {
-            //条件不满足继续等待
-            while (isAlive()) {
-                wait(0);
-            }
-            //条件符合，方法返回
-        } else {
-            while (isAlive()) {
-                long delay = millis - now;
-                if (delay <= 0) {
-                    break;
-                }
-                wait(delay);
-                now = System.currentTimeMillis() - base;
-            }
-        }
+
+    public static void park(Object blocker) {
+        Thread t = Thread.currentThread();
+        setBlocker(t, blocker);
+        UNSAFE.park(false, 0L);
+        setBlocker(t, null);
     }
 ~~~
 
 
 
----
-
-### 线程的中断
-
-在Java中，**停止一个线程的主要机制是中断，中断并不是强迫终止 一个线程，它是一种协作机制，是给线程传递一个取消信号，但是由线程来决定如何以及何时退出**
-
-**其他线程调用该线程的interrupt()方法对其进行中断操作**
 
 
 
-中断机制的特性是：线程通过检查自身是否被中断来进行响应，而且**可以决定是否响应中断的请求**。所以线程可以忽略中断请求并且继续运行
 
-每一个线程都有一个标志位，表示该线程是否被中断了
+#### Object、Condition、LockSupport 区别
 
-1. public void interrupt()
-   - 此方法并不能中断线程，只是告诉该线程外部已经有中断请求了，至于是否中断，取决于线程自己
-   - 此方法为实例方法，告诉线程外部有中断请求，并将线程的中断状态设置为true
-2. public static boolean interrupted()
-   - 此方法是类方法，对当前线程的中断标识进行复位
-   - 返回当前线程中断标志位是否为true，但是他有一个副作用就是清除线程的中断标志位，也就是说，**连续两次调用 interrupted（），第一次返回的结果为true，第二次一般就是false（除非 同时又发生了一次中断）**
-3. public boolean isInterrupted
-   - 此方法是实例方法，检查线程是否已经中断，返回对应的中断标志位是否为true
-   - 线程的中断状态不受该方法的影响
+1. Object、Conditon的局限性：线程需要先获取锁、唤醒方法需要在等待方法之后否则不能进行唤醒
+2. Object.wait()和LockSupport.park()
+   - Object.wait需要先获取到锁，park不需要
+   - 前者声明抛出了中断异常，需要调用者捕获或再次抛出；后者可以响应中断起到和unpark的作用
+   - Object.wait()不带超时的，需要另一个线程执行notify()来唤醒，但不一定继续执行后续内容；
+   - LockSupport.park()不带超时的，需要另一个线程执行unpark()来唤醒，一定会继续执行后续内容
 
 
 
-#### 线程对中断的反应
+如果在park()之前执行了unpark()会怎样?
 
- **interrupt（）对线程的影响与线程的状态和在进行的IO操作有关。** 我们主要考虑线程的状态，IO操作的影响和具体IO以及操作系统有关， 我们就不讨论了
-
-线程状态有：
-
-1. Runnable：线程在运行或具备运行条件只是在等待操作系统调度
-2. Waiting/Timed_Waiting：线程在等待某个条件或超时
-3. Blocked：线程在等待锁，阻塞状态
-4. New/Terminated：线程还未启动或已结束
+答：线程不会被阻塞，直接跳过park()，继续执行后续内容
 
 
 
-### 安全的终止线程
+park()会释放锁资源吗？
 
-1. 中断
-2. volatile + 设置标志位来控制是否停止任务并终止该线程
+答：不会，它只负责阻塞当前线程
+
+
+
+其中，Lock的Condition的 awiat/signal阻塞和唤醒是采用它实现的
+
+condition.await()会释放锁资源
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 
@@ -1376,6 +1600,10 @@ Condition 定义了等待/通知两种类型的方法，当前线程调用这些
 
 
 #### Condition实现原理
+
+AQS中同步队列：CLH队列，虚拟双向队列
+
+等待队列：是一个单向链表，当使用Condition时，才会存在这个单向链表
 
 ConditionObject是AQS的内部类，每个Condition对象都包含一个队列(等待队列)，该队列是Conditon对象实现等待/通知功能的关键
 
@@ -1771,6 +1999,12 @@ LinkedBlockingDeque：一个由**链表结构组成的双向**阻塞队列
 
 ### Java中的13个原子操作类
 
+> JUC中，多数类是通过volatile和CAS来实现的，CAS本质上是一种无锁方案，而synchronized和Lock是互斥锁方案。
+>
+> Java原子类本质上使用的是CAS，而CAS底层是通过Unsafe类实现的
+
+
+
 JDK1.5开始提供了juc包下atomic包，这个包中的原子操作类提供了一种用法简单、性能高效、线程安全地更新一个变量的方式
 
 因为变量的类型有很多种，所以在 Atomic 包里一共提供了 13 个类，属于 4 种类型的原子更新方式，分别是原子更新基本类型、原子更新数组、原子更新引用和原子更新属性（字段）
@@ -1781,7 +2015,9 @@ Atomic 包里的类基本都是使用 Unsafe 实现的包装类
 
 1. AtomicBoolean、AtomicInteger、AtomicLong
    - 这3个类提供的方法几乎一模一样
-   - 底层为unsafe.compareAndSwapxxx实现
+   - 底层为volatile的变量+CAS实现
+
+
 
 #### 原子更新数组
 
@@ -1818,6 +2054,170 @@ AtomicIntegerFieldUpdater：原子更新整型的字段的更新器
  AtomicLongFieldUpdater：原子更新长整型字段的更新器
 
  AtomicStampedReference：原子更新带有版本号的引用类型。该类将整数值与引用关联起来，可用于原子的更新数据和数据的版本号，可以解决使用 CAS 进行原子更新时可能出现的 ABA 问题
+
+
+
+##### AtomicStampedReference解决CAS的ABA问题
+
+主要是维护了一个对象引用以及一个可以自动更新的整数stamp的Pair对象来解决ABA问题
+
+~~~java
+public class AtomicStampedReference<V> {
+    private static class Pair<T> {
+        final T reference;  //维护对象引用
+        final int stamp;  //用于标志版本
+        private Pair(T reference, int stamp) {
+            this.reference = reference;
+            this.stamp = stamp;
+        }
+        static <T> Pair<T> of(T reference, int stamp) {
+            return new Pair<T>(reference, stamp);
+        }
+    }
+    private volatile Pair<V> pair;
+    ....
+    
+    /**
+      * expectedReference ：更新之前的原始值
+      * newReference : 将要更新的新值
+      * expectedStamp : 期待更新的标志版本
+      * newStamp : 将要更新的标志版本
+      */
+    public boolean compareAndSet(V   expectedReference,
+                             V   newReference,
+                             int expectedStamp,
+                             int newStamp) {
+        // 获取当前的(元素值，版本号)对
+        Pair<V> current = pair;
+        return
+            // 引用没变
+            expectedReference == current.reference &&
+            // 版本号没变
+            expectedStamp == current.stamp &&
+            // 新引用等于旧引用
+            ((newReference == current.reference &&
+            // 新版本号等于旧版本号
+            newStamp == current.stamp) ||
+            // 构造新的Pair对象并CAS更新
+            casPair(current, Pair.of(newReference, newStamp)));
+    }
+
+    private boolean casPair(Pair<V> cmp, Pair<V> val) {
+        // 调用Unsafe的compareAndSwapObject()方法CAS更新pair的引用为新引用
+        return UNSAFE.compareAndSwapObject(this, pairOffset, cmp, val);
+    }
+~~~
+
+
+
+
+
+
+
+---
+
+### CAS
+
+> Compare-And-Swap：比较并交换
+>
+> **是一条CPU的原子指令**，其作用是：让CPU先进行比较两个值是否相等，然后原子地更新某个位置的值
+>
+> CAS是基于硬件平台的汇编指令，即CAS是依靠硬件实现的，JVM只是封装了汇编调用，那些AtomicXX类就是使用了这些封装后的接口
+>
+> 简单理解：CAS操作需要输入两个值，一个是旧值(期望操作前的值)，一个是新值，在操作期间，先比较旧值有没有发生变化，如果没有发生变化，才交换成新值
+
+
+
+悲观锁：悲观锁就是我们常说的锁。对于悲观锁来说，它总是认为每次访问共享资源时会发生冲突，所以必须对每次数据操作加上锁，以保证临界区的程序同一时间只能有一个线程在执行
+
+乐观锁：又称-无锁，乐观锁总是假设对共享资源的访问没有冲突，线程可以不停地执行，无需加锁也无需等待。而一旦多个线程发生冲突，乐观锁通常是使用一种称为CAS的技术来保证线程执行的安全性
+
+
+
+乐观锁多用于：读多写少的环境，避免频繁加锁印象性能
+
+悲观锁多用于：写多读少的环境，避免频繁失败和重试影响性能
+
+
+
+CAS：Compare And Swap
+
+cas中，有这样三个值：
+
+1. V:要更新的变量
+2. E:预期值（主内存中）
+3. N:新值
+
+比较并交换过程：判断V是否等于E，如果相等则将V的值设置为N。如果不等，则说明有其他线程更新了V值，当前线程放弃更新，什么也不做
+
+
+
+**当多个线程同时使用CAS操作一个变量时，只有一个会胜出，并成功更新，其余均会失败，但失败的线程并不会被挂起，仅是被告知失败，并且允许再次尝试，当然也允许失败的线程放弃操作**
+
+
+
+
+
+
+
+#### CAS中的三大问题
+
+#### ABA问题
+
+解决思路：在变量上**加版本号或时间戳**
+
+JDK1.5开始提供了一个AtomicStampedReference类来解决ABA问题。这个类的`compareAndSet`方法的作用是首先检查当前引用是否等于预期引用，并且检查当前标志是否等于预期标志，如果二者都相等，才使用CAS设置为新的值和标志
+
+~~~java
+public boolean compareAndSet(V   expectedReference,
+                             V   newReference,
+                             int expectedStamp,
+                             int newStamp) {
+    Pair<V> current = pair;
+    return
+        expectedReference == current.reference &&
+        expectedStamp == current.stamp &&
+        ((newReference == current.reference &&
+          newStamp == current.stamp) ||
+         casPair(current, Pair.of(newReference, newStamp)));
+}
+~~~
+
+
+
+
+
+#### 循环时间长问题
+
+CAS常常与自旋结合，如果自旋cas长时间不成功，会占用大量cpu资源
+
+
+
+#### 只能保证一个共享变量的原子操作
+
+解决方案
+
+1. Jdk1.5开始提供了：AtomicReference类保证对象之间的原子性，把多个变量放到一个对象里面进行CAS操作。
+2. 取巧的办法：把多个共享变量合并到一个共享变量来操作。例如两个共享变量i=2,j=a，合并以下ij=2a，然后用cas来操作ij
+3. 加锁：对多个共享变量操作时，循环CAS就无法保证操作的原子性，这个时候就可以用锁
+
+
+
+
+
+#### Java实现CAS原理：Unsafe类
+
+>  CAS是一种原子操作，它是一种系统原语，是一条CPU的原子指令，从CPU层面保证它的原子性
+>
+> Unsafe类的实现是由底层JVM去实现的，JUC包中的CAS操作广泛应用了它
+
+Unsafe类主要执行低级别、不安全操作的方法。比如：直接访问系统内存资源、自主管理内存等等。这些方法在提升Java运行效率、增强Java语言底层资源操作能力方面起到了很大的作用
+
+对于Unsafe类的使用都是受限制的，正常情况是不能使用的。只有授信的代码才能获得该类的实例。当然，JDK库里面的类是可以随意使用它的
+
+
+
+
 
 
 
@@ -1943,6 +2343,10 @@ Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger �
 
 ---
 
+
+
+
+
 ### Fork/Join框架
 
 
@@ -1955,83 +2359,7 @@ Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger �
 
 ---
 
-### CAS
-
-悲观锁：悲观锁就是我们常说的锁。对于悲观锁来说，它总是认为每次访问共享资源时会发生冲突，所以必须对每次数据操作加上锁，以保证临界区的程序同一时间只能有一个线程在执行
-
-乐观锁：又称-无锁，乐观锁总是假设对共享资源的访问没有冲突，线程可以不停地执行，无需加锁也无需等待。而一旦多个线程发生冲突，乐观锁通常是使用一种称为CAS的技术来保证线程执行的安全性
-
-
-
-乐观锁多用于：读多写少的环境，避免频繁加锁印象性能
-
-悲观锁多用于：写多读少的环境，避免频繁失败和重试影响性能
-
-
-
-CAS：Compare And Swap
-
-cas中，有这样三个值：
-
-1. V:要更新的变量
-2. E:预期值（主内存中）
-3. N:新值
-
-比较并交换过程：判断V是否等于E，如果相等则将V的值设置为N。如果不等，则说明有其他线程更新了V值，当前线程放弃更新，什么也不做
-
-
-
-**当多个线程同时使用CAS操作一个变量时，只有一个会胜出，并成功更新，其余均会失败，但失败的线程并不会被挂起，仅是被告知失败，并且允许再次尝试，当然也允许失败的线程放弃操作**
-
-
-
-#### Java实现CAS原理：Unsafe类
-
-CAS是一种原子操作，它是一种系统原语，是一条CPU的原子指令，从CPU层面保证它的原子性
-
-Unsafe类的实现是由底层JVM去实现的
-
-
-
-#### CAS中的三大问题
-
-#### ABA问题
-
-解决思路：在变量上**加版本号或时间戳**
-
-JDK1.5开始提供了一个AtomicStampedReference类来解决ABA问题。这个类的`compareAndSet`方法的作用是首先检查当前引用是否等于预期引用，并且检查当前标志是否等于预期标志，如果二者都相等，才使用CAS设置为新的值和标志
-
-~~~java
-public boolean compareAndSet(V   expectedReference,
-                             V   newReference,
-                             int expectedStamp,
-                             int newStamp) {
-    Pair<V> current = pair;
-    return
-        expectedReference == current.reference &&
-        expectedStamp == current.stamp &&
-        ((newReference == current.reference &&
-          newStamp == current.stamp) ||
-         casPair(current, Pair.of(newReference, newStamp)));
-}
-~~~
-
-
-
-
-
-#### 循环时间长问题
-
-CAS常常与自旋结合，如果自旋cas长时间不成功，会占用大量cpu资源
-
-
-
-#### 只能保证一个共享变量的原子操作
-
-解决方案
-
-1. Jdk1.5开始提供了：AtomicReference类保证对象之间的原子性，把多个变量放到一个对象里面进行CAS操作
-2. 加锁
+2. 
 
 ---
 
@@ -2890,12 +3218,6 @@ HotSpot虚拟机中的对象头分为两部分：
 
 --------
 
-
-
-### 实际问题
-
-
-
 ### 多线程中i++等操作时线程安全问题
 
 #### Java内存模型-JMM
@@ -3010,11 +3332,7 @@ CAS执行依赖于UnSafe类实现
 
 
 
-如何解决上述问题？
 
-原子引用更新
-
-比较更新时，添加版本号--AtomicStampedReference
 
 ​	
 
