@@ -2371,9 +2371,11 @@ countDownLatch、CyclicBarrier、Semaphore、Exchanger
 
 前三者用于并发流量的控制、第四个为在线程间交换数据的一种手段
 
+
+
 #### CountDownLatch(闭锁)
 
-它允许一个或多个线程等待其他线程完成操作后，再执行。
+> 它允许一个或多个线程等待其他线程完成操作后，再执行。
 
 它可以使一个或一批线程在闭锁上等待，等到其他线程执行完相应操作后，闭锁打开，这些等待的线程可以继续执行
 
@@ -2426,6 +2428,10 @@ public CountDownLatch(int count) {
 将调用await()方法的线程，组装成Node，放在CLH同步队列尾中。一个线程在阻塞前会把它前面的节点设置为通知状态，这样便实现了链式唤醒机制
 
 ![image-20220419213822123](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202204192138362.png)
+
+await等待原理：LockSupport.park()
+
+countdown原理：每次countdown()，会让state-1，直到state=0时候，才会进行LockSupport.unpark()唤醒操作
 
 
 
@@ -2491,6 +2497,65 @@ Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger �
 
 ### Fork/Join框架
 
+> Fork/Join是JDK7加入的一个线程池类。Fork/Join采用的技术是分治算法的并行实现，它是一项可以获得良好的并行性能的简单且高效的设计技术
+>
+> 是一种可以将一个大任务拆分为多个小任务来异步执行的工具
+
+
+
+
+
+
+
+#### 核心思想1：分治算法
+
+> 把任务递归的拆分为各个子任务，这要可以更好的利用系统资源，尽可能的使用所有可用的计算能力来提升应用性能
+
+Fork/Join任务运行机制：
+
+![image-20230324153909447](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202303241539554.png)
+
+
+
+#### 核心思想2：工作窃取算法
+
+> 指某个线程从其他对立里窃取任务来执行
+>
+> ForkJoinPool中，线程池中每个工作线程都对应一个任务队列，工作线程优先处理自身队列的任务。工作窃取时，为了减少窃取线程与被窃取线程之间的竞争，通常会采用双端队列，被窃取线程从双端队列的头部拿任务执行，窃取任务的线程从队列的尾部拿任务执行
+
+
+
+工作窃取算法的优点：充分利用线程进行并行计算，减少了线程间的竞争
+
+工作窃取算法的缺点：某些情况下还是会存在竞争，例如双端队列里只有一个任务时。并且该算法会消耗更多的系统资源，例如创建多个线程和多个双端队列
+
+
+
+#### Fork/Join框架的设计
+
+1. 分割任务
+   - 把一个大任务分割为子任务
+   - 子任务可能还是很大，所以还需要不停地分割，直到分割出的子任务足够小
+2. 执行任务并合并结果
+   - 分割的任务分别放在双端队列里面，然后启动线程分别从双端队列获取任务执行
+   - 子任务执行完的结果统一放到一个队列里
+   - 启动一个线程从队列里获取数据，并合并这些数据
+
+Fork/Join中使用两个类来完成以上2件事情
+
+1. ForkJoinTask：它提供在任务中执行fork()、join()操作的机制。通常不需要之间继承ForkJoinTask，而是继承它的子类：RecursiveAction：用于没有返回结果的任务， RecursiveTask：用于有返回结果的任务
+2. ForkJoinPool：ForkJoinTask需要通过ForkJoinPool中的ForkJoinWorkThread来执行
+
+
+
+Fork/Join框架中主要的三个模块
+
+1. 任务对象：ForkJoinTask(RecrsiveTask、RecursiveAction、CountedCompleter)
+2. 执行Fork/Join任务的线程：ForkJoinWorkerThread
+3. 线程池：ForkJoinPool
+
+三者关系是：通过ForkJoinPool池中的ForkJoinWorkThread来处理ForkJoinTask任务
+
 
 
 #### Java8 Stream流并行计算
@@ -2498,10 +2563,6 @@ Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger �
 前提：多核cpu
 
 实现原理：Stream多线程并行计算，就是利用Fork/Join思想来进行多线程并行计算
-
----
-
-2. 
 
 ---
 
@@ -2721,6 +2782,8 @@ Executor类与接口示意图：
 
 ![image-20220705214122243](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052141415.png)
 
+
+
 Executor框架使用示意图：
 
 ![image-20220705213818512](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052138986.png)
@@ -2784,9 +2847,72 @@ public static <T> Callable<T> callable(Runnable task, T result)
 
 
 
+#### Excutors可以创建多种线程池
+
+> Executors扮演的是线程工厂的角色，一定要与Executor分开。Executors只是Executor框架中的一个工厂类而已，可以通过Executors创建特定功能的线程池
 
 
 
+通常我们可以根据自己的需求创建下面几种不同的线程池
+
+1. Executors.newFixedThreadPool()
+
+   - 创建一个固定数量的线程池，核心线程数和最大线程大小都是一样的
+   - 存在的问题：由于阻塞队列使用了LinkedBlockingQueue，默认情况下是Integer.Max_Vuale，如果随着任务的不断增多，这个队列所占用的内存将越来越多。最终导致OOM也是迟早的事
+
+2. Executors.newCachedThreadPool();
+
+   - 创建一个根据实际情况调整线程个数的线程池
+
+   - ~~~java
+     public static ExecutorService newCachedThreadPool() {
+             return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+                                           60L, TimeUnit.SECONDS,
+                                           new SynchronousQueue<Runnable>());
+         }
+     ~~~
+
+   - 
+
+   - 使用场景：适用于那些业务简单、耗时短的任务
+
+   - 存在的问题：它会创建一个核心线程数为 0 ，最大线程数为Integer上限，并且使用了无界的SynchronousQueued队列作为阻塞队列。无用线程存活时间为 6 秒的线程池。这意味着当我们需要在多线程中执行复杂业务时，它会疯狂的创建线程，因为其他线程中的业务并未执行完。
+
+   - 如果主线程提交任务的速度高于 maximumPool 中线程处理任务的速度时，CachedThreadPool 会不断创建新线程。极端情况下， CachedThreadPool 会因为创建过多线程而耗尽 CPU 和内存资源。
+
+   - 例如：若存在10万个任务且每个任务需要等待1s钟，这足以让计算机会在短暂的时间内内存使用率过高并一直持续到OOM
+
+3. Executors.newSingleThreadPool();
+
+   - 创建一个线程数量为1的线程池
+
+   - ~~~java
+     public static ExecutorService newSingleThreadExecutor() {
+             return new FinalizableDelegatedExecutorService
+                 (new ThreadPoolExecutor(1, 1,
+                                         0L, TimeUnit.MILLISECONDS,
+                                         new LinkedBlockingQueue<Runnable>()));
+         }
+     ~~~
+
+   - 
+
+4. Executors.newScheduledThreadPool();
+
+   - 线程池支持定时以及周期性执行任务
+
+
+
+#### 为什么不建议或不允许使用Excutors去创建线程池
+
+1. 使用Excutors.newFixedThreadPool和newSingleThreadExecutor：主要问题是堆积的请求处理队列可能会耗费非常大的内存，甚至OOM
+2. newCachedThreadPool和newScheduledThreadPool：主要问题是线程数最大是Integer.Max_Value，可能会创建非常多的线程，甚至造成OOM
+
+
+
+推荐使用ThreadPoolExecutor去创建线程池，这种方式创建的线程池可以更加明确的直到线程池的运行规则，规避了资源耗尽的风险
+
+或：commons-lang3包中的工具、google.guava包的工具
 
 
 
@@ -2849,9 +2975,11 @@ Executor框架中最核心的类，它是线程池的实现类
 
 ##### ScheduledThreadPoolExecutor详解
 
-其继承自ThreadPoolExecutro，主要用来在给定延迟之后运行任务或者定期执行任务
+> 其继承自ThreadPoolExecutro，主要用来**在给定延迟之后运行任务或者定期执行任务**
+>
+> 它的功能类似Timer，但是它更加强大、灵活。Timer对应的是一个单个后台线程，而ScheduledThreadPoolExecutor可以指定对应的后台线程数
 
-DelayQueue是一个无界队列，所有最大线程池数量没啥效果
+
 
 ScheduledThreadPoolExecutor的执行主要分为两大部分
 
@@ -2860,12 +2988,18 @@ ScheduledThreadPoolExecutor的执行主要分为两大部分
 
 ![image-20220705222506561](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/juc_img/202207052225487.png)
 
+
+
 ScheduledThreadPoolExecutor为了实现周期性任务，对ThreadPoolExecutor做了如下修改
 
 1. 使用DelayQueue阻塞队列作为任务队列
+   - JDK8已经换成了DelayedWorkQueue ：其实现原理和`DelayQueue`基本一样，核心数据结构是二叉最小堆的优先队列，队列满时会自动扩容，所以`offer`操作永远不会阻塞，`maximumPoolSize`也就用不上了，所以线程池中永远会保持至多有`corePoolSize`个工作线程正在运行
 2. 获取任务的方式不同
 3. 执行周期任务后，增加了额外的处理
-3. 
+
+
+
+
 
 ##### ScheduledThreadPoolExecutor 的实现
 
@@ -2876,6 +3010,8 @@ ScheduledFutureTask 主要包含 3 个成员变量，如下。
 1. long 型成员变量 time，表示这个任务将要被执行的具体时间
 2. long 型成员变量 sequenceNumber，表示这个任务被添加到ScheduledThreadPoolExecutor 中的序号
 3. long 型成员变量 period，表示任务执行的间隔周期
+
+
 
 DelayQueue 封装了一个 PriorityQueue，这个 PriorityQueue 会对队列中的 ScheduledFutureTask 进行排序。排序时，time 小的排在前面（时间早的任务将被先执行）。如果两个 ScheduledFutureTask 的 time 相同，就比较 sequenceNumber，sequenceNumber 小的排在前面（也就是说，如果两个任务的执行时间相同，那么先提交的任务将被先执行）
 
@@ -2890,24 +3026,41 @@ DelayQueue 封装了一个 PriorityQueue，这个 PriorityQueue 会对队列中�
 
 
 
-#### 为什么线程池不建议或不允许使用Excutors去创建
-
-1. 使用Excutors.newFixedThreadPool和newSingleThreadExecutor：主要问题是堆积的请求处理队列可能会耗费非常大的内存，甚至OOM
-2. newCachedThreadPool和newScheduledThreadPool：主要问题是线程数最大是Integer.Max_Value，可能会创建非常多的线程，甚至造成OOM
-
-
-
-推荐使用ThreadPoo;Executor去创建线程池，这种方式创建的线程池可以更加明确的直到线程池的运行规则，规避了资源耗尽的风险
-
-或：commons-lang3包中的工具、google.guava包的工具
 
 
 
 
+##### 配置线程池需要考虑的因素
+
+> 所以ThreadPoolExecutor方式手动创建线程池的时候，大致需要从以下4个角度来分析，并且尽可能的使用有界的工作队列
+
+1. 任务的优先级
+2. 任务的执行时间长短
+3. 任务的性质(CPU密集、IO密集)
+4. 任务的依赖关系
+
+性质不同的任务可使用不同规模的线程池分开处理
+
+1. cpu密集型：用尽可能少的线程，Ncpu+1
+2. I/O密集型：尽可能多的线程，Ncpu*2
+3. 混合型：CPU密集型的任务与IO密集型任务的执行时间差别较小，拆分为两个线程池；否则没有必要拆分
+
+
+
+##### ThreadPoolExecutor大致流程
+
+任务的执行
+
+> executor->addWorker->runworker(getTask)
 
 
 
 
+
+##### 任务的关闭
+
+1. shutdown：将线程池状态设为SHUTDOWN，线程池进入这个状态后，会拒绝新的任务，然后将剩余的任务全部执行
+2. shutdownNew：将线程池状态设为STOP，拒绝所有提交的任务，然后中断所有正在运行钟的worker，然后清空任务队列
 
 
 
@@ -3007,6 +3160,10 @@ FutureTask的实现基于AQS，基于AQS的有：ReentrantLock、Semaphore、Ree
 假设开始时 FutureTask 处于未启动状态或已启动状态，等待队列中已经有 3 个线程（A、B 和 C）在等待。此时，线程 D 执行 get()方法将导致线程 D 也到等待队列中去等待。
 
 当线程 E 执行 run()方法时，会唤醒队列中的第一个线程 A。线程 A 被唤醒后，首先把自己从队列中删除，然后唤醒它的后继线程 B，最后线程 A 从 get()方法返回。线程B、C 和 D 重复 A 线程的处理流程。最终，在队列中等待的所有线程都被级联唤醒并从get()方法返回
+
+
+
+
 
 
 
