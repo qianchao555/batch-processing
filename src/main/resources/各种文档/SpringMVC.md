@@ -1,8 +1,20 @@
 ## SpringMVC
 
-是Spring提供的一个基于MVC设计模式的轻量级Web开发框架，本质上相当于Servlet
+> SpringMVC是Spring在Ioc容器和Aop等的基础上，遵循web MVC的规范推出的web开发框架
+>
+> 目的是：为了简化Java技术栈的web开发
+>
+> 是Spring提供的一个基于MVC设计模式的轻量级Web开发框架，本质上相当于Servlet
+
+
 
 ### 什么是MVC
+
+> Model View Controller：模型-视图-控制器，一种软件设计规范
+>
+> 本质是为了解耦：将业务逻辑、数据、界面展示进行分离开来
+
+
 
 ### 前后端分离后
 
@@ -12,7 +24,9 @@ SpringMVC既适用于前后端一体的jsp类型的项目(一般是老项目了)
 2. 分离之后：后端仅仅返回前端所需的Json数据，后端不再渲染Html页面
 3. 分离之后：SpringMvc的 视图解析器是不需要的
 
-### SpringMvc流程
+
+
+### SpringMvc请求流程
 
 ![image-20220330153933034](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springmvc_img/image-20220330153933034.png)
 
@@ -380,7 +394,19 @@ Filter可以拦截多个请求或响应；一个请求或响应可以被多个Fi
 
 ## DispatcherServlet
 
-SpringMVC的核心，其实质是一个HttpServlet
+>  SpringMVC的核心，其实质是一个HttpServlet，需要根据Servlet规范使用Java配置或xml声明和映射
+
+
+
+DispatcherServlet需要WebApplicationContext（继承自 ApplicationContext）来配置
+
+![image-20230327150614373](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springmvc_img/202303271506670.png)
+
+
+
+
+
+
 
 ![image-20221021231600219](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springmvc_img/202210212316402.png)
 
@@ -393,6 +419,18 @@ DispatcherServlet和原生Servlet类似，都是用来接收用户请求
 当Servlet没有实现SingleThreadModel接口时，Servlet才是单例的，如果实现该接口，那么每次请求相同的Servlet将会创建一个新的实例
 
 DispatcherServlet其生命周期跟随Servlet容器，没有实现SingleThreadModel接口，所以只有一个实例
+
+
+
+### DispatcherServlet如何初始化
+
+> 首先，它本质是一个Servlet，Servlet有自己的生命周期的方法
+
+![image-20230327151537767](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/springmvc_img/202303271515999.png)
+
+其init()方法在HttpServletBean中，
+
+
 
 
 
