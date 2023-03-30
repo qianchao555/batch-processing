@@ -1343,29 +1343,29 @@ https://blog.csdn.net/a745233700/article/details/110914620
 
 ## Spring事务
 
-Spring事务的本质就是数据库对事务的支持，没有数据库对事务的支持，spring是无法提供事务功能的
+> Spring事务的本质就是数据库对事务的支持，没有数据库对事务的支持，spring是无法提供事务功能的
+>
+> 例如：MySQL的MyISAM存储引擎就是不支持事务的
+
+
 
 Spring只提供统一事务关联接口，具体实现都是由各个数据库自己实现，数据库事务的提交和回滚是通过redo log和undo log实现的。
 
 Spring会在事务开始时，根据当前环境中设置的隔离级别，调整数据库隔离级别，由此保持一致
 
-##### Spring事务的种类
-
-spring支持编程式事务管理和声明式事务管理
 
 
+#### Spring支持两种方式的事务管理
 
-###### 编程式事务管理
+##### 编程式事务管理
 
 使用：TransactionTemplate或PlatformTransactionManager都可以实现
 
 
 
-###### 声明式事务管理
+##### 声明式事务管理
 
-声明式事务：通过配置的方式，比如xml或注解，告诉spring哪些方法需要spring来帮忙管理事务，开发者只需要关注业务代码即可，而事务的控制由Spring给我们管理控制
-
-声明式事务的底层还是使用上面两种方式来进行事务控制的，不过对其进行了封装，使用起来更加简便
+声明式事务：通过配置的方式，比如xml或注解，告诉spring哪些方法需要spring来帮忙管理事务，开发者只需要关注业务代码即可，而事务的控制由Spring给我们管理控制。**声明式事务的底层还是使用上面两种方式来进行事务控制的，不过对其进行了封装，使用起来更加简便**
 
 
 
@@ -1377,9 +1377,13 @@ spring支持编程式事务管理和声明式事务管理
 
 ##### 事务管理器
 
-事务交给spring管理，那么你肯定要创建一个或者多个事务管理者，由这些管理者来管理具体的事务，比如启动事务、提交事务、回滚事务，这些都是管理者来负责的
+> 事务交给spring管理，那么你肯定要创建一个或者多个事务管理者，由这些管理者来管理具体的事务，比如启动事务、提交事务、回滚事务，这些都是管理者来负责的
 
-spring中使用PlatformTransactionManager这个接口来表示事务管理者，PlatformTransactionManager多个实现类，用来应对不同的环境
+
+
+spring中使用PlatformTransactionManager这个接口来表示事务管理者，是Spring事务策略的核心。它有多个实现类，用来应对不同的环境
+
+
 
 **JpaTransactionManager**：如果你用jpa来操作db，那么需要用这个管理器来帮你控制事务。
 
@@ -1391,13 +1395,42 @@ spring中使用PlatformTransactionManager这个接口来表示事务管理者，
 
 
 
+##### TransactionDefinition事务属性
+
+事务管理器接口PlatforTransactionManager，通过getTransaction(TransactionDefinition definition)方法来得到一个事务。其中TransactionDefinition接口定义了一些基本的事务属性。事务属性主要包括以下几点：
+
+1. 隔离级别
+
+2. 传播行为
+
+3. 回滚规则
+
+4. 是否只读
+
+5. 事务超时
+
+   
+
+##### TransactionStatus事务状态
+
+该接口用来记录事务的状态，例如
+
+1. 是否是新的事务
+2. 是否为只回滚
+3. 是否已完成
+4. 等等
+
 
 
 ##### Spring的事务传播机制
 
+> 事务的传播行为是为了解决：**业务层方法之间相互调用的事务问题**
+
 Spring事务的传播机制说的是，当多个事务同时存在时，spring如何处理这些事务的行为。
 
-事务传播机制采用ThreadLocal实现的，所以如果调用的方法是在新线程调用的，那么，事务传播实际上是会失效的
+例如：事务方法A，调用另一个事务方法B，需要指定事务应该如何传播。
+
+
 
 Propagation_Required:(默认传播行为)如果当前没有事务，就创建一个新事务；如果当前存在事务，就加入该事务
 
@@ -1413,7 +1446,17 @@ Propagation_Mandatory:如果当前存在事务，就加入该事务；如果当�
 
 Propagation_Never:以非事务方式执行，如果当前存在事务，则抛出异常
 
+
+
+事务传播机制采用ThreadLocal实现的，所以如果调用的方法是在新线程调用的，那么，事务传播实际上是会失效的
+
+
+
 ##### Spring中事务的隔离级别
+
+> 对应数据库中，事务的隔离级别
+
+
 
 Isolation_Default:这是个 PlatfromTransactionManager 默认的隔离级别，使用数据库默认的事务隔离级别
 
@@ -1427,7 +1470,13 @@ Isolation_Serializable:所有事务逐个依次执行
 
 
 
+##### 事务回滚规则
 
+> Spring中，默认情况下，事务只有遇到运行时异常RuntimeExecption时才会回滚，Error也会导致事务回滚。但是，在遇到检查型（Check)异常时并不会回滚(例如：IOException、SQLException)
+
+加上rollbackFor=Exception.class的时候，事务在遇到非运行时异常也会回滚。同时也可以回滚自定义异常
+
+例如：rollbackFor=MyException.class
 
 
 
@@ -1948,11 +1997,17 @@ Spring整合了AspectJ使得可以使用aspectj语法来实现Aop
 
 
 
-### Spring中哪些技术是利用Aop实现的
+### Spring中哪些技术是利用Aop实现
 
 
 
 #### @Transactional
+
+> Transactional实现原理：基于Spring Aop实现，Aop又是通过动态代理实现的
+>
+> spring会为标注了@Transactional注解的类或方法，为其创建一个代理类。在调用被`@Transactional` 注解的 public 方法的时候，实际调用的是，`TransactionInterceptor` 类中的 `invoke()`方法。这个方法的作用就是在目标方法之前开启事务，方法执行过程中如果遇到异常的时候回滚事务，方法调用完成之后提交事务
+
+
 
 ##### @EnableTransactionManagement
 
@@ -1974,6 +2029,15 @@ Spring整合了AspectJ使得可以使用aspectj语法来实现Aop
 
    
 
+##### rollbackFor属性
+
+指定能够触发事务回滚的异常类型，并且可以指定多个异常类型
+
+1. 如果事务没有配置rollbackFor属性，那么事务只会在遇到RuntimeException的时候才会回滚
+2. 加上rollbackFor=Exception.class的时候，事务在遇到非运行时异常也会回滚
+
+
+
 
 
 ##### Transactional失效场景
@@ -1984,17 +2048,24 @@ https://www.jianshu.com/p/befc2d73e487 ：事务失效例子比较全面
 
 1. Transactional注解标注在非public方法上时
    - 失效原因：因为@Transactional是基于AOP动态代理实现的，在bean初始化过程中，对含有@Transactional注解的实例创建代理对象，这里存在一个spring扫描该注解信息的过程，但是该注解标注在了非public方法上，那么就默认方法的@Transactional注解信息为空，便不会对bean进行代理对象创建
-2. 在一个类中A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
+2. 在**同一个类中**A方法上标注注解@Transactional，B方法未标注该注解，B方法中调用A方法，导致A方法上的事务注解失效。但是A方法调用B的事务是会生效的。。
    - spring默认的传播机制：Propagation_Required，即：支持当前事务，如果当前没有事务，就新建一个事务。
    - 因为B方法没有该注解，所以线程内的connection属性autocommit=true，那么传播给A方法的也为true，执行完自动提交，即使A方法标注了该注解，也会失效。
-   - B方法调用A方法时，是之间通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
-3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，会导致B方法的事务失效
+   - B方法调用A方法时，是直接通过this对象来调用方法，绕过了代理对象，也即没有代理逻辑了
+3. 一个类中A方法和B方法都标注了@Transactional注解，A调用B，默认情况下B会加入到A的事务中去
 4. rollbackFor 可以指定能够触发事务回滚的异常类型。**Spring默认抛出了未检查unchecked异常（继承自 RuntimeException 的异常）或者 Error才回滚事务**；其他异常（uncheck异常）不会触发回滚事务。如果在事务中抛出其他类型的异常，但却期望 Spring 能够回滚事务，就需要指定rollbackFor属性
 5. 事务方法内部手动捕捉了异常，没有抛出新的异常，导致事务操作不会进行回滚
-6. 多线程与Transaction
+6. 未被Spring管理的类
+7. final方法会失效
+   - 因为是通过Aop实现，最终会通过动态代理生成代理，而类的动态代理通过Cglib实现的
+8. 多线程与Transaction
    - 如果在一个被@Transactional修饰的方法内启用多线程，那么该方法的事务与线程内的事务是两个完全不相关的事务
    - 也就是说在@Transactional注解的方法会产生一个新的线程的情况下，事务是不会从调用者线程传播到新建线程的
    - spring数据库连接信息都放在了ThreadLocal中，所以不同的线程享有不同的连接信息，所以不存在于同一个事务中
+
+
+
+
 
 
 
