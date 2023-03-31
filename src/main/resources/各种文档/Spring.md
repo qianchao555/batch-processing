@@ -40,14 +40,16 @@ JavaEE
    - Spring中bean的创建模式是单例的
 3. 代理模式
    - Spring Aop是通过动态代理实现的
-4. 观察者模式
+4. 模板方法模式
+   - JdbcTemplate、HibernateTemplate等
+5. 观察者模式
    - Spring事件驱动模型通过观察者模式实现
-5. 适配器模式
+6. 适配器模式
    - SpringMVC中DispatcherServlet转发HandlerAdapter用到了适配器模式
-6. 装饰者模式
+7. 装饰者模式
    - Spring中配置DataSource时候，可能是不同的数据库和数据源
    - 使用装饰者模式实现
-7. 策略模式
+8. 策略模式
    - Resource接口本身没有提供访问底层资源的实现逻辑
    - 针对不同的底层资源Spring将会提供不同的Resource类，不同的类负责不同的资源访问逻辑
 
@@ -503,64 +505,7 @@ properties属性来源可以是：properties文件、yml文件、JVM properties�
 
 
 
----
 
-
-
-### @Value、PropertySource、RefreshScope
-
-
-
-#### @Value
-
-将外部配置文件中的数据，比如：数据库配置、redis等等配置信息放在配置文件中，然后通过@Value的方式，将其注入到bean的一些字段中
-
-spring容器启动的时候，会将配置信息加载到Environment中，@value中应用的值，最终是通过Environment来解析的。所以通过扩展Environment可以实现@Value数据的来源方式，例如：数据库、其他存储介质中
-
-使用方式：
-
-~~~java
-@Value("${配置文件中的key:默认值}")   //key不存在时，使用默认值来注入属性
-
-@Value("${password:123}")
-String password;   password配置不存在时，123作为值
-
-@Value("${配置文件中的key}")
-~~~
-
-
-
-##### @value数据来源
-
-通常来源于配置文件，不过还可以有其他方式，比如：将配置文件的内容放在数据库等等
-
-
-
-spring中有个类：PropertySource可以理解为一个配置源
-
-~~~java
-org.springframework.core.env.PropertySource
-~~~
-
-
-
-
-
-@Value实现动态刷新关键：@Scope中的proxyMode参数，值为ScopedProxyMode.Default会生成一个代理，来实现@value动态刷新效果
-
-springboot：@RefreshScope实现动态刷新
-
-
-
-#### @PropertySource
-
-标注在类上，用来指定配置文件的路径
-
-
-
-@ConfigurationProperties+前缀方式批量获取配置信息
-
-@Envionment动态获取单个配置
 
 
 
@@ -573,6 +518,38 @@ springboot：@RefreshScope实现动态刷新
 #### 组件类
 
 @Componet、Controller、Service、Repository
+
+
+
+#### 前后端传值类
+
+@RequestBody 、@RequestParam、@PathVariable
+
+
+
+#### 读取配置类
+
+@Value、@ConfigurationProperties、@PropertySource(不常用)
+
+
+
+#### 全局处理Controller层异常类
+
+@ControllerAdvice：定义全局异常处理类、@ExceptionHandler：声明异常处理方法
+
+
+
+#### Json数据处理
+
+@JsonIgnoreProperties：作用于类上用于过滤掉特定字段不返回或不解析
+
+@JsonIgnor：用在类的属性上，作用同上
+
+@JsonFormat：格式化json数据
+
+
+
+
 
 #### 装配Bean时使用的注解
 
@@ -613,6 +590,12 @@ Spring IoC容器(ApplicationContext)会在启动的时候实例化所有单例Be
 用于导入普通类的注入、@Configuration注解的配置类、声明@Bean注解的bean方法、导入ImportSelector的实现类或导入ImportBeanDefinitionRegistrar的实现类
 
 
+
+@Configurable
+
+> 比较少用，但是功能也很强大
+>
+> 和Configuration看着很像，但是它的作用是：某些自己new出来的对象，而new这个对象又必须依赖spring容器里的对象，才能完成一些工作
 
 
 
@@ -824,7 +807,7 @@ Ioc容器对Bean定义资源的载入是从refresh()函数开始的，refresh()�
 
 
 
-## 注册bean的方式
+## 向Ioc容器中注册bean的方式
 
 1. @CompontentScan
 2. @Configuration+@Bean
@@ -835,6 +818,12 @@ Ioc容器对Bean定义资源的载入是从refresh()函数开始的，refresh()�
    - 可以引入ImportSelector接口和ImportBeanDefinitionRegistrar接口的实现
    - 可以引入@ConpontentScan标注的类
    - 也包括@Conpontent注解的普通类
+
+
+
+
+
+下面这两个很重要，很多功能都是基于这两个接口实现自动注册的
 
 #### ImportBeanDefinitionRegistrar接口
 
@@ -908,10 +897,12 @@ spring对配置类的处理主要分为2个阶段：
 
 ## FactoryBean
 
-Spring BeanFacoty容器中管理两种bean：
+> Spring BeanFacoty容器中管理两种bean
+>
+> 1. 标准Java Bean  
+> 2. 另一种是工厂Bean,   即实现了FactoryBean接口的bean  它不是一个简单的Bean 而是一个**能生产或修饰对象的工厂Bean**
 
-1. 标准Java Bean  
-2. 另一种是工厂Bean,   即实现了FactoryBean接口的bean  它不是一个简单的Bean 而是一个生产或修饰对象生成的工厂Bean
+
 
 在向Spring容器获取bean时  对于标准的java Bean  返回的是类自身的实例。而FactoryBean 其返回的对象不一定是自身类的一个实例，返回的是该工厂Bean的getObject方法所返回的对象
 
@@ -921,7 +912,7 @@ Spring BeanFacoty容器中管理两种bean：
 
 
 
-当调用getBean("car")时，Spring通过反射机制发现CarFactoryBean实现了FactoryBean的接口，这时Spring容器就调用接口方法CarFactoryBean#getObject()方法返回。如果希望获取FactoryBean的实例，则需要在使用getBean(beanName)方法时在beanName前显示的加上"&"前缀：如getBean("&car")
+
 
 
 一般情况下，Spring通过反射机制利用<bean>的class属性指定实现类实例化Bean，在某些情况下，实例化Bean过程比较复杂，如果按照传统的方式，则需要在<bean>中提供大量的配置信息。配置方式的灵活性是受限的，这时采用编码的方式可能会得到一个简单的方案。Spring为此提供了一个org.springframework.bean.factory.FactoryBean的工厂类接口，用户可以通过实现该接口定制实例化Bean的逻辑
@@ -944,7 +935,7 @@ public interface FactoryBean<T> {
 
 - getObject：该方法返回 FactoryBean 所创建的实例，如果在 XML 配置文件中，我们提供的 class 是一个 FactoryBean 的话，那么当我们调用 getBean 方法去获取实例时，最终获取到的是 getObject 方法的返回值。
 - getObjectType：返回对象的类型。
-- isSingleton：表示getObject 方法所产生的对象是否单例形式存在与容器中。
+- isSingleton：表示getObject 方法所产生的对象是否单例形式存在于容器中
 
 
 
@@ -953,6 +944,8 @@ public interface FactoryBean<T> {
 ~~~java
 //代表这个bean本身就是一个工厂，可以生产其他bean实例，例如：这里生产了teacherBean
 //在实例化阶段，BeanFacotry中会涉及到FactoryBean的逻辑，从而调用getObject()返回当前实例
+
+//在向Ioc容器里面注册是时候，实际上是注册了2个bean，一个是StudentBean的单例对象，一个是getObject()方法里面的实例对象
 @Component("studentBean")
 public class StudentBean implements FactoryBean {
     @Override
@@ -982,7 +975,7 @@ public class TeacherBean {
 public class Demo1 {
     public static void main(String[] args) {
         AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(Appconfig.class);
-        //这里会返回一个teacherBean,因为StudentBean implements FactoryBean，会返回getObject()中的bean
+        //这里会返回一个teacherBean,因为StudentBean implements FactoryBean，会返回getObject()中的实例对象，而不是teacherBean对象
         StudentBean studentBean = (StudentBean)annotationConfigApplicationContext.getBean("studentBean");
         studentBean.study();
     }
@@ -1024,7 +1017,11 @@ FactoryBean与BeanFactory区别
 2. BeanFactory是Ioc容器、负责生产和管理bean，所有的Bean都是由BeanFactory来进行管理的，给具体的Ioc容器的所需提供了规范
 3. FactoryBean是一个bean，这个Bean不是简单的Bean，而是一个能生产或者修饰对象生成的工厂Bean。可以说是一个为Ioc容器中bean的实现提供了更加灵活的方式，FactoryBean在IOC容器的基础上给Bean的实现加上了一个简单工厂模式和装饰模式，我们可以在getObject()方法中灵活配置
 
----
+
+
+
+
+
 
 ## 父子容器
 
@@ -1061,8 +1058,6 @@ FactoryBean与BeanFactory区别
 
 
 
-
----
 
 ## Spring 中bean的生命周期
 
@@ -1512,30 +1507,45 @@ Spring中，通过MessageSource接口来支持国际化
 
 运用到的设计模式：观察者模式
 
-注册器A  发送邮件B  发送消费券C；聋子看到火车开灯就跳舞
-
 三要素：事件源、事件、事件监听器
 
+三者关系：事件源----执行某些操作 产生---->事件----------->被事件监听器发现-------->进入事件处理逻辑
 
 
-事件源：事件对象的产生者，任何一个事件都有一个来源
 
-- 火车
-- 包含监听器集合，以便触发事件时，通知监听器
+监听模式：当事件源对象上发生操作时，将会调用事件监听器的一个方法，并在调用该方法的时候把事件对象传递过去
 
-事件：开灯
 
-- 事件源发起的某个动作，所以事件中理所当然的包含了事件源本身，以便知晓是哪个事件源发起的事件
 
-事件监听器：
+#### 事件
 
-- 聋子
+> 继承自EventObject，由开发者自行定义
+>
+> 封装了事件源对象，以及事件其他相关信息。是事件源和事件监听器直接传递信息的角色
 
-- 事件源触发某个事件时，监听器对该事件有兴趣，就能够做出相应的相应，这个响应就是具体的业务逻辑
 
-事件广播器
 
-- 事件广播器在整个事件监听机制中扮演中介的角色，当事件发布者发布一个事件后，就需要通过广播器来通知所有相关的监听器对该事件进行响应
+#### 事件源
+
+> 触发事件的源头，不同的事件源会触发不同的事件类型
+>
+> 注册特定的监听，才可以对事件进行相应
+
+
+
+#### 事件监听器
+
+> 监听事件源发出的事件，通过EventListener接口实现事件监听，对事件进行处理或转发。必须注册在事件源上
+
+
+
+总结就是
+
+1. 事件源可以注册事件监听器对象，并向事件监听器发送事件对象
+2. 事件发生后，事件源将事件对象发送给已经注册的所以事件监听器
+3. 监听器会根据事件对象内的相应方法相应这个事件
+
+
 
 
 
