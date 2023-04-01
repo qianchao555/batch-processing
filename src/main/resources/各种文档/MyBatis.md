@@ -622,6 +622,10 @@ MyBatis认为，**对于两次查询，如果以下条件都完全一样，那�
 
 MyBatis在开启一个数据库会话时，会创建一个新的SqlSession对象，SqlSession对象中会有一个新的Executor对象，Executor对象中持有一个新的PerpetualCache对象；**当会话结束时，SqlSession对象及其内部的Executor对象还有PerpetualCache对象也一并释放掉**
 
+- 如果SqlSession调用了close()方法，会释放掉一级缓存PerpetualCache对象，一级缓存将不可用；
+- 如果SqlSession调用了clearCache()，会清空PerpetualCache对象中的数据，但是该对象仍可使用；
+- SqlSession中执行了任何一个update操作(update()、delete()、insert()) ，都会清空PerpetualCache对象的数据，但是该对象可以继续使用；
+
 
 
 **一级缓存是一个粗粒度的缓存，没有更新缓存和缓存过期的概念**
@@ -669,7 +673,9 @@ SqlSession应该存活于一个业务请求中，处理完整个请求后，会�
 
 Mybatis二级缓存是Application级别的缓存，它可以提高数据库查询的效率，以提升应用的性能。但是并不是简单地对整个Application就只有一个Cache对象，而是更加细分到Mapper级别，即：每一个Mapper都可以拥有一个Cache对象
 
+##### spring整合Mybatis后一级缓存失效
 
+在没有开启@Transactional事务情况下，每一次sql都会去创建SqlSession从而一级缓存失效
 
 ##### mybatis二级缓存出现的原因
 

@@ -1553,15 +1553,21 @@ Spring中，通过MessageSource接口来支持国际化
 
 ## Spring事件监听机制
 
-spring事件驱动模型：类似于消息队列中的发布/订阅模式、也类似于观察者模式
-
-根据JDK基础：在JDK的事件监听机制上继承实现的
-
-运用到的设计模式：观察者模式
-
-
+>  spring事件驱动模型：类似于消息队列中的发布/订阅模式、也类似于观察者模式
+>
+> 运用到的设计模式：观察者模式
+>
+> 实现原理：根据JDK基础，在JDK的事件监听机制上继承实现
 
 ApplicationContext容器中对事件进行了支持
+
+
+
+Spring事件对象为：ApplicationEvent  extends EventObject
+
+Spring事件源为：ApplicationContext
+
+Spring事件监听器为：ApplicationListener extends EventListener
 
 
 
@@ -1572,10 +1578,25 @@ ApplicationContext容器中对事件进行了支持
 3. 创建事件广播器、先广播器中注册事件监听器
 4. 通过广播器发布事件
 
-### Spring所以事件的两种方式
+
+
+### Spring事件监听器的两种方式
 
 1. 实现接口：ApplicationListener等相关接口
 2. 使用注解：@EventListener
+
+
+
+
+
+### Spring内建事件
+
+1. Spring应用上下文就绪事件：ContextRefreshedEvent
+2. Spring应用上下文启动事件：ContextStartedEvent
+3. Spring应用上下文停止事件：ContextStopedEvent
+4. Spring应用上下文关闭事件：ContextClosedEvent
+
+
 
 ### spring异步事件
 
@@ -1606,6 +1627,14 @@ ApplicationContext容器中对事件进行了支持
 4. Before_commit：事务提交之前触发
 
 
+
+### SpringBoot事件
+
+> SpringBoot的事件是在Spring事件的基础上封装的
+
+SpringBoot事件对象改为了：SpringApplicationVent
+
+SpringBoot事件源改为了：SpringApplication（Context?）
 
 
 
