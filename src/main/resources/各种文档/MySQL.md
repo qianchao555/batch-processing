@@ -664,7 +664,7 @@ end;
 #### 事务四大特性ACID
 
 1. 原子性(Atomicity):一个事务中的所有操作，要么全部完成，要么全部不完成。事务在执行过程中发生错误会被回滚到事务开始前的状态，就像这个事务没有执行过一样
-   - undo log实现
+   - undo log保证了原子性
    - 每条数据变更（INSERT/UPDATE/DELETE/REPLACE）等操作都会生成一条undo log记录，在SQL执行前先于数据持久化到磁盘
    - 当事务需要回滚时，MySQL会根据回滚日志对事务中已执行的SQL做逆向操作，比如 DELETE 掉一行数据的逆向操作就是再把这行数据 INSERT回去，其他操作同理
 2. 一致性(Consistency):事务开始之前和事务结束之后，数据库的完整性没有被破坏。
@@ -1539,6 +1539,10 @@ select * from t where b=12 and c=14 and d=3查找过程：
 
 
 
+其中in和= 可以乱序：例如a=1 and c=2 and b=1  mysql优化器是会自动优化的，这个会走到索引
+
+
+
 [索引覆盖与下推](https://www.jianshu.com/p/d0d3de6832b9)
 
 #### 覆盖索引
@@ -1684,6 +1688,14 @@ Explain Select 语句；
 |      |             |       |      |               |      |         |      |      |          |       |
 
 2. Explain partitions：相比 explain 多了个 partitions 字段，如果查询是基于分区表的话，会显示查询将访问的分区
+
+
+
+### MySQL-SQL优化工具
+
+美团DBA团队开源工具：SQLAdvisor
+
+它可以根据输入的SQL，输出索引优化建议
 
 
 
@@ -2682,3 +2694,24 @@ Oracle中是通过在数据项中对相应数据行加锁来实现的
      - ![image-20220607222032793](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mysql_img/202206072221160.png)
    - 若有死锁，InnoDB会选择回滚undo  log量最小的事务
 
+
+
+
+
+#### MySQL可以直接存储文件吗(比如：图片)
+
+1. 可以是可以，直接存储文件对应的二进制数据就好。不过，不建议在数据库中存储文件，会严重影响数据库性能，消耗过多存储空间
+   - 可以选择云服务厂商提供的文件存储服务，成熟稳定，价格比较低
+2. 可以选择自建文件存储服务
+   - 可以基于FastDFS、MinIO等开源项目实现分布式文件服务
+   - 公司采用的是分布式文件存储系统HDFS
+
+
+
+#### MySQL如何存储Ip地址
+
+不建议采用字符串方式存储
+
+可以将Ip地址转化为32位的整形数字存储
+
+同时mysql提供了Inet_aton()：将ip转换为无符号整型（4-8位），Inet_ntoa()：把整型的ip转换为地址
