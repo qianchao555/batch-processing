@@ -404,7 +404,9 @@ while (true) {
 
 传统IO模型：其主要是一个Server对接N个客户端，在客户端连接之后，为每个客户端都分配一个执行线程
 
-传统IO模型中，由于线程在等待连接以及进行IO操作时都会阻塞当前线程，这部分是损耗非常大的，JDK1.4提供了一套非阻塞IO的API，java NIO。该API本质上是以事件驱动来处理网络事件的，而Reactor是基于该API提出的一套IO模型
+传统IO模型中，由于线程在等待连接以及进行IO操作时都会阻塞当前线程，这部分是损耗非常大的
+
+JDK1.4提供了一套非阻塞IO的API，java NIO。**该API本质上是以事件驱动来处理网络事件**的，而Reactor是基于该API提出的一套IO模型
 
 ![image-20220614224250088](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/javaio_img/202206142242251.png)
 
@@ -477,13 +479,25 @@ windows提供一种异步IO技术：IOCP
 
 Linux使用epoll对异步IO进行模拟
 
-#### 
+
+
+
 
 ### Java N(A)IO框架-Netty
 
-Netty是一个高性能、异步事件驱动的NIO框架，提供了对TCP、UDP和文件传输的支持。作为当前流行的NIO框架，Netty在互联网领域、大数据分布式计算领域、游戏行业、通信行业等获得了广泛的应用，很多开源组件也基于Netty构建，例如：RPC框架、zookeeper等
+> Netty是一个高性能、异步事件驱动的NIO框架，提供了对TCP、UDP和文件传输的支持。
+>
+> 作为当前流行的NIO框架，Netty在互联网领域、大数据分布式计算领域、游戏行业、通信行业等获得了广泛的应用，很多开源组件也基于Netty构建，例如：RPC框架、zookeeper等
 
 Netty由JBoss提供的一个Java开源框架。Netty提供异步的、基于事件驱动的网络应用程序框架和工具，用以快速开发高性能、高可靠的网络服务器和客户端程序
+
+
+
+#### NIO框架
+
+1. 原生Java NIO框架
+2. Apache Mina2
+3. Netty4、Netty5
 
 
 
