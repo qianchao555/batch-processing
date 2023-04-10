@@ -201,8 +201,8 @@ Kafka通过多副本机制实现了故障的自动转移，当Kafka集群中某�
 #### partition副本
 
 1. kafka可以配置partition需要备份的个数(replicas)，每个partition将会被备份到多台机器上，以提高高可用性，备份的数量可以通过配置文件指定
-2. 既然有副本，就涉及到对同一个文件的多个备份如何进行管理和调度。kafka 采取的方案是：每个 partition 选举一个 server 作为“leader”，由 leader 负责所有对该分区的读写，其他 server 作为 follower 只需要简单的与 leader 同步，保持跟进即可。如果原来的 leader 失效，会重新选举由其他的 follower 来成为新的 leader。如何选取：kafka所以zookeeper在broker中选出一个controller，用于partition分配和leader选举
-2. 一个分区只能由一个消费者消费
+2. 既然有副本，就涉及到对同一个文件的多个备份如何进行管理和调度。kafka 采取的方案是：每个 partition 选举一个 server 作为“leader”，由 **leader分区负责所有对该分区的读写**，其他 server 作为 follower 只需要简单的与 leader 同步，保持跟进即可。如果原来的 leader 失效，会重新选举由其他的 follower 来成为新的 leader。如何选取：kafka所以zookeeper在broker中选出一个controller，用于partition分配和leader选举
+2. 一个分区只能被一个消费者消费
 
 #### 整体数据流
 
@@ -320,6 +320,8 @@ topic会被分为多个partition并分配到多个broker上，分区的信息以
 
 
 #### 记录消息消费的进度Offset
+
+> offset存储的地方不止zookeeper，也可以存放在其他地方。比如：项目中就是先把offset存储在redis中，再手动确认ack
 
 消费者对指定的消息分区进行消费的过程中，需要定时的将分区消息的消费进度offset记录到Zk中，以便在该消费者进行重启或其他消费者重新接管该消息分区的消息消费后，能从之前的进度开始继续进行消费
 
