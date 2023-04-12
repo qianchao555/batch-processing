@@ -1109,6 +1109,10 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 ### 消费者分区的分配以及再平衡（rebalance)
 
+> kafka再平衡机制：在再平衡过程中，消费者无法从kafka消费消息，这对kafka的TPS影响是非常大的，这段时间内kafka基本处于不可用状态，所有，应该尽量避免再平衡发生
+
+
+
 到底由哪个消费者来消费哪个分区？
 
 **消费者不用选择分区，消费组会帮消费者指定分区**
@@ -1120,6 +1124,10 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 
 #### Range分区及再平衡
+
+> 再平衡默认策略：Range
+
+
 
 当执行rebalance的时候，消费者组中所有消费者实例都会停止对消息的消费，直到rebalance完成。因此，要尽可能地避免rebalance
 
@@ -1150,7 +1158,7 @@ Range范围分区的弊端：如上图，随着topic的数量增多，那么C0�
 
 #### Sticky 以及再平衡
 
-黏性分区：可以理解为分配的结果代意黏性的。即在执行一次新的分配之前，考虑上一次分配的结果，尽量少的调整分配的变动，可以节省大量的开销
+黏性分区：在执行一次新的分配之前，考虑上一次分配的结果，尽量少的调整分配的变动，可以节省大量的开销
 
 是kafka 0.11x版本开始引入的分配策略，首先会尽量均衡的放置分区到消费者上面，在出现同一消费者组内消费者出现问题的时候，会尽量保持原有分配的分区不变化
 
@@ -1161,6 +1169,32 @@ Range范围分区的弊端：如上图，随着topic的数量增多，那么C0�
 1. 消费者组中的消费者实例发生变化
 2. 订阅的主题发生变化
 3. 主题的分区发生变化
+
+
+
+#### 避免再平衡
+
+要完全避免再平衡那是不可能的，但是，消费者故障是最为常见的引发再平衡的地方，所以要尽可能的避免消费者故障
+
+首先，若消费者真的挂掉了那也是没有办法的。实际场景中，kafka可能错误的认为一个正常的消费者挂掉了，我们要解决的是避免这种情况出现
+
+哪些情况会出现kafka错误判断消费者挂掉的情况：
+
+> 分布式系统中，通常是通过心跳来维持分布式系统的连接的，kafka也是采用心跳机制来判断是否和Kafka broker连接
+
+1. 由于网络原因没有收到心跳，不知道对方是因为负载过重没来得及反应心跳或网络阻塞，所以一般会约定一个时间，超时会判断对方挂掉了
+2. kafka消费场景中
+3. session.timeout.ms：group coordinator检测consumer发生崩溃所需的时间。一个consumer group里面的某个consumer挂掉了，最长需要 session.timeout.ms 秒检测出来。它指定了一个阈值—10秒，在这个阈值内如果group coordinator未收到consumer的任何消息（指心跳），那coordinator就认为consumer挂了
+   - 项目中消费者配置的是：150000ms==>150s   ==>2分30秒
+4. heartbeat.interval.ms：每个consumer 都会根据 heartbeat.interval.ms 参数指定的时间周期性地向group coordinator发送 hearbeat，group coordinator会给各个consumer响应，若发生了 rebalance，各个consumer收到的响应中会包含 REBALANCE_IN_PROGRESS 标识，这样各个consumer就知道已经发生了rebalance，同时 group coordinator也知道了各个consumer的存活情况。
+5. max.poll.interval.ms：如果consumer两次poll操作间隔超过了这个时间，broker就会认为这个consumer处理能力太弱，会将其踢出消费组，将分区分配给别的consumer消费 ，触发rebalance 
+   - 项目中消费者配置的是：300000ms==>300s   ==>5分钟
+
+
+
+所以避免设置好这几个参数，能很好的防止误判，导致再平衡
+
+
 
 
 

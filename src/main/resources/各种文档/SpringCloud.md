@@ -1468,6 +1468,31 @@ zipkin支持MySQL、ES等存储方式
 
 
 
+
+
+### 服务链路追踪-SkyWalking
+
+> SkyWalking是一个国产开源的观测平台，用于从服务和云原生等基础设施中收集、分析、聚合以及可视化数据
+>
+> SkyWalking更像是一种现代化的应用程序性能监控工具，专为云原生、基于容器以及分布式系统而设计
+
+
+
+#### 为什么需要链路追踪
+
+> 由于微服务项目拆分，会导致各个服务间调用链路复杂。此时，一个前端请求可能最终需要调用多个后端服务才能完成实现
+>
+> 1. 链路梳理难
+> 2. 故障定位难
+
+有了链路追踪后，微服务间相互依赖关系即使再混乱，每一个请求的调用链路都会被清晰的记录，我们可以快速定位调用链路上某一环节的问题
+
+链路追踪有很多组件，比如：Sleuth、Zipkin、阿里鹰眼、大众点评cat、skywalking等等。这些组件有一个共同的名字：APM工具，即：Application Performance Management，应用性能监控工具
+
+
+
+
+
 ---
 
 ### Spring Cloud Stream
@@ -2576,4 +2601,28 @@ Nginx实现负载均衡，一般来说是将请求**转发给服务器集群**
    - 现在都用JWT来解决了
 
    
+
+## 分布式任务
+
+1. Quartz
+2. XXL-Job
+3. Elastic-Job
+
+
+
+
+
+## 分布式文件存储系统
+
+1. 谷歌的：Googel File System ：GFS
+2. 阿里的：Taobao File System ：TFS
+3. Hadoop Distributed File System ：HDFS
+4. 淘宝的：FastDFS
+5. MinIO、MogileFs、GridFs等等一系列
+
+
+
+## 分布式计算
+
+Hadoop、Storm、Spark、
 
