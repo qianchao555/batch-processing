@@ -27,12 +27,12 @@ public class SpringBootRun   {
     public static void main(String[] args) {
         SpringApplication springApplication = new SpringApplication(SpringBootRun.class);
         springApplication.run(args);
-        AnnotationConfigApplicationContext anno=new AnnotationConfigApplicationContext(SpringBootRun.class);
-        anno.getBean(MySelectorService.class).printTestSelector();
-        String[] beanDefinitionNames = anno.getBeanDefinitionNames();
-        for (String beanDefinitionName : beanDefinitionNames) {
-            System.out.println(beanDefinitionName);
-        }
+//        AnnotationConfigApplicationContext anno=new AnnotationConfigApplicationContext(SpringBootRun.class);
+//        anno.getBean(MySelectorService.class).printTestSelector();
+//        String[] beanDefinitionNames = anno.getBeanDefinitionNames();
+//        for (String beanDefinitionName : beanDefinitionNames) {
+//            System.out.println(beanDefinitionName);
+//        }
 
     }
 
