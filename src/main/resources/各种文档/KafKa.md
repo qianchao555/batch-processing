@@ -1011,13 +1011,17 @@ offset为什么移除zookeeper？
 
 
 
-### 消费者组原理
+### Consumer Group原理
 
 消费组(Consumer Group)是Kafka的消费理念中一种特有的概念，每个消费者都属于一个消费组。生产者的消息发布到主题后，只会被投递给订阅该主题的每个消费组中的一个消费者。消费者组内每个消费者负责消费不同分区的数据，**一个分区只能由一个消费者组内的消费者消费**；所有的消费者都有一个与之对应的消费者组，即消费者组是逻辑上的一个订阅者。**消费者组之间互不影响，多个不同的消费者组可以同时订阅一个Topic**，此时消息会同时被每个消费者组中一个消费者消费。
 
 
 
 实际生产中，一般分区数和消费者数保持相等，如果这个主题的消费者数大于主题的分区数，那么多出来的消费者将消费不到数据，只能浪费系统资源。
+
+
+
+为什么要采用消费者组的形式：Kafka用于可扩展且有容错性的消费者机制
 
 
 
@@ -1033,6 +1037,24 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 
 ![image-20220427211716358](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272117602.png)
+
+
+
+
+
+#### Coordinator
+
+> 怎么读：阔喔递类tor，协调者
+>
+> 一般是值运行在Broker上的group coordinator，用于管理Consumer group中各个成员
+>
+> 每一个Kafka Broker都有一个GroupCoordinator实例，一个实例管理多个消费者组，主要用于offset位移管理和consumer rebalance
+
+
+
+
+
+
 
 
 
