@@ -69,7 +69,7 @@ redis是一款基于内存的高速缓存数据库，是一个k-v存储系统。
    - Redis读的速度大约是11万次/s，写的速度大约是8万次/s
 2. 数据类型丰富：redis6中，支持5种基本数据类型
 3. 原子性
-   - redis索引操作都是原子性的，同时还支持对几个操作合并后原子性的执行
+   - redis所有操作都是原子性的，同时还支持对几个操作合并后原子性的执行
 4. 丰富的特性
    - 支持发布/订阅模式、通知、key过期等等特性
 5. 持久化：支持rdb、aof持久化方式
@@ -112,11 +112,29 @@ redis是一款基于内存的高速缓存数据库，是一个k-v存储系统。
 
 ### 五大基本数据类型
 
+> String字符串、List列表、Set集合、Hash散列、Zset有序集合
+
+
+
 https://redis.io/docs/manual/data-types/
 
-redis中的数据都是以key-value形式存储的，所有的key都是字符串，五大数据类型主要指存储值value的数据类型
+redis中的数据都是以key-value形式存储的，**所有的key都是字符串**，五大数据类型主要指存储值value的数据类型
 
 ![image-20220607231156801](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206072311932.png)
+
+
+
+基本数据类型，存储的值
+
+| 结构类型 | 结构存储的值(value)                             | 结构的读写能力 |
+| -------- | ----------------------------------------------- | -------------- |
+| String   | 字符串、整数、浮点数、图片。。                  |                |
+| List列表 | 一个链表（链表上的每个节点都包含一个字符串）    |                |
+| Set集合  | 包含字符串的无序、无重复的集合                  |                |
+| Hash散列 | 包含k-v对的无序散列表集合                       |                |
+| Zset     | 和散列表类似，不过存储的是有序的、无重复的k-v对 |                |
+
+
 
 
 
@@ -125,7 +143,7 @@ redis中的数据都是以key-value形式存储的，所有的key都是字符串
 ![image-20220608001010556](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206080010678.png)
 
 1. String是Redis最基本的类型，一个key对应一个value
-2. 是二进制安全的，意味着Redis的**String可以包含任何数据。比如：jpg图片、序列化对象等等**
+2. 是二进制安全的，意味着Redis的**String可以包含任何数据。比如：字符串、整数、浮点数、jpg图片、序列化对象等等**
 3. 一个Redis中，字符串value大小上限最多可以是512M
 
 ##### 底层数据结构
@@ -300,7 +318,7 @@ Geographic底层实际为Zset
 
 Redis5.0加入了Stream数据类型，借鉴了Kafka的设计，是一个新的强大的支持多播的可持久化的消息队列
 
-Stream是对redis实现中消息队列的完善
+**Stream是redis实现中消息队列的完善**
 
 
 
@@ -485,7 +503,9 @@ logfile ""
 
 基础类型的底层是如何实现的？
 
-Redis每种对象其实都是redisObject(对象结构)与对应编码的数据结构组合而成
+
+
+Redis每种对象其实都是**redisObject**(对象结构)与**对应编码的数据结构**组合而成
 
 ![image-20230307213124704](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303072131027.png)
 
