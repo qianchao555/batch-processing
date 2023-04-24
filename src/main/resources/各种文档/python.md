@@ -496,3 +496,133 @@ bStudent.print_student()
 #### 访问限制
 
 如果想要内部属性不能别外部访问，需要在属性的前面加两个下划线，这边会变成一个私有变量，类似Java的private
+
+
+
+~~~~python
+class Student(object):
+
+    def __init__(self, name, score):
+        #name和score都是两个下划线
+        self.__name = name
+        self.__score = score
+
+    def print_score(self):
+        print('%s: %s' % (self.__name, self.__score))
+~~~~
+
+
+
+此时已经不能在外部访问name和socre了，所以需要提供一个访问代码，类似java的getter/setter方法
+
+
+
+~~~python
+class Student(object):
+    ...
+	#getter方法
+    def get_name(self):
+        return self.__name
+
+    def get_score(self):
+        return self.__score
+    
+    #setter方法
+    def set_score(self, score):
+        self.__score = score
+~~~
+
+
+
+#### 继承和多态
+
+~~~python
+class Animal(object):
+    def run(self):
+        print('动物在跑')
+~~~
+
+
+
+需要继承Animal时，直接继承即可
+
+~~~python
+class Dog(Animal):
+    pass
+
+class Cat(Animal):
+    def run(self):
+        print('猫在跑')
+~~~
+
+
+
+
+
+
+
+### 错误机制
+
+> Python同样提供了类似Java的try-catch机制
+>
+> try-except-finally
+
+~~~python
+try:
+    print('try...')
+    r=10/0
+    print('result:',r)
+except ValueError as e:
+    print('ValueError:',e)
+except ZeroDivisionError as e:
+    print('Except:',e)
+finally:
+    print('Finally')
+~~~
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
