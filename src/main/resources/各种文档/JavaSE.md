@@ -213,7 +213,7 @@ Collection主要包含List、Set、Queue
 
 针对：JDK8
 
-ArrayList是顺序容器，即：元素存放的数据与放进去的顺序相同，运行放入null元素，底层通过数组实现。未实现同步机制，其余与Vector大致相同
+ArrayList是顺序容器，即：元素存放的数据与放进去的顺序相同，允许放入null元素，底层通过数组实现。未实现同步机制，其余与Vector大致相同
 
 创建ArrayList时，默认ArrayList对象中的elementData长度是空的{}，即：arr.length=0；size是(elementData中元素包含的个数)0，当第一次add的时候，elementData将会变成默认大小为10
 
@@ -251,7 +251,7 @@ private int size;
 
 删除：
 
-1. 后面的元素后依次向左移动一个位置，将最后一个元素置null，好让垃圾收集器进行回收，remove方法不会让数组的长度缩减，只是将最后一个数组元素置空而已：O(n)
+1. 后面的元素后依次向左移动一个位置，将最后一个元素置null，好让垃圾收集器进行回收，**remove方法不会让数组的长度缩减**，只是将最后一个数组元素置空而已：O(n)
 
 这就导致了在指定位置添加和删除的性能消耗大！
 
@@ -271,7 +271,7 @@ private int size;
 
 ##### ArrayList Fail-Fast机制
 
-使用iterator遍历可能会引发多线程异常
+使用ArrayList遍历的时候可能会引发多线程异常
 
 ArrayList采用了快速失败机制，通过记录modCount参数来实现，在面对并发修改时，迭代器很快就会完全失败，而不是冒着在将来某个不确定的时间发生任何不确定行为的风险
 
@@ -280,6 +280,9 @@ ArrayList采用了快速失败机制，通过记录modCount参数来实现，在
 使用迭代器提供的remove方法时，实际上还是调用的集合的remove方法删除元素，但是在删除元素之后会将expectedModCount重新置为modCount的值，即让这两个值变得想等了，因此单线程下使用迭代器的remove方法删除元素是不会触发快速失败机制的
 
 ##### fail-safe 安全失败机制
+
+1. 使用Iterator迭代器的删除方法
+2. copyOnWriteArrayList
 
 安全失败，是相对于快速失败而言的，快速失败时立即抛出异常，安全失败则是不会抛出异常，失败的“很安全”，但是，也是属于一个“失败”的操作
 
