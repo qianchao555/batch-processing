@@ -46,12 +46,17 @@ public abstract class MultiThreadUtil<D, R> {
      *
      * @param list
      */
-    public MultiThreadUtil(List<D> list) {
+//    public MultiThreadUtil(List<D> list ) {
+
+      //优化？ 创建一个线程池的时候
+    public MultiThreadUtil(List<D> list,ExecutorService executorService) {
         if (!CollectionUtils.isEmpty(list)) {
             this.listData = list;
             //这里有问题，具体场景具体分析，不能利用List的大小来创建线程个数
-            this.executorService = Executors.newFixedThreadPool(list.size());
-//            this.executorService = Executors.newFixedThreadPool(20);
+//            this.executorService = Executors.newFixedThreadPool(list.size());
+
+            //创建一个线程池的时候
+            this.executorService = executorService;
 
             this.endCountDownLatch = new CountDownLatch(list.size());
         } else {
@@ -128,7 +133,7 @@ public abstract class MultiThreadUtil<D, R> {
     public List<R> getProcessResult() throws InterruptedException, ExecutionException {
         List<R> resultList = new ArrayList<>();
         if (listData != null && listData.size() > 0) {
-            try {
+//            try {
                 int nThread = listData.size();
 
                 //将任务提交到线程池，执行
@@ -164,16 +169,17 @@ public abstract class MultiThreadUtil<D, R> {
                     R r = future.get();
                     resultList.add(r);
                 }
-            } finally {
-                //关闭线程池，此时并未关闭，不能再提交任务到线程池，线程池里面的任务继续执行
-                executorService.shutdown();
-                //等待所有任务完成
-                for (; ; ) {
-                    if (executorService.isTerminated()) {
-                        break;
-                    }
-                }
-            }
+//            }
+//            finally {
+//                //关闭线程池，此时并未关闭，不能再提交任务到线程池，线程池里面的任务继续执行
+//                executorService.shutdown();
+//                //等待所有任务完成
+//                for (; ; ) {
+//                    if (executorService.isTerminated()) {
+//                        break;
+//                    }
+//                }
+//            }
         }
         return resultList;
     }

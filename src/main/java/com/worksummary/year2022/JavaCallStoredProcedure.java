@@ -5,7 +5,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -31,7 +30,7 @@ public class JavaCallStoredProcedure {
     /**
      * 每2小时跑一次
      */
-    @Scheduled(cron = "0 0 0/2 * * ?")
+//    @Scheduled(cron = "0 0 0/2 * * ?")
     public void scheduleTask() {
         //引入线程池，是否需要多线程：根据自身业务而定，存储过程要同时启动则拿多线程来启动，不用同时启动则不需要多线程来跑
         ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(20);

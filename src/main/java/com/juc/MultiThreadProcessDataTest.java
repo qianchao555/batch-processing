@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,19 +26,30 @@ public class MultiThreadProcessDataTest {
     public static void main(String[] args) {
         List<Integer> moneyInteger = new ArrayList<>();
 
-        for (int i = 0; i <= 1500; i++) {
-            moneyInteger.add((int) (Math.random() * i));
+        for (int i = 0; i <= 50; i++) {
+//            moneyInteger.add((int) (Math.random() * i));
+            moneyInteger.add(i);
         }
         //list太大需要分割成块，来对每一个块分别计算
-        List<List<Integer>> blockLists = splitList(moneyInteger, 1500);
+        List<List<Integer>> blockLists = splitList(moneyInteger, 10);
+
+        //优化？创建一个线程池的时候
+        ExecutorService executorService = Executors.newFixedThreadPool(blockLists.get(0).size());
 
         //统计最终结果
         List<Integer> sumList = new ArrayList<>();
         //多线程计算
+
+        //优化？创建一个线程池的时候
+        try {
+
+
         for (int i = 0; i < blockLists.size(); i++) {
             //处理当前块List
             List<Integer> blockList = blockLists.get(i);
-            MultiThreadUtil<Integer, Integer> multiThreadUtil = new MultiThreadUtil<Integer, Integer>(blockList) {
+//            MultiThreadUtil<Integer, Integer> multiThreadUtil = new MultiThreadUtil<Integer, Integer>(blockList) {
+
+            MultiThreadUtil<Integer, Integer> multiThreadUtil = new MultiThreadUtil<Integer, Integer>(blockList,executorService) {
                 @Override
                 public Integer businessCodeExecuteTask(int currentThread, Integer data) {
                     try {
@@ -65,12 +78,24 @@ public class MultiThreadProcessDataTest {
                 e.printStackTrace();
             }
         }
+        //2种方式求和
         Integer sumCount = sumList.stream().mapToInt(x -> x).sum();
 //        for (int i = 0; i < sumList.size(); i++) {
 //            sumCount+=sumList.get(i);
 //        }
         log.info("最终统计结果为：" + sumCount);
+        }
 
+        finally {
+            //关闭线程池，此时并未关闭，不能再提交任务到线程池，线程池里面的任务继续执行
+            executorService.shutdown();
+            //等待所有任务完成
+            for (; ; ) {
+                if (executorService.isTerminated()) {
+                    break;
+                }
+            }
+        }
 
     }
 
