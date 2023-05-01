@@ -2095,7 +2095,7 @@ Sentinel熔断策略：
 
 ---
 
-### Spring Cloud Alibaba Seata
+### Seata
 
 [参考文章](http://c.biancheng.net/springcloud/seata.html)
 
@@ -2135,7 +2135,7 @@ XID是全局事务的唯一标识，它可以在服务的调用链路中传递�
 
 ##### 核心组件
 
-- TC（Transaction Coordinator）:事务协调器，它是事务的协调者，主要负责维护全局事务和分支事务的状态，驱动全局事务提交或回滚
+- TC（Transaction Coordinator）:事务协调器，它是事务的协调者，主要 务和分支事务的状态，驱动全局事务提交或回滚
 - TM（Transaction Manager)：事务管理器，它是事务的发起者，负责定义全局事务的范围，并根据TC维护的全局事务和分支事务状态，做出开始事务、提交事务、回滚事务的决议
 - RM（Resource Manager)：资源管理器，它是资源的管理者（可以理解为各服务使用的数据库）。它负责管理分支事务上的资源，向TC注册分支事务，汇报分支事务状态，驱动分支事务的提交或回滚
 
