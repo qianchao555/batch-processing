@@ -2723,7 +2723,15 @@ client.execute_command("bf.reserve", "keyname", 0.001, 50000)
 
 在基础上，还提供了分布式的多值映射、本地缓存映射、有序集、队列、阻塞队列、双端队列、阻塞双端队列、阻塞公平队列、延迟队列、**布隆过滤器**、原子整长行、**BitSet**等Redis原本没有的数据结构
 
+RBucket=>redis.string
 
+RMap=>redis.hash
+
+RList=>redis.list
+
+RSet=>redis.set
+
+RScoredSortedSet=>redis.zset
 
 ---
 
