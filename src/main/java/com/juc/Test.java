@@ -1,13 +1,4 @@
-package juc;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.Environment;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+package com.juc;
 
 /**
  * @description:
@@ -17,10 +8,19 @@ import java.util.Map;
  */
 public class Test {
 
-    @Autowired
-    Environment env;
 
     public static void main(String[] args) {
+        int x=0;
+        System.out.println(x);
+        int y=tt1();
+    }
+
+    private static int tt1() {
+        int i=1;
+        int j=2;
+        int k=i+j;
+        System.out.println(k);
+        return 4;
     }
 
 //    public Map<String, Object> xxxConsumerConfig() {
