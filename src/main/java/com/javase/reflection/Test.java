@@ -39,6 +39,10 @@ public class Test {
         x.add(12457897L);
         log.info("没有查询cba状态的函证id为{}",x);
 
+        for (int i = 0; i < 20; i++) {
+            System.out.println(i);
+        }
+
 
     }
 }
