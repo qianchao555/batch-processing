@@ -1,4 +1,4 @@
-package com.boot.containers;
+package com.boot.base.containers;
 
 import lombok.Getter;
 import org.junit.rules.ExternalResource;

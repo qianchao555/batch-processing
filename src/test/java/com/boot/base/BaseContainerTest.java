@@ -1,10 +1,8 @@
-package com.boot;
+package com.boot.base;
 
-import com.boot.containers.RedisContainer;
 import com.boot.listener.DataSetExecutionListener;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.web.servlet.MockMvc;
@@ -12,7 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * @ClassName 单元测试基类
+ * 单元测试基类
  * @Author qianchao
  * @Date 2022/9/5
  **/
@@ -26,9 +24,7 @@ public abstract class BaseContainerTest {
     protected MockMvc mockMvc;
 
     static {
-        log.info("BBBBBBBB");
-        log.info("AAAAAAAAAAAA");
-        //做一些默认设置
+        log.info("这里做一些基本的默认设置");
     }
 
     @Before

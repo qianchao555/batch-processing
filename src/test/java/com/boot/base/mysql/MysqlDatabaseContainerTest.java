@@ -1,6 +1,7 @@
-package com.boot;
+package com.boot.base.mysql;
 
-import com.boot.containers.MysqlContainer;
+import com.boot.base.BaseContainerTest;
+import com.boot.base.containers.MysqlContainer;
 import org.junit.ClassRule;
 
 /**
@@ -9,7 +10,7 @@ import org.junit.ClassRule;
  * @Date 2022/9/6
  * @Version  V1.0
  **/
-public class MysqlDatabaseContainerTest extends BaseContainerTest{
+public class MysqlDatabaseContainerTest extends BaseContainerTest {
 
     @ClassRule
     MysqlContainer pgContainer =

@@ -1,4 +1,4 @@
-package com.boot.containers;
+package com.boot.base.containers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.rules.ExternalResource;

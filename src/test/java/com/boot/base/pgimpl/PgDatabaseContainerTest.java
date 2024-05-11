@@ -1,6 +1,7 @@
-package com.boot;
+package com.boot.base.pgimpl;
 
-import com.boot.containers.PgContainer;
+import com.boot.base.BaseContainerTest;
+import com.boot.base.containers.PgContainer;
 import org.junit.ClassRule;
 
 /**
