@@ -1,7 +1,7 @@
 package com.boot.base.mysql;
 
 import com.boot.base.BaseContainerTest;
-import com.boot.base.containers.MysqlContainer;
+import com.boot.base.containers.MysqlImageContainer;
 import org.junit.ClassRule;
 
 /**
@@ -12,9 +12,13 @@ import org.junit.ClassRule;
  **/
 public class MysqlDatabaseContainerTest extends BaseContainerTest {
 
+    /**
+     * mysql镜像库
+     * url为docker服务器的ip地址
+     */
     @ClassRule
-    MysqlContainer pgContainer =
-            new MysqlContainer("mysql:5.7.22", "integration-test-db", "test", "test", "init.sql")
+    MysqlImageContainer mysqlImageContainer =
+            new MysqlImageContainer("mysql:5.7.22", "integration-test-db", "test", "test", "init.sql")
                     .setJdbcUrl("datasource.url")
                     .setJdbcUserName("datasource.username")
                     .setJdbcPassWord("datasource.password");

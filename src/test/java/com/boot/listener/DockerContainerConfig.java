@@ -22,7 +22,12 @@ public class DockerContainerConfig extends DockerClientProviderStrategy implemen
 //    private static String DOCKER_HOST = "tcp://远程机器ip:2375";
     private static String DOCKER_HOST = "tcp://101.35.51.33:2375";
     //本地测试就用localhost
+    private static String local_Docker_host = "tcp://localhost:2375";
 
+    /**
+     * Constructor
+     * 就行docker的相关配置
+     */
     public DockerContainerConfig() {
         //这一步可以封装到一个Utils里面
         InetAddress localIp4 = null;
@@ -35,7 +40,8 @@ public class DockerContainerConfig extends DockerClientProviderStrategy implemen
         //判断ip环境，根据公司ip判断
         DOCKER_HOST = "tcp://101.35.51.33:2375";
 
-        String dockerHost = System.getProperty("docker.host", DOCKER_HOST);
+//        String dockerHost = System.getProperty("docker.host", DOCKER_HOST);
+        String dockerHost = System.getProperty("docker.host", local_Docker_host);
         log.info("docker host:{}", dockerHost);
 
         //本机测试
@@ -43,6 +49,7 @@ public class DockerContainerConfig extends DockerClientProviderStrategy implemen
             config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
             return;
         }
+        //远程主机
         System.setProperty("DOCKER_HOST", dockerHost);
         TestcontainersConfiguration.getInstance()
                 .updateGlobalConfig("docker.client.strategy", DockerContainerConfig.class.getName());

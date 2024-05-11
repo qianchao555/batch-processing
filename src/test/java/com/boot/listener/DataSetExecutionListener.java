@@ -20,6 +20,7 @@ import org.dbunit.dataset.ITable;
 import org.dbunit.dataset.ReplacementDataSet;
 import org.dbunit.dataset.excel.XlsDataSet;
 import org.dbunit.operation.DatabaseOperation;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.core.Constants;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -36,7 +37,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * @ClassName DateSetExecutionListener
+ * 数据集监听器
+ * 
  * @Author qianchao
  * @Date 2022/9/6
  * @Version   V1.0
@@ -76,13 +78,12 @@ public class DataSetExecutionListener extends AbstractTestExecutionListener {
     }
 
     /**
-     * 执行test方法前的相关操作
+     * 执行test方法前
+     * 这里完成的相关操作
      *
-     * @param testContext
-     * @throws Exception
      */
     @Override
-    public void beforeTestMethod(TestContext testContext) throws Exception {
+    public void beforeTestMethod(@NotNull TestContext testContext) throws Exception {
         List<DataSetConfig> datasetConfigs = getDatasetConfig(testContext);
         if (CollectionUtils.isEmpty(datasetConfigs)) {
             return;
