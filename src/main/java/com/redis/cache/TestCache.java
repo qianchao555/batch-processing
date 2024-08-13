@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 public class TestCache {
-    
+
     @Autowired
     CustomRedisTemplate customRedisTemplate;
-    
+
     //本地缓存测试
     @PostMapping("/testLocalCache")
 //    @Cacheable(cacheNames = CbaCacheConfig.CacheNameSpace.CACHE_5_MIN,cacheManager = CbaCacheConfig.CacheManageName.cbaCacheManageName

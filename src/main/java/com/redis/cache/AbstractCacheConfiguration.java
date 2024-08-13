@@ -45,7 +45,7 @@ public abstract class AbstractCacheConfiguration extends CachingConfigurerSuppor
     @Autowired
     Environment env;
 
-    
+
 
     /**
      * 可配置不同缓存空间对应的过期时间
@@ -77,8 +77,8 @@ public abstract class AbstractCacheConfiguration extends CachingConfigurerSuppor
 
     }
 
-    
-    
+
+
     /*
      * @description TODO
      * @params [redisConnectionFactory]
@@ -97,7 +97,7 @@ public abstract class AbstractCacheConfiguration extends CachingConfigurerSuppor
                 .prefixCacheNameWith(cache_space_name);
 
         Map<String, Long> cacheNamesExpiredTimeMap = this.defaultCacheNamesExpiredTime();
-        
+
         //为每个自定义的 缓存空间设置过期时间
         Map<String, RedisCacheConfiguration> configMap = new HashMap<>();
         Set<String> cacheNamesSet = new HashSet<>();

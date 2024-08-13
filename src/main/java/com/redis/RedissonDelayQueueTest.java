@@ -18,16 +18,16 @@ import java.util.function.Consumer;
 public class RedissonDelayQueueTest {
     @Autowired
     RedissonDelayQueue redissonDelayQueue;
-    
+
     /**
      * 初始化，根据不同的类型，创建不同的消费逻辑
      * 这里就可以根据自己的业务场景优化了
-     * 
-     * @param: 
+     *
+     * @param:
      * @return void
-     */ 
-    
-    
+     */
+
+
     @PostConstruct
     public void init(){
         Consumer consumer=(t)->{
@@ -43,7 +43,7 @@ public class RedissonDelayQueueTest {
         };
         redissonDelayQueue.processEvent(Integer.class,consumer);
     }
-    
+
     @PostMapping("testQueue")
     public void testDelayQueue(String message){
         redissonDelayQueue.addQueue(message,5, TimeUnit.SECONDS);

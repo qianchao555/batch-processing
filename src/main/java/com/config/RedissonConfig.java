@@ -1,4 +1,4 @@
-package com.redis;
+package com.config;
 
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
@@ -16,14 +16,15 @@ import org.springframework.context.annotation.Configuration;
  * @date 16/07/2023
  */
 
-//@Configuration
+@Configuration
 public class RedissonConfig {
     private static final String FORMAT_STR = "redis://%s:%s";
-//    @Autowired
+
+    @Autowired
     private RedisProperties redisProperties;
     
     
-//    @Bean
+    @Bean
     public RedissonClient redissonClient(){
         Config config = new Config();
         String redisUrl = String.format(FORMAT_STR, redisProperties.getHost(),
