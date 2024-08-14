@@ -1,8 +1,10 @@
 package com;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
 
 /**
  * @description:
@@ -11,10 +13,8 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
  * @version:1.0
  */
 //默认扫描启动程序所在包，以及子包
-//@ComponentScan(basePackages ={"com"})
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
-//@SpringBootApplication
-//@MapperScan("com.springbootproject.dao")
+@SpringBootApplication
+@MapperScan("com.dao")
 //@EnableFeignClients
 //@EnableAsync
 //@EnableMyTestAnnotation
