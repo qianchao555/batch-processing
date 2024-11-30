@@ -30,4 +30,7 @@ public class User {
 
     @TableField("email")
     private String email;
+
+    @TableField("grils")
+    private String grils;
 }

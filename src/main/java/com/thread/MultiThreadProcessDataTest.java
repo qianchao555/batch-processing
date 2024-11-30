@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.util.juc.MultiThreadUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;

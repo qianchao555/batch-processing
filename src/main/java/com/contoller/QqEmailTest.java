@@ -3,6 +3,8 @@ package com.contoller;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+
+import javax.mail.MessagingException;
 import java.util.Properties;
 
 /**
@@ -31,7 +33,7 @@ public class QqEmailTest {
         properties.setProperty("mail.transport.protocol", "smtp");
         //需要验证身份
         properties.setProperty("mail.smtp.auth", "true");
-        properties.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        properties.setProperty("mail.smtp.socketFactory.class", "jakarta.net.ssl.SSLSocketFactory");
         properties.setProperty("mail.smtp.port", "465");
         Session session = Session.getDefaultInstance(properties);
         //debug模式

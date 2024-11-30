@@ -308,7 +308,7 @@ Web容器往往会自带Web服务器模块，提供基本的Http服务，所以�
 
 在Servlet中，一个动态网页对应一个Servlet类，访问一个动态网页的过程实际上是将对应的Servlet类进行加载、实例化、调用相关方法过程
 
-Servlet规范最顶层接口是一个javax.servlet.Servlet接口
+Servlet规范最顶层接口是一个jakarta.servlet.Servlet接口
 
 主要创建Servlet类的方式
 

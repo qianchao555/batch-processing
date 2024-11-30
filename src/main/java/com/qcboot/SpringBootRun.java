@@ -1,9 +1,8 @@
-package com;
+package com.qcboot;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
@@ -14,6 +13,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 //默认扫描启动程序所在包，以及子包
 @SpringBootApplication
+@ComponentScan("com")
 @MapperScan("com.dao")
 //@EnableFeignClients
 //@EnableAsync

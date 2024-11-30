@@ -1,8 +1,8 @@
 package com.util.beansutildemo;
 
 import com.alibaba.fastjson.JSON;
-import org.junit.jupiter.api.Test;
 import com.util.BeansUtil;
+import org.junit.Test;
 
 import java.util.*;
 
