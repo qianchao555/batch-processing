@@ -1,50 +1,5 @@
 ## Redis
 
-/opt  软件位置
-
-默认启动位置/usr/local/bin    里面类型windows 的启动程序
-
-​	busybox-x86_64
-
-​	redis-benchmark:性能测试工具
-
-​	redis-check-aof：修复有问题的aof文件
-
-​	redis-check-rdb：修复有问题的rdb文件
-
-​	redis-cli：客户端，操作入口
-
-​	redis-sentinel：redis集群
-
-​	redis-server：redis服务器启动命令
-
-### 启动
-
-1. 前台启动 不推荐
-
-   - [root@vm-qc-centos bin]#  redis-server
-
-   - 当前窗口关闭后，相当于redis服务就关了
-
-2. 后台启动
-
-   -  防止误操作，在复制的那个配置文件里面操作
-   -  cp redis.conf  /etc/redis.conf
-   - 后台启动设置为yes: dam   yes
-   - redis-server /etc/redis.conf
-   - 查看进程：ps -ef | grep redis
-   - redis-cli  通过客户端访问redis服务
-
-### 关闭
-
-- shutdown
-- 找到进程号  kill
-
-1. 端口：6379
-2. 默认16个数据库，初始默认使用0号数据库
-
-Redis是单线程+多路IO复用技术
-
 
 
 ### 什么是Redis
@@ -59,7 +14,7 @@ redis是一款基于内存的高速缓存数据库，是一个k-v存储系统。
 
 
 
-### 为什么要使用Redis
+为什么要使用Redis：
 
 1. 读写性能优异
    - Redis读的速度大约是11万次/s，写的速度大约是8万次/s
@@ -413,7 +368,31 @@ Redis5.0加入了Stream数据类型，借鉴了Kafka的设计，是一个新的�
 
 
 
----
+
+
+### Redis进阶-数据结构：对象机制详解
+
+基础类型的底层是如何实现的？
+
+
+
+Redis每种对象其实都是**redisObject**(对象结构)与**对应编码的数据结构**组合而成
+
+![image-20230307213124704](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303072131027.png)
+
+上图反应了Redis的每种对象其实都是对象结构redisObject与对应编码的数据结构组合而成，而每种对象类型对应若干编码方式，不同的编码方式所对应的底层数据结构是不同的
+
+
+
+redisObject是redis类型系统的核心，数据库中的每个键、值以及Redis本身处理的参数，都表示为这种类型
+
+
+
+
+
+
+
+
 
 ### Redis的发布和订阅
 
@@ -446,198 +425,15 @@ Redis有2种发布/订阅模式
 
    
 
-~~~shell
-客户端1：订阅频道
-127.0.0.1:6379> subscribe channel1
-Reading messages... (press Ctrl-C to quit)
-1) "subscribe"
-2) "channel1"
-3) (integer) 1
-hello
-1) "message"
-2) "channel1"
-3) "hello"
+一般很少有这个特性。都是用消息队列来实现发布/订阅
 
-1) "message"
-2) "channel1"
-3) "hello2"
 
-客户端2：向频道发布消息
-127.0.0.1:6379> publish channel1 hello
-(integer) 1
-127.0.0.1:6379> publish channel1 hello2
-(integer) 1
-127.0.0.1:6379> 
 
 
-~~~
 
 
 
----
 
-
-
-### 配置文件
-
-已经实现拷贝了一份了    /etc/redis.conf
-
-~~~shell
-# Redis configuration file example.
-#
-# Note that in order to read the configuration file, Redis must be
-# started with the file path as first argument:
-#
-# ./redis-server /path/to/redis.conf
-
-# Note on units: when memory size is needed, it is possible to specify
-这里定义一些基本的度量单位，只支持字节，不支持其他bit等，大小写不区分
-# it in the usual form of 1k 5GB 4M and so forth:
-#
-# 1k => 1000 bytes
-# 1kb => 1024 bytes
-# 1m => 1000000 bytes
-# 1mb => 1024*1024 bytes
-# 1g => 1000000000 bytes
-# 1gb => 1024*1024*1024 bytes
-#
-# units are case insensitive so 1GB 1Gb 1gB are all the same.
-包含：当前文件可以包含其他文件
-########### INCLUDES ###################
-
-
-# If instead you are interested in using includes to override configuration
-# options, it is better to use include as the last line.
-#
-# include /path/to/local.conf
-# include /path/to/other.conf
-
-##################### MODULES ########
-
-# Load modules at startup. If the server is not able to load modules
-# it will abort. It is possible to use multiple loadmodule directives.
-#
-# loadmodule /path/to/my_module.so
-# loadmodule /path/to/other_module.so
-
-网络相关配置
-################# NETWORK##########
-bind 
-#bind 127.0.0.1 -::1   目前只能本地访问
-
-开启保护模式：protected-mode
-# protected-mode yes 只能本地访问
-远程要访问时：设置为No
-
-tcp-backlog
-1.设置tcp的backlog
-2.backlog是一个连接队列，backlog队列总和=未完成三次握手队列+已经完成三次握手队列
-
-设置连接redis超时的时间   0永不超时
-timeout 0
-
-检测机制：心跳，检测连接是否还活着  =》是否操作了
-300s
-tcp-keepalive 300
-
-
-############# GENERAL###################
-pidfile:redis每次操作的进程号
-pidfile /var/run/redis_6379.pid
-
-日志级别
-loglevel：
-# debug (a lot of information, useful for development/testing)
-# verbose (many rarely useful info, but not a mess like the debug level)
-# notice (moderately verbose, what you want in production probably)
-# warning (only very important / critical messages are logged)
-loglevel notice
-
-日志文件的输出文件
-logfile ""
-
-
-
-
-############### SECURITY ##################
-密码
- requirepass ''  默认没有
- 
-##################### CLIENTS #############
-最大连接数 默认1w
-# maxclients 10000
-~~~
-
----
-
-### Jedis
-
-1. 使用jedis连接远程Redis
-
-2. 注意事项：
-
-   - redis修改bind
-
-   - redis关闭保护模式 protedcted-mode no
-
-   - 开启防火墙firewalld、iptables
-
-   - ~~~shell
-     iptables -L -n
-     
-     iptables -I INPUT 1 -p tcp -m state --state NEW -m tcp --dport 6379 -j ACCEPT
-     
-     service iptables save
-     
-     ----------------------
-     firewall-cmd --state
-     firewall-cmd --permanent --add-port=6379/tcp
-     firewall-cmd --permanent --query-port=6379/tcp
-     firewall-cmd --permanent --list-ports
-     firewall-cmd --reloads
-     
-     ~~~
-
-   - 腾讯云防火墙添加6379端口
-
-     
-
-#### 例子
-
-1. 输入手机号，点击发送随机生成6位数字码，2分钟有效
-2. 输入验证码，验证，返回成功或失败
-3. 每个手机号每天只能输入三次
-4. 解答：jedis.randomauthcode文件代码
-
-
-
-
-
-
-
----
-
-### Redis进阶-数据结构：对象机制详解
-
-基础类型的底层是如何实现的？
-
-
-
-Redis每种对象其实都是**redisObject**(对象结构)与**对应编码的数据结构**组合而成
-
-![image-20230307213124704](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303072131027.png)
-
-上图反应了Redis的每种对象其实都是对象结构redisObject与对应编码的数据结构组合而成，而每种对象类型对应若干编码方式，不同的编码方式所对应的底层数据结构是不同的
-
-
-
-redisObject是redis类型系统的核心，数据库中的每个键、值以及Redis本身处理的参数，都表示为这种类型
-
-
-
-
-
----
 
 ### Redis事务
 
@@ -1112,25 +908,24 @@ redis通过创建一个新的aof文件替换现有的aof文件，新旧两个aof
 
 
 
-
-
----
-
 ### Redis主从复制
 
-> 要避免单点故障，保证高可用，便需要采用副本的冗余方式来提供集群服务。
+> 避免单节点故障，保证高可用，那么就需要采用副本的冗余方式来提供集群服务。
 >
-> redis集群模式主要分为：主从模式、cluster集群模式
+> redis集群模式主要分为：主从模式、主从+哨兵模式、cluster集群模式
 >
-> 这里主要讲：redis主-从模式
 
 
 
-redis提供了主从库模式，以保证数据副本的一致，**主从库之间采用读写分离方式**
+#### 主从复制概述
 
-**redis主从复制：将一台redis主服务器的数据，复制到其他的redis服务器，数据的复制是单向的，只能由主节点到从节点**
+> **redis主从复制：将一台redis主服务器的数据，复制到其他的redis从服务器，数据的复制是单向的，只能由主节点到从节点**
+>
+> redis提供了主从库模式，以保证数据副本的一致，**主从库之间采用读写分离方式**
 
-主机数据更新后，根据配置和策略，自动同步到备机的Master/Slaver机制，Master以写为主，Slave以读为主
+
+
+但是，通常不会只使用主从复制架构，因为不能实现自动故障切换，通常采用的模式是：主从+哨兵模式、cluster集群模式
 
 
 
@@ -1138,13 +933,20 @@ redis提供了主从库模式，以保证数据副本的一致，**主从库之�
 
 #### 主从复制的作用
 
-1. 读写分离，性能扩展
+1. 数据冗余备份：主从复制实现了数据的热备份，是持久化之外的一种数据冗余方式
 2. 容灾快速恢复：当主节点出现故障后，可以由从节点提供服务，实现快速的故障恢复
 3. 负载均衡：在主从复制的基础上，配合读写分离，由主节点提供写服务，从节点提供读服务，即：写redis数据时，应用连接主节点，读redis数据时应用连接从节点，从而分担服务器负载。适用于写少读多的场景，通过多个从节点分担读负载，可以大大提高redis服务器的并发量
-4. 主从库之间采用读写分离的方式
-   - 读操作：主库、从库都可以接收
-   - 写操作：首先到主库执行，然后主库将写操作同步到从库
-   - ![image-20220609210402236](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092104175.png)
+4. 高可用基石：主从复制是哨兵模式和cluster集群实施的基础
+
+
+
+主从库之间采用的是：读写分离的方式
+
+- 读操作：主库、从库都可以接收
+- 写操作：首先到主库执行，然后主库将写操作同步到从库
+- ![image-20220609210402236](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092104175.png)
+
+
 
 
 
@@ -1165,7 +967,7 @@ redis2.8前只有全量同步复制，2.8版本后有全量和增量同步复制
    - **第一次复制采取全量复制**
 2. **第二阶段：主库将数据同步给从库**
    - 从库收到数据后，在本地完成数据加载，这个**过程依赖于内存快照生成的rdb文件**
-   - 主库执行bgsave命令，生成rdb文件，接着将rdb文件发给从库
+   - ==主库执行bgsave命令，生成rdb文件，接着将rdb文件发给从库==
    - 主库发送rdb文件给从库，从库收到文件后，会先清空当前数据库，然后加载rdb文件
      - 因为从库通过replicaof命令开始和主库同步前，可能保存了其他数据，所以需要清空
    - 主库将数据同步给从库过程中，主库不会被阻塞，仍然可以正常接收请求
@@ -1213,11 +1015,11 @@ replication bufffer：
 
 
 
-##### 主服务器不进行持久化时，复制的安全性
+#### 主服务器不进行持久化时，复制的安全性
 
-> 进行主从复制设置时，强烈建议在主服务器上开启持久化。
->
-> 当不开启持久化时，考虑到其他问题，比如：延迟问题时，应该将实例配置为非自动重启
+> 进行主从复制设置时，强烈建议在==主服务器上开启持久化==
+
+当主服务器不开启持久化时，考虑到延迟问题时，应该将实例配置为非自动重启
 
 
 
@@ -1235,10 +1037,21 @@ replication bufffer：
 
 
 
-##### 为什么主从全量复制使用RDB而不是Aof
+#### 为什么主从全量复制使用RDB而不是Aof
 
-1. **rdb文件内容是经过压缩的二进制文件，文件很小**。而aof文件很大，在主从全量数据同步时，传输rdb文件可以尽量降低对主库的网络带宽消耗，从库在加载rdb文件时，一是文件小，读取文件的速度很快，二是rdb文件存储的是二进制数据，从库直接按照rdb协议解析还原数据即可，速度非常快。而aof需要依次重放每个命令这个过程冗长，恢复速度相比rdb慢很多，所有使用rdb进行主从全量复制的成本更低
-2. 若使用aof做全量复制，意味着开启aof功能，开启aof就要选择文件刷盘的策略，选择不当会严重影响Redis性能。而Rdb只需要定时备份和主从全量复制数据时才会生成一次快照。而且，在丢失数据不敏感的业务场景，其实是不需要开启Aof的
+1. **rdb文件内容是经过压缩的二进制文件，文件很小**。而aof文件很大，在主从全量数据同步时，传输rdb文件可以尽量降低对主库的网络带宽消耗，从库在加载rdb文件时，一是文件小，读取文件的速度很快，二是rdb文件存储的是二进制数据，从库直接按照rdb协议解析还原数据即可，速度非常快。
+2. 而aof需要依次重放每个命令这个过程冗长，恢复速度相比rdb慢很多，所以使用rdb进行主从全量复制的成本更低
+3. 若使用aof做全量复制，意味着开启aof功能，开启aof就要选择文件刷盘的策略，选择不当会严重影响Redis性能。而Rdb只需要定时备份和主从全量复制数据时才会生成一次快照。而且，在丢失数据不敏感的业务场景，其实是不需要开启Aof的
+
+#### 为什么有无磁盘复制模式
+
+Redis默认是磁盘复制
+
+但是，如果使用比较低速的磁盘，这种操作会给主服务器带来较大的压力。从2.8开始，支持无磁盘复制
+
+无磁盘模式：master创建一个新进程，直接dump rdb到socket，不经过主进程，不经过磁盘，适用于磁盘较慢，并且网络较快的时候
+
+
 
 
 
@@ -1264,7 +1077,7 @@ replication bufffer：
 
 #### 主从复制下-读写分离中的问题
 
-在主从复制基础上实现的读写分离，可以实现Redis的读负载均衡：由主节点提供写服务，由一个或多个从节点提供读服务（多个从节点既可以提高数据冗余程度，也可以最大化读负载能力）；在读负载较大的应用场景下，可以大大提高Redis服务器的并发量
+在主从复制基础上实现的读写分离，可以实现Redis的读负载均衡：由主节点提供写服务，由一个或多个从节点提供读服务，在读负载较大的应用场景下，可以大大提高Redis服务器的并发量
 
 
 
@@ -1327,7 +1140,7 @@ replication bufffer：
 
 
 
-#### redis哨兵机制
+### redis哨兵机制
 
 > 单纯的主-从模式不能实现主节点故障自动转移故障，哨兵的加入可以在发现主节点出现故障后，自动选举新的主节点
 >
@@ -1341,7 +1154,35 @@ redis sentinel：即redis哨兵，2.8版本开始引入。**核心功能是主�
 
 
 
-**哨兵：是一个独立的进程，它会独立运行**。其原理是通过发送命令，等待Redis服务器响应，从而监控运行的多个Redis实例
+**哨兵：是一个独立的进程，它会独立运行，不提供读写访问，默认运行在26379端口上**。其原理是通过发送命令，等待Redis服务器响应，从而监控运行的多个Redis实例
+
+通过命令，可以让redis以Sentinel模式运行
+
+~~~shell
+redis-sentinel /path/to/sentinel.con
+~~~
+
+
+
+常见的最小配置如下：
+
+~~~shell
+#2 表示当有2个sentinel认为master失效时，master才算真正失效
+sentinel monitor mymaster-1 127.0.0.1 6379 2
+
+#master节点宕机多长事件才会被sentinel认为失效
+sentinel down-after-milliseconds mymaster-1 60000
+sentinel failover-timeout mymaster-1 18000
+sentinel parallel-syncs mymaster-1 1
+
+
+# 第二个sentinel配置
+sentinel monitor mymaster-2 192.168.1.3 6380 4
+sentinel down-after-milliseconds mymaster-2 10000
+sentinel failover-timeout mymaster-2 180000
+# 发生主备切换时，最多可以有5个slave同时对新的master进行同步
+sentinel parallel-syncs mymaster-2 5
+~~~
 
 
 
@@ -1349,7 +1190,7 @@ redis sentinel：即redis哨兵，2.8版本开始引入。**核心功能是主�
 
 ![image-20220609214723922](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092147037.png)
 
-##### 哨兵的功能
+#### 哨兵的功能
 
 1. 监控：哨兵会不断地检查主节点和从节点是否运作正常
 2. 自动故障转移：当主节点不能正常工作时，哨兵会开始自动故障转移操作，在从节点中选取一个作为新的主节点，并让其他从节点改为复制新的主节点数据
@@ -1364,7 +1205,7 @@ redis sentinel：即redis哨兵，2.8版本开始引入。**核心功能是主�
 
 
 
-##### 哨兵集群的组建
+#### 哨兵集群的组建
 
 > **哨兵实例之间可以相互发现，这个要归功于Redis的发布/订阅机制**
 
@@ -1377,31 +1218,42 @@ redis sentinel：即redis哨兵，2.8版本开始引入。**核心功能是主�
 
 
 
-##### 哨兵监控Redis库
+#### 哨兵监控Redis库
 
 ![image-20220609215600099](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092156209.png)
 
 
 
+#### Sentinel如何检测节点是否下线
+
 ##### 主库下线判断
 
-1. 主观下线：任何一个哨兵都可以监控探测，并作出redis节点下线的判断
-2. 客观下线：**由哨兵集群共同决定redis主节点是否下线**
+1. 主观下线(SDown)：一个Sentinel节点认为某个Redis节点已经下线了，但是还不确定，需要其他sentinel节点的投票
+2. 客观下线（ODown)：法定数量(通常是过半）的sentinel节点，认定某个redis节点已经下线，那么这个redis节点就算是下线了
 3. ![image-20220609215806511](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092158623.png)
 
 
 
-##### 哨兵集群的主节点选举机制
-
-判断主库下线后，哪个哨兵节点来执行主从切换？
-
-为了避免哨兵的单点情况发生，所以需要一个哨兵的分布式集群。作为分布式集群，必然涉及共识问题（即选举问题）；同时故障的转移和通知都只需要一个**主哨兵节点**就可以了
 
 
 
-**选举机制**
 
-哨兵的选举机制其实很简单，就是一个**Raft选举算法： 选举的票数大于等于num(sentinels)/2+1时，将成为领导者，如果没有超过，继续选举**
+
+
+
+
+##### 哨兵集群如何选举出Sentinel leader
+
+判断主库下线后，就开始故障转移流程
+
+1. 在sentinel集群中，选择一个Leader，来执行主从切换，完成故障转移
+2. 既然sentinel也是分布式集群，必然涉及共识问题
+
+
+
+哨兵的leader选举机制其实很简单
+
+- **Raft选举算法： 选举的票数大于等于num(sentinels)/2+1时，将成为领导者，如果没有超过，继续选举**
 
 任何一个想成为Leader的哨兵要满足两个条件
 
@@ -1429,17 +1281,17 @@ redis sentinel：即redis哨兵，2.8版本开始引入。**核心功能是主�
 
 
 
-##### 新主库的选出
+##### Sentinel如何选择出新的master
 
 主库判断客观下线了，如何在从库中选举出新的主库
-
-
 
 1. 过滤掉不健康的没有回复过哨兵ping响应的从节点
 2. 选择salve-priority从节点优先级最高的（redis.conf中配置的）
 3. 选择复制偏移量最大，只复制最完整的从节点
-3. 根据以上3个条件选举出一个从节点，将其升级为主节点
-4. ![image-20220609221819291](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092218518.png)
+4. 根据以上3个条件选举出一个从节点，将其升级为主节点
+5. runid：若以上步骤还没有选举出新的master，那么选择runid小的为新的master
+   - 每个reids节点启动时，都有一个40字节随机字符串作为运行id
+6. ![image-20220609221819291](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092218518.png)
 
 
 
@@ -1466,27 +1318,42 @@ redis sentinel：即redis哨兵，2.8版本开始引入。**核心功能是主�
 
 
 
-### redis集群(redis分片、redis cluster)
+### redis cluster 集群
 
 Redis cluster是Redis的分布式解决方案。参考文章：[Java全栈Redis集群讲解](https://pdai.tech/md/db/nosql-redis/db-redis-x-cluster.html)
 
+主从+Sentinel模式面临的问题
+
+> 虽然主从复制和哨兵机制保证了高可用，就读写分离而言虽然slave从节点扩展了主从的读并发能力
+>
+> 但是，写能力和存储能力是无法进行扩展，就只能是master节点能够承载的上限。
+>
+> 面对海量数据那么**必然需要构建master(主节点分片)之间的集群**。同时必然需要吸收高可用(主从复制和哨兵机制)能力，即每个master分片节点还需要有slave节点，这是分布式系统中典型的纵向扩展(集群的分片技术)的体现
 
 
-> 虽然主从复制和哨兵机制保证了高可用，就读写分离而言虽然slave从节点扩展了主从的读并发能力，但是写能力和存储能力是无法进行扩展，就只能是master节点能够承载的上限。面对海量数据那么**必然需要构建master(主节点分片)之间的集群**。同时必然需要吸收高可用(主从复制和哨兵机制)能力，即每个master分片节点还需要有slave节点，这是分布式系统中典型的纵向扩展(集群的分片技术)的体现
 
+#### 为什么需要redis cluster集群
 
+高并发场景下，使用redis面临的问题：
 
-面临的问题：
+1. 缓存的数据量太大
+   - 高并发下缓存的数据量可以达到几十G，甚至更高
+2. 并发量要求太高
+   - 虽然redis单机号称可以支持10w并发，但是，实际项目中，不可靠因素太多，会导致性能达到瓶颈而无法满足实际需求
 
-1. 机器容量不够，redis如何扩容？
-2. 并发写操作，redis如何分摊？
-3. 3.0之前通过代理主机、客户端分片、redis sentinel等方案来解决，redis3.0开始后提供了无中心集群配置
+而主从复制、主从复制+sentinel都是增加主库的副本slave数量的方式，来提高redis服务的整体高可用性和读取的吞吐量
 
+但是，这二者都不支持横向扩展来缓解写压力以及缓存数据量过大的问题。纵向扩展的局限性有太大，局限性也大
 
+所以，横向扩展来解决这个问题
+
+即：通过使用Redis切片集群部署，就是部署多台Redis主节点，主节点直接是平等的，没有主从关系。每个主节点又是高可用的，即每个主节点配置一个或多个从节点slave
 
 
 
 #### Redis Cluster提供的功能
+
+> Redis cluster通过分片（Sharding)来进行数据管理，提供主从复制、故障转移（内置了sentinel,无需单独部署sentinel集群）等功能
 
 1. 数据自动分片
    - 集群中，每个节点都会负责一定数量的slot，每个key会映射到一个具体的slot，通过这种方式就可以找到key具体保存在哪个节点上了
@@ -1494,6 +1361,13 @@ Redis cluster是Redis的分布式解决方案。参考文章：[Java全栈Redis�
    - 通过hash tag功能可以将多个不同key映射到同一个slot上，这样就能够提供multi-key操作，hash tag的使用的方式是在key中包含“{}”，这样只有在“{...}”中字串被用于hash计算
 3. 自动实现转移和手动失效转移
 4. 减少硬件成本和运维成本
+
+
+
+redis cluster可以动态扩展到1000个节点，但是不建议这样做，应该尽量避免集群中节点过多
+
+- 因为cluster中的各个节点是基于Gossip协议进行通信通信信息的
+- 当节点过多时，Gossip协议效率会显著下降，通信成本剧增
 
 
 
@@ -1648,7 +1522,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 1. 设置可访问的名单（白名单）：如果做了用户鉴权则这一个可以不做
    - 使用bitmap定义可以访问的名单，每次访问时进行比较，存在可以进行访问，否则进行拦截，不允许访问
      - 缺点：每次需要进行比较
-     
+   
 2. **采用布隆过滤器-bloom filter**
 
    - 底层是优化的bitmap，用于快速判某个元素是否存在于集合中，其**典型的应用场景就是快速判断一个key是否存在于某容器，不存在就直接返回**。
@@ -2405,16 +2279,6 @@ latch.countDown();
 
 
 
-### zk分布式锁
-
-![image-20220511205617605](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205112056393.png)
-
-
-
-
-
-
-
 
 
 ---
@@ -3156,7 +3020,7 @@ latch.countDown();
 
 
 
-## Redis公司架构
+## Redis 凯亚架构
 
 三大航共用的机器：
 
