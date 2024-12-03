@@ -1,8 +1,6 @@
-## Redis
+# Redis
 
-
-
-### 什么是Redis
+## 什么是Redis
 
 [Java全栈网站](https://pdai.tech/md/db/nosql-redis/db-redis-introduce.html)  、 [官网](www.reids.cn) 、推荐书籍：《Redis核心技术与实战》（作者：蒋德钧）
 
@@ -33,7 +31,7 @@ redis是一款基于内存的高速缓存数据库，是一个k-v存储系统。
 
 
 
-### Redis使用场景
+## Redis使用场景
 
 平时应用redis场景还是相当多的，例如：标黑为项目中用到过的
 
@@ -65,7 +63,7 @@ redis是一款基于内存的高速缓存数据库，是一个k-v存储系统。
 
 
 
-### 五大基本数据类型
+## 五大基本数据类型
 
 > String字符串、List列表、Set集合、Hash散列、Zset有序集合
 
@@ -93,7 +91,9 @@ redis中的数据都是以key-value形式存储的，**所有的key都是字符�
 
 
 
-#### 字符串String
+
+
+### 字符串String
 
 ![image-20220608001010556](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206080010678.png)
 
@@ -139,9 +139,7 @@ redis中的数据都是以key-value形式存储的，**所有的key都是字符�
 
 
 
----
-
-#### 列表List
+### 列表List
 
 Redis中的List，其实就是链表，Redis用双端链表实现List
 
@@ -193,9 +191,7 @@ Redis中的List，其实就是链表，Redis用双端链表实现List
 
 
 
----
-
-#### 集合Set
+### 集合Set
 
 Redis中，Set是无序集合，集合成员是唯一的，即：集合中没有重复的数据
 
@@ -230,9 +226,7 @@ Redis中，Set是无序集合，集合成员是唯一的，即：集合中没有
 
 
 
----
-
-#### 哈希Hash
+### 哈希Hash
 
 Redis hash是一个string类型的field(字段)和value(值)的映射表，hash特别适合用于存储对象
 
@@ -268,7 +262,7 @@ Redis hash是一个string类型的field(字段)和value(值)的映射表，hash�
 
 ---
 
-#### 有序集合ZSet
+### 有序集合ZSet
 
 1. 有序集合与上述set类似，只是它是有序的
 2. 有序集合的每个成员都关联了一个**评分**权重参数，这个评分被用来按照从最低分到最高分的方式排序集合中的成员
@@ -309,9 +303,7 @@ zset应用场景
 
 
 
----
-
-### Redis6 3种新的数据类型
+## Redis6 3种新的数据类型
 
 #### BitMaps
 
@@ -370,7 +362,7 @@ Redis5.0加入了Stream数据类型，借鉴了Kafka的设计，是一个新的�
 
 
 
-### Redis进阶-数据结构：对象机制详解
+## Redis进阶-数据结构：对象机制详解
 
 基础类型的底层是如何实现的？
 
@@ -394,7 +386,7 @@ redisObject是redis类型系统的核心，数据库中的每个键、值以及R
 
 
 
-### Redis的发布和订阅
+## Redis的发布和订阅
 
 > Redis发布订阅是一种消息通信模式：发送者发送消息、订阅者接收消息
 
@@ -435,7 +427,7 @@ Redis有2种发布/订阅模式
 
 
 
-### Redis事务
+## Redis事务
 
 **Redis事务的本质是一组命令的集合**，事务支持一次执行多个命令，一个事务中所有命令都会被序列化。事务执行过程中，会按照串行化执行队列中的命令，其他客户端提交的命令请求不会插入到事务执行命令序列中
 
@@ -545,7 +537,7 @@ QUEUED
 
 
 
-### Redis持久化
+## Redis持久化
 
 > 为了防止数据丢失以及服务器重启时能够恢复数据，Redis支持的数据持久化方式分为RDB和AOF
 
@@ -908,7 +900,7 @@ redis通过创建一个新的aof文件替换现有的aof文件，新旧两个aof
 
 
 
-### Redis主从复制
+## Redis主从复制
 
 > 避免单节点故障，保证高可用，那么就需要采用副本的冗余方式来提供集群服务。
 >
@@ -1140,7 +1132,7 @@ Redis默认是磁盘复制
 
 
 
-### redis哨兵机制
+## redis哨兵机制
 
 > 单纯的主-从模式不能实现主节点故障自动转移故障，哨兵的加入可以在发现主节点出现故障后，自动选举新的主节点
 >
@@ -1190,7 +1182,7 @@ sentinel parallel-syncs mymaster-2 5
 
 ![image-20220609214723922](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092147037.png)
 
-#### 哨兵的功能
+### 哨兵的功能
 
 1. 监控：哨兵会不断地检查主节点和从节点是否运作正常
 2. 自动故障转移：当主节点不能正常工作时，哨兵会开始自动故障转移操作，在从节点中选取一个作为新的主节点，并让其他从节点改为复制新的主节点数据
@@ -1205,7 +1197,7 @@ sentinel parallel-syncs mymaster-2 5
 
 
 
-#### 哨兵集群的组建
+### 哨兵集群的组建
 
 > **哨兵实例之间可以相互发现，这个要归功于Redis的发布/订阅机制**
 
@@ -1218,15 +1210,15 @@ sentinel parallel-syncs mymaster-2 5
 
 
 
-#### 哨兵监控Redis库
+### 哨兵监控Redis库
 
 ![image-20220609215600099](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206092156209.png)
 
 
 
-#### Sentinel如何检测节点是否下线
+### Sentinel如何检测节点是否下线
 
-##### 主库下线判断
+#### 主库下线判断
 
 1. 主观下线(SDown)：一个Sentinel节点认为某个Redis节点已经下线了，但是还不确定，需要其他sentinel节点的投票
 2. 客观下线（ODown)：法定数量(通常是过半）的sentinel节点，认定某个redis节点已经下线，那么这个redis节点就算是下线了
@@ -1242,7 +1234,7 @@ sentinel parallel-syncs mymaster-2 5
 
 
 
-##### 哨兵集群如何选举出Sentinel leader
+#### 哨兵集群如何选举出Sentinel leader
 
 判断主库下线后，就开始故障转移流程
 
@@ -1281,7 +1273,7 @@ sentinel parallel-syncs mymaster-2 5
 
 
 
-##### Sentinel如何选择出新的master
+#### Sentinel如何选择出新的master
 
 主库判断客观下线了，如何在从库中选举出新的主库
 
@@ -1295,7 +1287,7 @@ sentinel parallel-syncs mymaster-2 5
 
 
 
-##### 故障的转移
+#### 故障转移
 
 >  主库选择出来后，就可以进行故障的转移了
 
@@ -1318,7 +1310,7 @@ sentinel parallel-syncs mymaster-2 5
 
 
 
-### redis cluster 集群
+## redis cluster 集群
 
 Redis cluster是Redis的分布式解决方案。参考文章：[Java全栈Redis集群讲解](https://pdai.tech/md/db/nosql-redis/db-redis-x-cluster.html)
 
@@ -1332,7 +1324,7 @@ Redis cluster是Redis的分布式解决方案。参考文章：[Java全栈Redis�
 
 
 
-#### 为什么需要redis cluster集群
+### 为什么需要redis cluster集群
 
 高并发场景下，使用redis面临的问题：
 
@@ -1351,7 +1343,7 @@ Redis cluster是Redis的分布式解决方案。参考文章：[Java全栈Redis�
 
 
 
-#### Redis Cluster提供的功能
+### Redis Cluster提供的功能
 
 > Redis cluster通过分片（Sharding)来进行数据管理，提供主从复制、故障转移（内置了sentinel,无需单独部署sentinel集群）等功能
 
@@ -1371,74 +1363,168 @@ redis cluster可以动态扩展到1000个节点，但是不建议这样做，应
 
 
 
-#### Redis Cluster原理
+### 一个最基本的Redis Cluster集群
 
-##### 数据分布
-
-Redis**采用去中心化的设计方案**，通过16384个hash槽位，将每个key映射到一个具体的槽上，而每个redis节点可以负责管理一定数量的槽位。
-
-例如cluster集群中存在三个节点，那么可能存在的一种分配如下：
-
-1. 节点A包含0-5500号哈希槽
-2. 节点B包含5501-11000号哈希槽
-3. 节点C包含11001-16384号哈希槽
+- 为了保证高可用，Redis cluster至少需要3master+3slave，即一个master必须搭配一个slave
+- master和slave之间做主从复制
+  - 不过这里的主从与普通的Redis主从架构稍微不同，这里的slave不提供读服务，slave主要用来保障master的高可用，当master有问题时替换它
+- 如果宕机的master无slave可用时，为了保障集群的完整性，保障所有的哈希槽都指派给了可用的master，此时整个集群不可用
+  - 这种情况，想要集群保持可用，需要配置相关参数：cluster-require-full-coverge：No
+  - 表示是否需要16384个槽位都正常分配的时候cluster才对外提供服务
 
 
 
-##### Keys hash tags
-
-hash tags提供了一种途径，用来将多个不同的key分配到相同的hash slot中，这样就能够提供multi-key操作。hash tag的使用的方式是在key中包含“{}”，并且只有在“{...}”中字串被用于hash计算
 
 
+### Redis Cluster原理
 
-##### Cluster nodes属性
+
+
+#### 数据分布
+
+> 类似说法：cluster是如何分片的、cluster中的数据是如何分布的、给定key应该分布在哪个哈希槽中
+
+采用的是：哈希槽分区
+
+Redis**采用去中心化的设计方案**，通过16384个hash槽位，将每个key映射到一个具体的槽上，而每个redis节点可以负责管理一定数量的槽位
+
+- 例如cluster集群中存在三个节点ABC，那么可能存在的一种分配如下：
+
+  1. 节点A包含0-5500号哈希槽
+
+  2. 节点B包含5501-11000号哈希槽
+
+  3. 节点C包含11001-16384号哈希槽
+
+- 这个槽位默认情况下是cluster自动分配的，可用手动调整重新分配哈希槽
+
+  - 例如：将redis性能好的机器分配更多的槽位
+  - cluster addslots slot等一系列命令
+
+
+
+怎么分
+
+~~~java
+Hash_slot=CRC16(key) mod number_of_slots
+~~~
+
+1. 将key进行CRC-16校验码
+2. 将这个校验码对16384取模，即得到key对应的槽位
+
+
+
+#### hash tags
+
+hash tags提供了一种途径，用来==将多个不同的key（相关的key)分配到相同的hash slot中==，这样就能够提供multi-key操作。
+
+hash tag的使用的方式是在key中包含“{}”，并且只有在“{...}”中字串被用于hash计算
+
+- {user_001}-demo01，{user_001}-demo02 这两个key会被计算到同一个哈希槽位中，因为只有{里面} 括号里面的值才会用来计算
+
+
+
+#### Cluster nodes属性
 
 每个节点在cluster中有唯一的名字。
 
 
 
-##### 节点通信
+#### Redis cluster节点通信
 
-1. Gossip协议
-2. meet消息
-3. ping
-4. pong
-5. fail
-6. 消息格式
+> Redis cluster是典型的分布式系统，各个节点需要相互通信，既然要通信，那么就需要遵循通信协议
 
+Redis cluster各个节点采用Gossip协议来通信共享信息，每个Reids节点都维护了一份集群的状态信息
 
+有了redis cluster后，不用专门不是Sentinel集群服务。相当于是内置了Sentinel机制，各个节点通过Gossip协议相互探测健康状态，在有故障时候可自动切换
 
-##### 扩容
+Gossip协议
 
-##### 缩容
+- 又称epidemic协议，是基于流行病传播方式的节点，或进程之间信息交换的协议
+- gossip协议最大的好处：即使集群节点的数量增加，每个节点的负载也不会增加很多，几乎是恒定的
 
-##### 故障转移
+Gossip算法：又称反熵，
 
-##### 故障发现
-
-##### 故障恢复
-
-##### 请求重定向
+- 熵：物理学概念，代表杂乱无章。
+- 反熵：在杂乱无章中寻求一致
 
 
 
-1. 什么是集群
-   - Redis集群实现了对Redis的水平扩容，即启动N个redis节点，将整个数据库分布存储在这N个节点中，每个节点存储总书记的1/N
-   - Redis集群通过分区（partition）来提供一定程度可用性：即使集群有一部分节点失效或者无法通讯，集群也可以继续处理命令请求
-2. 分配原则
-   - 尽量保证每个主数据库服务器运行在不同的ip地址，每个从库和主库不在一个ip地址上
-3. slots
-   - 一个Redis集群包含16384个slots，数据库中的每个键都属于这个16384个插槽的其中一个
-   - 集群使用公式CRC16(key)% 16384计算出key属于哪个插槽，便放入哪个机器中
-4. 故障恢复
-   - 主机宕机，从机升级为主机
-   - 主机重新启动后，成为当前主机的从机
-   - 集群里面的一部分（主机、从机）都宕机了
-     - cluster-require-full-coverage yes：整个集群都挂掉
-     - cluster-require-full-coverage no：该插槽数据全都不能使用也不能存储
-5. 集群的不足
-   - 多建操作需要建立 组
-   - 多建的Redis事务是不被支持的。lua脚本不被支持
+#### 扩容、缩容
+
+Redis cluster扩容缩容的本质是进行重新分片，动态迁移哈希槽
+
+扩容
+
+1. 新节点加入集群时，可用通过集群中任何一个客户端执行cluster meet 新节点ip:端口
+   - 或者redis-trib add node添加
+   - 新添加的节点默认在集群中都是主节点
+2. 迁移数据
+   - 首先确定哪些槽位需要迁移到目标节点，然后获取槽位中的key，将key全部迁移到目标节点上，然后向集群中所以主节点广播槽位已经全部迁移到新节点了
+
+缩容
+
+- 大致与扩容一致
+
+为了确保在动态扩容缩容期间，集群依然对外提供服务，redis cluster提供了重定向机制
+
+
+
+#### 请求重定向
+
+为什么会存在找错节点？
+
+- 这是因为redis cluster内部可能会重新分配哈希槽给节点。例如：扩容缩容的时候
+- 这就导致客户端缓存的哈希槽分配信息是有误的
+
+
+
+当客户端请求key时，如果哈希槽确实是自己这个节点负责的，则响应请求结果。
+
+当这个槽位不是自己负责时，返回重定向错误，告诉客户都当前槽位由哪个节点负责
+
+
+
+Ask重定向
+
+发生于集群扩容、缩容时，导致的槽位迁移
+
+- 客户端请求的key对应的哈希槽在当前正在迁移至新的节点，返回Ask重定向错误
+- 客户端收到Ask重定向后，会临时向目标节点发送Asking命令
+- ask重定向不会同步更新客户端缓存的哈希槽分配信息。即：客户端对正在迁移的相同哈希槽的请求，会发送到原节点，而不是目标节点
+
+Moved重定向
+
+- 客户端请求的key对应的哈希槽迁移完成
+- 会返回一个moved重定向错误
+- 客户端向新的目标节点发送请求并更新缓存的哈希槽分配
+
+
+
+smart客户端
+
+- 重定向的机制使得客户端实现更加复杂，所以提供了smart客户端（JedisCluster)来减低复杂性
+- 在客户端内部就完成了重定向操作，不用程序员再去手动写了
+
+
+
+
+
+#### redis cluster 故障转移（切换master过程）
+
+故障发现
+
+- 主观下线、客观下线
+
+  
+
+故障恢复
+
+- 主机宕机，从机升级为主机
+- 主机重新启动后，成为当前主机的从机
+- 集群里面的一部分（主机、从机）都宕机了
+  - cluster-require-full-coverage yes：整个集群都挂掉
+  - cluster-require-full-coverage no：该插槽数据全都不能使用也不能存储
 
 
 
@@ -1446,55 +1532,76 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
+## redis缓存
 
-
----
-
-### redis缓存
+缓存的基本思想：空间换时间
 
 在高并发业务场景下，数据库大多数情况是用户并发访问最薄弱的环节。所以就需要做一个缓冲操作，让请求先访问缓存，而不是直接请求数据库，这样大大缓解了数据库的压力
 
 
 
-当想要查询数据时，使用缓存的流程如下
 
-![](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222313989.png)
 
-#### 本地缓存
+### 本地缓存
 
-本地缓存也就是**使用内存中的缓存数据**，可以使用HashMap、数组等数据结构来做缓存
+本地缓存也就是**使用内存中的缓存数据**
 
-优点：
+1. Map、数组等
+2. Ehcache、Guava Cache、Spring Cache本地缓存框架
+3. Caffeine后起之秀，一般建议使用其替代Guave Cache
 
-1. 减少和数据库的交互、降低了磁盘IO引起的性能问题
-2. 加快响应速度
+
+
+优点：低依赖、轻量、简单、成本低
 
 缺点：
 
 1. 占用本地内存，机器宕机、重启后缓存丢失
-2. 可能存在数据库数据和缓存数据不一致问题
-3. 同一个机器的多个微服务缓存的数据不一致
-   - ![image-20220322232320544](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222323695.png)
-4. 集群环菌下存在缓存的数据不一致
-   - ![image-20220322232336902](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203222323056.png)
-
-基于本地缓存的问题，引入了分布式缓存Redis
+2. 本地缓存耦合，对分布式架构不友好
 
 
 
 
 
+基于本地缓存的问题，引入了分布式缓存
+
+- 分布式缓存脱离于应用，独立存在，多个应用可用公用一个分布式缓存服务
 
 
-#### 分布式缓存redis
 
-##### 为什么要用缓存
+分布式缓存方案
+
+- Memcached：分布式缓存刚开始那会儿，用的多，后来随着Redis的发展，后来很多基本上都使用Redis了
+- Redis
+- Tendis腾讯开源的：使用也比较少
+
+
+
+多级缓存
+
+一般是一级缓存+二级缓存，一般用的少，基本上用Redis一层缓存就能搞定大部分业务了
+
+- 一级缓存JVM里面实现
+  - 如何保证数据强一致性
+    - 可用通过注册到zk上去，zk协调缓存失效通知
+- 二级缓存：Reids
+
+
+
+
+
+### 分布式缓存redis
+
+#### 为什么要用缓存
 
 1. 提高性能
    - 把一些负责操作耗时的查询出结果后，若后面有很多请求都需要读取，那么可以将结果放进缓存，后面的请求读取缓存就可以了
-   - ![image-20220508203048601](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082030789.png)
+   
+     
+   
 2. 提高并发
-   - ![image-20220508203132273](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082031397.png)
+   
+   
 
 
 
@@ -1502,11 +1609,11 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-==当缓存库出现时，必须考虑如下问题==：缓存穿透、缓存击穿、缓存雪崩、缓存污染(或者满了)、缓存和数据库一致性等问题
+==随着缓存库的引入，必须考虑如下问题==：缓存穿透、缓存击穿、缓存雪崩、缓存污染(或者满了)、缓存和数据库一致性等问题
 
 
 
-##### 缓存穿透
+#### 缓存穿透
 
 >  问题来源：**redis缓存中和数据库中都没有的数据**，而用户不断地发起请求
 
@@ -1541,7 +1648,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-##### 缓存击穿
+#### 缓存击穿
 
 > 问题来源：**缓存中没有数据，但数据库中有的数据**（一般是缓存时间到期），这时由于并发用户特别多，同时读缓存时又没有读取到数据，导致大量请求直接去读取数据库，引起数据库压力瞬间增大，造成过大压力
 >
@@ -1569,7 +1676,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-##### 缓存雪崩
+#### 缓存雪崩
 
 > 问题来源：缓存中的数据**大批量到了过期时间**，而查询数据量巨大，引起数据库压力过大甚至宕机
 
@@ -1597,7 +1704,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-##### 缓存预热
+#### 缓存预热
 
 1. 缓存预热如字面意思，当系统上线时，缓存内还没有数据，如果直接提供给用户使用，每个请求都会穿过缓存去访问底层数据库，如果并发大的话，很有可能在上线当天就会宕机，因此我们需要在上线前**先将数据库内的热点数据缓存至Redis内**再提供出去使用，这种操作就成为"缓存预热"。
 2. 缓存预热的实现方式
@@ -1605,7 +1712,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-##### 缓存污染(或满了)
+#### 缓存污染(或满了)
 
 指的是：**缓存中那些只会被访问一次或者几次的数据，被访问后再也访问不到，但是这部分数据依然保存在缓存中，消耗缓存空间**
 
@@ -1615,7 +1722,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-##### 最大缓存设置多大
+#### 最大缓存设置多大
 
 系统的设计选择是一个权衡的过程：大容量缓存是能带来性能加速的收益，但是成本也会更高，而小容量缓存不一定就起不到加速访问的效果。一般来说，**建议把缓存容量设置为总数据量的 15% 到 30%，兼顾访问性能和内存空间开销**
 
@@ -1625,7 +1732,7 @@ hash tags提供了一种途径，用来将多个不同的key分配到相同的ha
 
 
 
-### Redis过期策略（缓存淘汰策略）
+## Redis过期策略（缓存淘汰策略）
 
 redis是基于内存的，缓存里面的数据是会过期的，要么自己设置一个过期时间，要么redis自己清理这些数据。
 
@@ -1720,7 +1827,7 @@ private final int CACHE_SIZE;
 
 
 
-### 数据库和缓存一致性
+## 数据库和缓存一致性
 
 
 
@@ -1883,7 +1990,7 @@ private final int CACHE_SIZE;
 
 ---
 
-### 基于Redis的分布式锁
+## 基于Redis的分布式锁
 
 分布式锁：分布式系统中，通过加锁来控制共享资源在多个客户端之间的互斥访问，保证数据一致性
 
@@ -1901,7 +2008,7 @@ private final int CACHE_SIZE;
 
 
 
-#### 分布式锁的实现方式
+### 分布式锁的实现方式
 
 1. 基于数据库分布式锁
    - 通过唯一索引的方式
@@ -1915,7 +2022,7 @@ private final int CACHE_SIZE;
 
 
 
-#### 使用Redis实现分布式锁
+### 使用Redis实现分布式锁
 
 1. 利用setnx+expire命令：错误的做法，因为setnx和expire是分开的两个步骤，不具有原子性，如果执行完加锁指令后，应用异常或者重启了，锁将无法过期。
 
@@ -1947,11 +2054,9 @@ Redisson客户端实现分布式锁
 
 
 
-##### Redis+Lua脚本
 
 
-
-###### Lua脚本
+#### Redis+Lua脚本
 
 > Lua脚本是高并发、高性能的必备脚本，大部分的开源框架例如：Redisson中的分布式锁都是用lua脚本实现的
 
@@ -1964,7 +2069,7 @@ Redis 2.6开始，提供了Lua脚本功能，保证脚本里面的命令以原�
 
 
 
-##### Redis集群环境下(主要针对主从、主从+哨兵这种方式)分布式锁有什么问题
+#### Redis集群环境下(主要针对主从、主从+哨兵这种方式)分布式锁有什么问题
 
 我们知道，在Redis集群中，Master主节点和Slave从节点之间是异步方式进行数据同步的。这样其实就有一个问题，举个例子：
 
@@ -1976,11 +2081,201 @@ Redis 2.6开始，提供了Lua脚本功能，保证脚本里面的命令以原�
 
 以上就是Redis集群下Redis分布式锁存在的一些问题，当然如果项目里面容忍偶尔几次的这种锁重复问题，那么也可以采用，**如果一次都不能容忍，那么建议使用Redisson的RedLock算法或者直接使用Zookeeper实现分布式锁**
 
----
+
+
+详见Redisson
 
 
 
-#### Redisson
+
+
+
+
+## Redis单线程模型
+
+> 这个单线程主要指的是：Redis的网络I/O和执行命令的核心模块是单线程完成的，Redis在处理客户端的请求时，包括：获取、解析、执行、内容返回等都是一个顺序串行的主线程处理。而不是说Redis实例就是一个单线程的，比如：持久化、异步删除、集群数据同步等等都是额外的线程执行的
+
+Redis采用Reactor模式的网络模型，对一个客户端请求，主线程负责一个完整的处理过程。redis基于reactor模式开发了网络事件处理器，这个处理器叫做文件事件处理器。这个文件事件处理器，是单线程的，redis才叫做单线程的模型
+
+
+
+官网给的答案：Redis是基于内存的操作，**CPU不是Redis的瓶颈，Redis的瓶颈最有可能是机器内存的大小或者网络带宽**。既然单线程容易实现，而且CPU不会成为瓶颈，那就顺理成章地采用单线程的方案了
+
+
+
+Redis 6 引入多线程IO，但**多线程部分只是用来处理网络数据的读写和协议解析，执行命令仍然是单线程**。之所以这么设计是不想因为多线程而变得复杂，需要去控制 key、lua、事务，LPUSH/LPOP 等等的并发问题
+
+
+
+### Redis事件
+
+redis采用**事件驱动机制**，来处理大量的网络I/O，事件机制分为文件事件和时间事件，Redis中的事件驱动库只关注网络IO，以及定时器
+
+
+
+最核心的就是文件事件处理器
+
+
+
+### 文件事件 file event
+
+>  用于处理redis服务器和客户端之间的网络IO
+
+redis基于reactor模式开发了网络事件处理器，这个处理器叫做文件事件处理器，file event handler。
+
+这个文件事件处理器，是单线程的，redis才叫做单线程的模型，采用IO多路复用机制同时监听多个socket，根据socket上的事件来选择对应的事件处理器来处理这个事件。
+
+
+
+单线程的redis为啥这么快？
+
+采用多路复用机制，使其在网络IO操作中能并发处理大量的客户端请求，实现高吞吐率
+
+
+
+
+
+#### 文件事件处理器
+
+> 文件事件处理器是单线程模式运行的，但是通过IO多路复用机制监听多个socket，可以实现高性能的网络通信模型，又可以跟内部其他单线程的模块进行对接，保证了redis内部的线程模型的简单性。
+
+
+
+文件事件处理器的结构包含4个部分
+
+1. 多个socket(文件事件被抽象为一个socket)
+2. I/O多路复用程序
+3. 文件事件分派器
+4. 事件处理器（又分为：命令请求处理器、命令回复处理器、连接应答处理器，等等）
+
+
+
+
+
+多个socket可能并发的产生不同的操作，每个操作对应不同的文件事件，**IO多路复用程序会监听多个socket**，并将socket放入一个队列中排队，每次从队列中取出一个socket给事件分派器，事件分派器把socket给对应的事件处理器。
+
+![image-20230311221853896](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303112218647.png)
+
+
+
+然后一个socket的事件处理完之后，IO多路复用程序才会将队列中的下一个socket给事件分派器。文件事件分派器会根据每个socket当前产生的事件，来选择对应的事件处理器来处理。
+
+![image-20220613224944811](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206132250669.png)
+
+
+
+#### 文件事件
+
+> **文件事件：是对套接字socket操作的抽象**
+
+如果被监听的socket准备好执行accept、read、write、close等一系列操作的时候，跟该操作对应的文件事件就会产生，这个时候文件事件处理器就会调用之前关联好的事件处理器来处理这个事件。
+
+- 当socket变得可读时（比如客户端对redis执行write操作，或者close操作），或者有新的可以应答的socket出现时（客户端对redis执行连接操作），socket就会产生一个AE_READABLE事件。
+- 当socket变得可写的时候（客户端对redis执行read操作），socket会产生一个AE_WRITABLE事件。
+- IO多路复用程序可以同时监听AE_REABLE和AE_WRITABLE两种事件，要是一个socket同时产生了AE_READABLE和AE_WRITABLE两种事件，那么文件事件分派器优先处理AE_REABLE事件，然后才是AE_WRITABLE事件。
+
+#### I/O多路复用程序
+
+Redis 作为一个 Client-Server 架构的数据库，其源码中少不了用来实现网络通信的部分。通常系统实现网络通信的基本方法是使用 **Socket 编程模型**，包括创建 Socket、监听端口、处理连接请求和读写请求。但是，由于**基本的 Socket 编程模型一次只能处理一个客户端连接上的请求**，所以当要处理高并发请求时，一种方案就是使用多线程，让每个线程负责处理一个客户端的请求。Redis采用了另一种I/O多路复用来解决 
+
+
+
+> 多路：多个socket连接
+>
+> 复用：复用一个线程
+>
+> 多路复用主要实现技术：select，poll，epoll。epoll是最新的也是目前最好的多路复用技术
+
+1. 负责监听多个socket，并向文件事件分派器传递那些产生了事件的socket
+2. 多个文件事件可能并发的出现，但是IO多路复用程序会将所产生的套接字放到一个队列中，然后事件处理器会有序、同步、单个socket的方式处理队列里面的套接字，也就是处理就绪的文件事件
+3. I/O多路复用如何做到多个客户端不阻塞：设计到Liunx的内核了，简单了解即可
+   - Redis 的 IO 多路复用程序的所有功能都是通过包装常见的 select、poll、epoll、evport 和 kqueue 这些 IO 多路复用函数库来实现的，每个 IO 多路复用函数库在 Redis 源码中都有对应的一个单独的文件。
+   - Redis 为每个 IO 多路复用函数库都实现了相同的 API，所以 IO 多路复用程序的底层实现是可以互换的，如下图
+   - ![image-20230311232037819](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303112320917.png)
+   - Redis 把所有连接与读写事件、时间事件一起集中管理，并对底层 IO 多路复用机制进行了封装，最终实现了单进程能够处理多个连接以及读写事件
+
+#### 文件事件处理器
+
+- 如果是客户端要连接redis，那么会为socket关联连接应答处理器
+- 如果是客户端要写数据到redis，那么会为socket关联命令请求处理器
+- 如果是客户端要从redis读数据，那么会为socket关联命令回复处理器
+
+
+
+
+
+**redis客户端与服务端通信的一次流程**，[csdn文章也有类似的参考](https://blog.csdn.net/qq_38601777/article/details/91325622)
+
+1. 在redis启动初始化的时候，redis会将连接应答处理器跟AE_READABLE事件关联起来
+   - 如果一个客户端跟redis发起连接，客户端向服务端**发起建立 socket 连接的请求**（连接到redis的server socket请求建立连接），此时会产生一个AE_READABLE事件，该事件被I/O多路复用程序检测到，把检测到的socket连接放入socket队列中
+   - 事件分配器把socket分配给对应的事件处理器
+   - 由于连接应答处理器和AE_READABLE事件在redis初始化的时候已经关联起来，所以由连接应答处理器来处理跟客户端建立连接，**然后通过ServerSocket(下图)创建一个与客户端一对一对应的socket，如socket01**，同时将这个socket01的AE_READABLE事件跟命令请求处理器关联起来。
+2. 当客户端向redis发起请求时（不管是读还是写请求），首先就会在socket(例如socket01)产生一个AE_READABLE事件，I/O多路复用程序监听到socket01，放入队列中，分配器取出socket01，然后分配给对应的命令请求处理器。由于命令处理器和socket01的AE_READABLE事件关联起来了，所以对应的命令请求处理器来处理。这个命令请求处理器就会从socket01中读取请求相关数据，然后进行执行和处理。同时将命令请求处理器与socket01的ae_writeable事件关联起来，准备响应数据了
+3. redis准备好给客户端的响应数据之后，当客户端准备读取响应数据时，就会在socket01上产生一个AE_WRITABLE事件，同理经过上述步骤后，会由对应的命令回复处理器来处理，就是将准备好的响应数据写入这个对应的socket01，供客户端来读取
+4. 命令回复处理器写完之后，就会删除这个socket01的AE_WRITABLE事件和命令回复处理器的关联关系
+5. 这样客户端就和Redis完成了一次通信
+
+![image-20220508205702299](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082057463.png)
+
+
+
+
+
+
+
+### 时间事件
+
+redis服务器中的一些操作，需要在给定的时间点执行，而时间事件就是处理这类定时操作的
+
+定时事件：让程序在指定的时间之后执行一次
+
+周期性事件：让程序每隔指定时间就执行一次
+
+### aeEventLoop
+
+是整个事件驱动的核心，它管理文件事件和事件事件列表，不断地循环处理着就绪的文件事件和到期的时间事件
+
+
+
+
+
+**为什么redis单线程模型也能效率这么高实现高并发？**
+
+**Redis的瓶颈主要在I/O**而不是CPU
+
+1. 采用了**非阻塞的IO多路复用程序**，使其在网络I/O操作中能并发处理大量客户端请求，实现高吞吐率
+2. **纯内存操作**
+3. 单线程反而避免了多线程上下文切换问题
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Redisson
+
+Redis客户端有哪些：Jedis、lettuce、Redisson，官方推荐使用Redisson，其提供了使用Redis的最简单和最便捷的方法。
+
+
+
+Redisson是一个高级的分布式协调Redis客户端，在Redis的基础上实现的Java驻内存数据网格(In-Memory Data Grid)。它不仅提供了一系列分布式的Java常用对象，还提供了许多分布式服务。
+
+**Redisson的宗旨是促进使用者对Redis的关注分离，从而让使用者能够将精力更集中地放在处理业务逻辑上**
+
+
+
+
+
+### Redisson
 
 Redisson是一个在Redis的基础上实现的Java驻内存数据网格(In-Memory Data Grid)。它不仅提供了一系列分布式的Java常用对象，还提供了许多分布式服务。
 
@@ -2030,7 +2325,7 @@ Redisson实现了Redis文档中提到的分布式锁Lock。此外，还在分布
 
    - 当一个线程持有了一把锁，由于并未设置超时时间leaseTime，Redisson默认配置了30S，开启watchDog，每10S对该锁进行一次续约，维持30S的超时时间，直到任务完成再删除锁。也即：在第20s的时候会去重置成30s，以此类推
    - Redisson内部提供了一个**监控锁的看门狗**它的作用是在Redisson实例被关闭前，不断的延长锁的有效期，也就是说如果一个拿到锁的线程业务逻辑一直没有执行完，那么看门狗会不断的延长锁超时时间，锁不会因为超时而释放
-   
+
    
 
 如果我们未制定 lock 的超时时间，就使用 **30 秒作为看门狗的默认时间**。只要占锁成功，就会启动一个定时任务：每隔 10 秒检查一遍这个锁释放释放了，如果没有释放，则重新给锁设置过期时间为 30 秒
@@ -2094,7 +2389,7 @@ https://github.com/redisson/redisson/wiki/8.-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%8
 
 
 
-#### Redisson里面锁的实现
+### Redisson里面锁的实现
 
 ##### 分布式可重入锁(Reentrant Lock)
 
@@ -2174,10 +2469,10 @@ RedLock的实现步骤：
 
 1. 获取当前时间，以毫秒为单位。
 2. 按顺序向5个master节点请求加锁。客户端设置网络连接和响应超时时间，并且超时时间要小于锁的失效时间。（假设锁自动失效时间为10秒，则超时时间一般在5-50毫秒之间,我们就假设超时时间是50ms吧）。如果超时，跳过该master节点，尽快去尝试下一个master节点。
-2. 比如：TTL为5s，设置获取锁最多用1s，所以如果一秒内无法获取锁，就放弃获取这个锁，从而尝试获取下个锁。
-3. 客户端通过获取所有节点获取的锁后的时间减去第一步的时间，得到获取锁使用的时间。这个时间差要小于TTL时间并且至少有3个redis实例成功获取锁，才能说明真正的获取锁成功。当且仅当超过一半（N/2+1，这里是5/2+1=3个节点）的Redis master节点都获得锁，并且使用的时间小于锁失效时间时，锁才算获取成功。（如上图，10s> 30ms+40ms+50ms+4m0s+50ms）
-4. 如果取到了锁，key的真正有效时间就变啦，需要减去获取锁所使用的时间。（则锁的真正有效时间是 TTL减去第三步的时间差 的时间；比如：TTL 是5s，获取所有锁用了2s，则真正锁有效时间为3s，这里忽略时钟漂移的时间【实际上还要减去时钟漂移，我们假定没有时钟漂移，忽略不计】）
-5. 如果获取锁失败（没有在至少N/2+1个master实例取到锁，有或者获取锁时间已经超过了有效时间），客户端要在所有的master节点上解锁（即便有些master节点根本就没有加锁成功，也需要解锁，以防止有些漏网之鱼）。（如果锁获取失败了，不管是因为获取成功的锁不超过一半（N/2+1)，还是因为总消耗时间超过了锁释放时间【超过了TTL】，客户端都会到每个master节点上释放锁，即便是那些没有获取锁成功的节点上，也执行释放锁操作）
+3. 比如：TTL为5s，设置获取锁最多用1s，所以如果一秒内无法获取锁，就放弃获取这个锁，从而尝试获取下个锁。
+4. 客户端通过获取所有节点获取的锁后的时间减去第一步的时间，得到获取锁使用的时间。这个时间差要小于TTL时间并且至少有3个redis实例成功获取锁，才能说明真正的获取锁成功。当且仅当超过一半（N/2+1，这里是5/2+1=3个节点）的Redis master节点都获得锁，并且使用的时间小于锁失效时间时，锁才算获取成功。（如上图，10s> 30ms+40ms+50ms+4m0s+50ms）
+5. 如果取到了锁，key的真正有效时间就变啦，需要减去获取锁所使用的时间。（则锁的真正有效时间是 TTL减去第三步的时间差 的时间；比如：TTL 是5s，获取所有锁用了2s，则真正锁有效时间为3s，这里忽略时钟漂移的时间【实际上还要减去时钟漂移，我们假定没有时钟漂移，忽略不计】）
+6. 如果获取锁失败（没有在至少N/2+1个master实例取到锁，有或者获取锁时间已经超过了有效时间），客户端要在所有的master节点上解锁（即便有些master节点根本就没有加锁成功，也需要解锁，以防止有些漏网之鱼）。（如果锁获取失败了，不管是因为获取成功的锁不超过一半（N/2+1)，还是因为总消耗时间超过了锁释放时间【超过了TTL】，客户端都会到每个master节点上释放锁，即便是那些没有获取锁成功的节点上，也执行释放锁操作）
 
 简化下步骤就是：
 
@@ -2281,199 +2576,13 @@ latch.countDown();
 
 
 
----
 
-### Redis单线程模型
 
-> 这个单线程主要指的是：Redis的网络I/O和执行命令的核心模块是单线程完成的，Redis在处理客户端的请求时，包括：获取、解析、执行、内容返回等都是一个顺序串行的主线程处理。而不是说Redis实例就是一个单线程的，比如：持久化、异步删除、集群数据同步等等都是额外的线程执行的
-
-Redis采用Reactor模式的网络模型，对一个客户端请求，主线程负责一个完整的处理过程。redis基于reactor模式开发了网络事件处理器，这个处理器叫做文件事件处理器。这个文件事件处理器，是单线程的，redis才叫做单线程的模型
-
-
-
-官网给的答案：Redis是基于内存的操作，**CPU不是Redis的瓶颈，Redis的瓶颈最有可能是机器内存的大小或者网络带宽**。既然单线程容易实现，而且CPU不会成为瓶颈，那就顺理成章地采用单线程的方案了
-
-
-
-Redis 6 引入多线程IO，但**多线程部分只是用来处理网络数据的读写和协议解析，执行命令仍然是单线程**。之所以这么设计是不想因为多线程而变得复杂，需要去控制 key、lua、事务，LPUSH/LPOP 等等的并发问题
-
-
-
-#### Redis事件
-
-redis采用**事件驱动机制**，来处理大量的网络I/O，事件机制分为文件事件和时间事件，Redis中的事件驱动库只关注网络IO，以及定时器
-
-
-
-最核心的就是文件事件处理器
-
-
-
-#### 文件事件 file event
-
->  用于处理redis服务器和客户端之间的网络IO
-
-redis基于reactor模式开发了网络事件处理器，这个处理器叫做文件事件处理器，file event handler。
-
-这个文件事件处理器，是单线程的，redis才叫做单线程的模型，采用IO多路复用机制同时监听多个socket，根据socket上的事件来选择对应的事件处理器来处理这个事件。
-
-
-
-单线程的redis为啥这么快？
-
-采用多路复用机制，使其在网络IO操作中能并发处理大量的客户端请求，实现高吞吐率
-
-
-
-
-
-##### 文件事件处理器
-
-> 文件事件处理器是单线程模式运行的，但是通过IO多路复用机制监听多个socket，可以实现高性能的网络通信模型，又可以跟内部其他单线程的模块进行对接，保证了redis内部的线程模型的简单性。
-
-
-
-文件事件处理器的结构包含4个部分
-
-1. 多个socket(文件事件被抽象为一个socket)
-2. I/O多路复用程序
-3. 文件事件分派器
-4. 事件处理器（又分为：命令请求处理器、命令回复处理器、连接应答处理器，等等）
-
-
-
-
-
-多个socket可能并发的产生不同的操作，每个操作对应不同的文件事件，**IO多路复用程序会监听多个socket**，并将socket放入一个队列中排队，每次从队列中取出一个socket给事件分派器，事件分派器把socket给对应的事件处理器。
-
-![image-20230311221853896](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303112218647.png)
-
-
-
-然后一个socket的事件处理完之后，IO多路复用程序才会将队列中的下一个socket给事件分派器。文件事件分派器会根据每个socket当前产生的事件，来选择对应的事件处理器来处理。
-
-![image-20220613224944811](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202206132250669.png)
-
-
-
-##### 文件事件
-
-> **文件事件：是对套接字socket操作的抽象**
-
-如果被监听的socket准备好执行accept、read、write、close等一系列操作的时候，跟该操作对应的文件事件就会产生，这个时候文件事件处理器就会调用之前关联好的事件处理器来处理这个事件。
-
-- 当socket变得可读时（比如客户端对redis执行write操作，或者close操作），或者有新的可以应答的socket出现时（客户端对redis执行连接操作），socket就会产生一个AE_READABLE事件。
-- 当socket变得可写的时候（客户端对redis执行read操作），socket会产生一个AE_WRITABLE事件。
-- IO多路复用程序可以同时监听AE_REABLE和AE_WRITABLE两种事件，要是一个socket同时产生了AE_READABLE和AE_WRITABLE两种事件，那么文件事件分派器优先处理AE_REABLE事件，然后才是AE_WRITABLE事件。
-
-##### I/O多路复用程序
-
-Redis 作为一个 Client-Server 架构的数据库，其源码中少不了用来实现网络通信的部分。通常系统实现网络通信的基本方法是使用 **Socket 编程模型**，包括创建 Socket、监听端口、处理连接请求和读写请求。但是，由于**基本的 Socket 编程模型一次只能处理一个客户端连接上的请求**，所以当要处理高并发请求时，一种方案就是使用多线程，让每个线程负责处理一个客户端的请求。Redis采用了另一种I/O多路复用来解决 
-
-
-
-> 多路：多个socket连接
->
-> 复用：复用一个线程
->
-> 多路复用主要实现技术：select，poll，epoll。epoll是最新的也是目前最好的多路复用技术
-
-1. 负责监听多个socket，并向文件事件分派器传递那些产生了事件的socket
-2. 多个文件事件可能并发的出现，但是IO多路复用程序会将所产生的套接字放到一个队列中，然后事件处理器会有序、同步、单个socket的方式处理队列里面的套接字，也就是处理就绪的文件事件
-3. I/O多路复用如何做到多个客户端不阻塞：设计到Liunx的内核了，简单了解即可
-   - Redis 的 IO 多路复用程序的所有功能都是通过包装常见的 select、poll、epoll、evport 和 kqueue 这些 IO 多路复用函数库来实现的，每个 IO 多路复用函数库在 Redis 源码中都有对应的一个单独的文件。
-   - Redis 为每个 IO 多路复用函数库都实现了相同的 API，所以 IO 多路复用程序的底层实现是可以互换的，如下图
-   - ![image-20230311232037819](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202303112320917.png)
-   - Redis 把所有连接与读写事件、时间事件一起集中管理，并对底层 IO 多路复用机制进行了封装，最终实现了单进程能够处理多个连接以及读写事件
-
-##### 文件事件处理器
-
-- 如果是客户端要连接redis，那么会为socket关联连接应答处理器
-- 如果是客户端要写数据到redis，那么会为socket关联命令请求处理器
-- 如果是客户端要从redis读数据，那么会为socket关联命令回复处理器
-
-
-
-
-
-**redis客户端与服务端通信的一次流程**，[csdn文章也有类似的参考](https://blog.csdn.net/qq_38601777/article/details/91325622)
-
-1. 在redis启动初始化的时候，redis会将连接应答处理器跟AE_READABLE事件关联起来
-   - 如果一个客户端跟redis发起连接，客户端向服务端**发起建立 socket 连接的请求**（连接到redis的server socket请求建立连接），此时会产生一个AE_READABLE事件，该事件被I/O多路复用程序检测到，把检测到的socket连接放入socket队列中
-   - 事件分配器把socket分配给对应的事件处理器
-   - 由于连接应答处理器和AE_READABLE事件在redis初始化的时候已经关联起来，所以由连接应答处理器来处理跟客户端建立连接，**然后通过ServerSocket(下图)创建一个与客户端一对一对应的socket，如socket01**，同时将这个socket01的AE_READABLE事件跟命令请求处理器关联起来。
-2. 当客户端向redis发起请求时（不管是读还是写请求），首先就会在socket(例如socket01)产生一个AE_READABLE事件，I/O多路复用程序监听到socket01，放入队列中，分配器取出socket01，然后分配给对应的命令请求处理器。由于命令处理器和socket01的AE_READABLE事件关联起来了，所以对应的命令请求处理器来处理。这个命令请求处理器就会从socket01中读取请求相关数据，然后进行执行和处理。同时将命令请求处理器与socket01的ae_writeable事件关联起来，准备响应数据了
-3. redis准备好给客户端的响应数据之后，当客户端准备读取响应数据时，就会在socket01上产生一个AE_WRITABLE事件，同理经过上述步骤后，会由对应的命令回复处理器来处理，就是将准备好的响应数据写入这个对应的socket01，供客户端来读取
-4. 命令回复处理器写完之后，就会删除这个socket01的AE_WRITABLE事件和命令回复处理器的关联关系
-5. 这样客户端就和Redis完成了一次通信
-
-![image-20220508205702299](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/redis_img/202205082057463.png)
-
-
-
-
-
-
-
-#### 时间事件
-
-redis服务器中的一些操作，需要在给定的时间点执行，而时间事件就是处理这类定时操作的
-
-定时事件：让程序在指定的时间之后执行一次
-
-周期性事件：让程序每隔指定时间就执行一次
-
-#### aeEventLoop
-
-是整个事件驱动的核心，它管理文件事件和事件事件列表，不断地循环处理着就绪的文件事件和到期的时间事件
-
-
-
-
-
-**为什么redis单线程模型也能效率这么高实现高并发？**
-
-**Redis的瓶颈主要在I/O**而不是CPU
-
-1. 采用了**非阻塞的IO多路复用程序**，使其在网络I/O操作中能并发处理大量客户端请求，实现高吞吐率
-2. **纯内存操作**
-3. 单线程反而避免了多线程上下文切换问题
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Redisson
-
-Redis客户端有哪些：Jedis、lettuce、Redisson，官方推荐使用Redisson，其提供了使用Redis的最简单和最便捷的方法。
-
-
-
-Redisson是一个高级的分布式协调Redis客户端，在Redis的基础上实现的Java驻内存数据网格(In-Memory Data Grid)。它不仅提供了一系列分布式的Java常用对象，还提供了许多分布式服务。
-
-**Redisson的宗旨是促进使用者对Redis的关注分离，从而让使用者能够将精力更集中地放在处理业务逻辑上**
-
-
-
-
-
-
-
-### Netty框架
+## Netty框架
 
 Redission采用了基于NIO的Netty框架，不仅能作为Redis底层驱动客户端，还具备提供对Redis各种组态形式的连接功能，对Redis命令能以同步发送、异步形式发送、异步流形式发送、管道形式发送的功能，Lua脚本执行处理，以及处理返回结构的功能
 
-### 配置
+## 配置
 
 1. 编程式配置：通过Config对象实例来执行
 
@@ -2486,13 +2595,13 @@ Redission采用了基于NIO的Netty框架，不仅能作为Redis底层驱动客�
 
 
 
-### 基础数据结构
+## 基础数据结构
 
 将原生的Redis String 、List、Set、Hash、ZSet、Geo、HyperLogLog等数据结构封装为Java里的映射
 
 
 
-### 分布式对象
+## 分布式对象
 
 每个Redisson对象都绑定到一个Redis键，且可以通过getName()读取
 
@@ -2687,7 +2796,7 @@ client.execute_command("bf.reserve", "keyname", 0.001, 50000)
 
 
 
-### 分布式集合
+## 分布式集合
 
 在基础上，还提供了分布式的多值映射、本地缓存映射、有序集、队列、阻塞队列、双端队列、阻塞双端队列、阻塞公平队列、延迟队列、**布隆过滤器**、原子整长行、**BitSet**等Redis原本没有的数据结构
 
@@ -2705,7 +2814,7 @@ RScoredSortedSet=>redis.zset
 
 
 
-### 分布式锁
+## 分布式锁
 
 分布式锁：分布式系统中，通过加锁来控制共享资源在多个客户端之间的互斥访问，保证数据一致性
 
@@ -2724,7 +2833,7 @@ Redisson实现了Redis文档中提到的分布式锁Lock。此外，还在分布
 
 
 
-### Redisson锁续约   （看门狗机制）
+## Redisson锁续约   （看门狗机制）
 
 WatchDog
 
@@ -2792,9 +2901,9 @@ https://github.com/redisson/redisson/wiki/8.-%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%8
 
 
 
-#### Redisson里面锁的实现
+### Redisson里面锁的实现
 
-##### 分布式可重入锁(Reentrant Lock)
+#### 分布式可重入锁(Reentrant Lock)
 
 基于Redis的Redisson分布式可重入锁[`RLock`](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RLock.html) Java对象实现了java.util.concurrent.locks.Lock接口。同时还提供了异步（Async）、反射式（Reactive）和RxJava2标准的接口
 
@@ -2804,7 +2913,7 @@ RLock lock = redisson.getLock("anyLock");
 lock.lock();
 ~~~
 
-##### 公平锁(Fair Lock)
+#### 公平锁(Fair Lock)
 
 它保证了当多个Redisson客户端线程同时请求加锁时，优先分配给先发出请求的线程。
 
@@ -2818,7 +2927,7 @@ fairLock.lock();
 
 
 
-##### Redisson加、解锁核心原理
+#### Redisson加、解锁核心原理
 
 利用Lua脚本进行加锁，实现分布式可重入锁。hincrby就是锁上面加一
 
@@ -2856,7 +2965,7 @@ if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
 
 
 
-##### 联锁(MultiLock)
+#### 联锁(MultiLock)
 
 基于Redis的Redisson分布式联锁RedissonMultiLock对象，将多个Rlock对象关联为一个联锁，每个RLock对象实例可以来自于不同的Redisson实例
 
@@ -2888,7 +2997,7 @@ lock.unlock();
 
 
 
-##### 红锁（RedLock)
+#### 红锁（RedLock)
 
 RedissonRedLock 继承自RedissonMultiLock
 
@@ -2936,7 +3045,7 @@ lock.unlock();
 
 
 
-##### 读写锁(ReadWriteLock)
+#### 读写锁(ReadWriteLock)
 
 实现了 `java.util.concurrent.locks.ReadWriteLock` 接口并支持 TTL
 
@@ -2959,7 +3068,7 @@ rwlock.writeLock().lock();
 
 
 
-##### 信号量(Semaphore)
+#### 信号量(Semaphore)
 
 基于Redis的Redisson的分布式信号量（[Semaphore](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphore.html)）Java对象`RSemaphore`采用了与`java.util.concurrent.Semaphore`相似的接口和用法。同时还提供了[异步（Async）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphoreAsync.html)、[反射式（Reactive）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphoreReactive.html)和[RxJava2标准](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RSemaphoreRx.html)的接口
 
@@ -2983,7 +3092,7 @@ semaphore.releaseAsync();
 
 
 
-##### 过期性信号量(PermitExpirableSemphore)
+#### 过期性信号量(PermitExpirableSemphore)
 
 基于Redis的Redisson可过期性信号量（[PermitExpirableSemaphore](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphore.html)）是在`RSemaphore`对象的基础上，为每个信号增加了一个过期时间。每个信号可以通过独立的ID来辨识，释放时只能通过提交这个ID才能释放。它提供了[异步（Async）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphoreAsync.html)、[反射式（Reactive）](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphoreReactive.html)和[RxJava2标准](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RPermitExpirableSemaphoreRx.html)的接口
 
@@ -2998,7 +3107,7 @@ semaphore.release(permitId);
 
 
 
-##### 闭锁(CountDownLatch)
+#### 闭锁(CountDownLatch)
 
 基于Redisson的Redisson分布式闭锁（[CountDownLatch](http://static.javadoc.io/org.redisson/redisson/3.10.0/org/redisson/api/RCountDownLatch.html)）Java对象`RCountDownLatch`采用了与`java.util.concurrent.CountDownLatch`相似的接口和用法
 
@@ -3020,7 +3129,7 @@ latch.countDown();
 
 
 
-## Redis 凯亚架构
+# Redis 凯亚架构
 
 三大航共用的机器：
 
@@ -3050,7 +3159,7 @@ hadoop集群
 
 
 
-## 问题
+# 问题
 
 ### Redis如何快速插入大数据量
 
