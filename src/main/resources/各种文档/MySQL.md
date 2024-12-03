@@ -1168,131 +1168,6 @@ InnoDB的MVCC通过read view 和版本链实现，版本链保存有历史版本
 
 所谓的MVCC指的就是在使用`READ COMMITTD`、`REPEATABLE READ`这两种隔离级别的事务在执行普通的`SEELCT`操作时访问记录的`版本链`的过程，这样子可以使不同事务的`读-写`、`写-读`操作`并发执行`，从而`提升系统性能`
 
----
-
-
-
-# MySQL分库分表
-
-#### 水平切分
-
-1. 水平切分又叫：Sharding，它是将同一个表中的记录拆分到多个结构相同的表中。
-2. 当一个表的数据不断增多时，Sharding 是必然的选择，它可以将数据分布到集群的不同节点上，从而缓解单个数据库的压力。
-3. ![image-20220315211326794](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152113604.png)
-
-#### 垂直切分
-
-1. 垂直切分是将一张表切分成多个表，通常按照列的关系密集程度进行切分，也可以将经常使用的列和不经常使用的列切分到不同的表中
-2. 在数据库的层面使用垂直切分将按数据库中表的密集程度部署到不同的库中，例如将原来的电商数据库垂直切分成商品数据库、用户数据库等
-
-#### Sharding策略
-
-1. 哈希取模：hash(key)%Num_Db
-2. 范围:可以是ID范围，也可以是时间范围
-3. 映射表：使用单独的一个数据库来存储映射关系
-
----
-
-
-
-# MySQL分区
-
-参考：
-
-https://www.cnblogs.com/helios-fz/p/13671682.html
-
-https://juejin.cn/post/6844903991944413191
-
-#### 概念
-
-1. 将同一表中，不同行的记录分配到不同的物理文件中，几个分区就有几个.ibd文件(InnoDB引擎)。（MyISAM引擎生成.myd 和.myi文件）
-2. 分区是将一个表或索引分解成多个更小、更可管理的部分。每个分区都是独立的，可以独立处理，亦可以作为一个更大对象的一部分进行处理
-3. MySQL数据库的分区是局部分区索引，一个分区中既存了数据，又放了索引，也就是说，每个区的聚集索引和非聚集索引都放在各自区的(不同的物理文件)。目前MySQL不支持全局分区
-
-#### MySQL分区表
-
-分区表是一个独立的逻辑表，但是底层由多个物理子表组成。
-
-MySQL实现分区的方式：对底层表的封装，意味着索引也是按照分区的子表定义的，没有全局索引。这个Oracle不同，在Oracle中可以更加灵活地定义索引表和表是否进行分区。
-
-查询时，优化器会根据分区定义过滤掉那些没有在我们需要数据的分区，这样查询无需扫描所有分区，只需要查询包含需要数据的分区就可以了
-
-分区主要目的：将数据按照一个较粗的粒度划分到不同的表中
-
-以下场景中，分区可以起到非常大的作用：
-
-1. 表非常大以至于无法全部放在内存中，或只需要表里面的热点数据，其他均为历史数据
-2. 分区表的数据更容易维护，例如：想批量删除整个分区的数据，另外还可以对分区进行优化、检查、修复等等操作
-3. 分区表的数据可以分布在不同的物理设备上，从而高效地利用多个硬件设备
-
-#### 分区类型
-
-以下几种：无论哪种类型的分区，如果表中存在主键或唯一索引时，分区列必须是唯一索引的一个组成部分
-
-查看执行计划，和普通的执行计划比较多了partitions、filtered字段，partitions标识走了哪几个分区
-
-explain partitions select 语句；
-
-##### Range分区
-
-1. 是实战中最为常用的一种分区类型，行数据基于属于一个给定的连续区间的列值被放入分区。但是，当插入的数据不再一个分区中定义的值的时候，会抛异常
-
-2. ~~~mysql
-   CREATE TABLE `m_test_db`.`Order` (
-       `id` INT NOT NULL AUTO_INCREMENT,
-       `partition_key` INT NOT NULL,
-       `amt` DECIMAL(5) NULL,
-       PRIMARY KEY (`id` , `partition_key`)
-   ) PARTITION BY RANGE (partition_key) PARTITIONS 5 (
-   PARTITION part0 VALUES LESS THAN (201901) , 
-   PARTITION part1 VALUES LESS THAN (201902) , 
-   PARTITION part2 VALUES LESS THAN (201903) , 
-   PARTITION part3 VALUES LESS THAN (201904) , 
-   PARTITION part4 VALUES LESS THAN (201905));
-   #插入数据
-   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('1', '201901', '1000');
-   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('2', '201902', '800');
-   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('3', '201903', '1200');
-   
-   ~~~
-
-   - ~~~mysql
-     explain partitions select * from order where partition_key ='201902'
-     #可以看出，SQL优化器只搜索对应的part2分区
-     ~~~
-
-   - |      |             |       |            |       |               |      |         |      |      |          |       |
-     | ---- | ----------- | ----- | ---------- | ----- | ------------- | ---- | ------- | ---- | ---- | -------- | ----- |
-     | id   | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra |
-     | 1    | Simple      | order | part2      | index |               |      |         |      |      |          |       |
-
-注意事项：
-
-1. MySQL分区表如果有主键，那么必须包含分区字段，所以创建语句是一个复合主键，否则会报SQL创建表错误
-2. 对于原生分区，分区对象返回的只能是整数值
-3. 分区字段不能为null
-
-以下几种分区不常用：
-
-##### List分区
-
-LIST分区和RANGE分区很相似，只是分区列的值是离散的，不是连续的。LIST分区使用VALUES IN，因为每个分区的值是离散的，因此只能定义值
-
-##### Hash分区
-
-将数据均匀的分布到预先定义的各个分区中，以保证每个分区的熟练大致相同
-
-##### Key分区
-
-KEY分区和HASH分区相似，不同之处在于HASH分区使用用户定义的函数进行分区，KEY分区使用数据库提供的函数进行分区
-
-
-
-##### MySQL分区过滤失效
-
-1. Null值会使分区过滤无效，5.5已经解决这个问题了
-2. 分区列和索引列不匹配
-
 
 
 
@@ -2172,7 +2047,11 @@ long_query_time=10
 
 https://blog.csdn.net/m_awdawdw/article/details/107665827
 
----
+
+
+
+
+
 
 
 
@@ -2186,11 +2065,11 @@ https://blog.csdn.net/m_awdawdw/article/details/107665827
 
 > 主要涉及三个线程：binlog线程、I/O线程、SQL线程
 
-binlog  dump线程：主库创建一个binlog dump线程，负责发生binlog日志文件，从库的I/O线程负责接收
+binlog  dump线程：主库创建一个binlog dump线程，负责将主服务器上的数据更改，写入到binlog日志文件
 
-I/O线程：负责从主服务器上读取binlog日志文件，并写入到从服务器的中继日志中
+I/O线程：负责去主服务器上拉取binlog日志文件，并写入到从服务器的中继日志中
 
-SQL线程：负责读取中继日志，并重放其中的SQL语句(再执行一遍sql语句)
+SQL线程：负责读取中继日志，并重放其中的SQL语句(再执行一遍sql语句
 
 
 
@@ -2233,30 +2112,199 @@ MySQL主从复制，默认采用**异步复制方式进行的**，所以从服�
 
 提供类似的代理中间件有：MyCat、Sharding-JDBC等等
 
+springboot：项目一般采用Aop切面方式配置数据源，实现读写分离
+
 ![image-20230404152351685](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mysql_img/202304041523226.png)
 
-## 读写分离带来的问题
+## 如何避免主从同步延迟
 
 > 主库和从库之间数据存在延迟，这是很多主-从架构的问题，并不是MySQL才存在
 
-如何解决？
+如果业务场景无法容忍主从同步延迟，那么应该如何避免？
 
 1. **强制将读请求路由到主库处理**
 
-   - 既然从库数据过期了，那就直接读取主库。问题就是会给主库增加压力，当时实现比较简单
+   - 既然主从数据不一致，那就直接读取主库。问题就是会给主库增加压力，实现比较简单，也是使用较多的方案
    - Sharding-JDBC就是采用这种方案，根据它的分片键值管理器，可以强制使用主库
-   - 对于这种方案：必须获取最新数据的读请求都交给主库处理
+   - 对于这种方案：将那些必须获取最新数据的读请求，都交给主库处理
 
-2. **延迟读取**
-
+2. **延迟读取**（一般不用这个）
    - 比如主从同步延迟了1s，那我1.5s之后再去读取数据
+     - 方便是方便，就是感觉有的扯淡，还是有可能出现读取不到的问题，至少减少了概率而已
+   
    - 需要看具体的业务场景
-
    
 
 
 
----
+
+
+主从延迟：从库的数据落后与主库的数据
+
+- 从库I/O线程接收binlog的速度，跟不上主库写入binlog的速度，导致从库relay log的数据滞后与主库的binlog数据
+- 从库SQL线程执行relay log的速度跟不上从库I/O线程接收binlog的速度，导致从库的数据滞后于从库relay log数据
+
+
+
+与主从同步有关的时间点主要有 3 个：
+
+1. 主库执行完一个事务，写入 binlog，将这个时刻记为 T1；
+2. 从库 I/O 线程接收到 binlog 并写入 relay log 的时刻记为 T2；
+3. 从库 SQL 线程读取 relay log 同步数据本地的时刻记为 T3。
+
+那么可以得出：
+
+- T2和T1的差值：反映了从库I/O线程的性能和网络传输效率
+- T3和T2的差值：反映了从库SQL线程执行的速度
+
+
+
+那么什么情况下，会出现主从同步出现延迟呢？
+
+- 从库机器性能比主库差
+- 从库处理读请求太多
+- 从库太多
+- 网络延迟
+- 复制模式
+  - 默认采用异步复制，必然会存在延迟问题
+
+
+
+Mysql集群只能解决高可用问题，不能解决单表数据量过大后引起的一系列问题，所以在单表达到瓶颈后，需要采用分库分表来解决数据量的问题
+
+# MySQL分库分表
+
+#### 分表-水平切分
+
+1. 水平切分又叫：Sharding，它是将同一个表中的记录拆分到多个结构相同的表中。
+2. 当一个表的数据不断增多时，Sharding 是必然的选择，它可以将数据分布到集群的不同节点上，从而缓解单个数据库的压力。
+3. ![image-20220315211326794](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152113604.png)
+
+#### 分表-垂直切分
+
+1. 垂直切分是将一张表按照列的关系密集程度进行切分，也可以将经常使用的列和不经常使用的列切分到不同的表中
+2. 在数据库的层面使用垂直切分将按数据库中表的密集程度部署到不同的库中，例如将原来的电商数据库垂直切分成商品数据库、用户数据库等
+
+#### Sharding策略
+
+1. 哈希取模：hash(key)%Num_Db
+2. 范围:可以是ID范围，也可以是时间范围
+3. 映射表：使用单独的一个数据库来存储映射关系
+
+
+
+
+
+常用的分库分表中间件
+
+1. ShardingSphere：Apache开源
+2. Mycat2：阿里开源，基于Cobar演进
+3. TDDL：阿里开源
+4. DBRouter：京东开源
+
+
+
+# MySQL分区
+
+参考：
+
+https://www.cnblogs.com/helios-fz/p/13671682.html
+
+https://juejin.cn/post/6844903991944413191
+
+#### 概念
+
+1. 将同一表中，不同行的记录分配到不同的物理文件中，几个分区就有几个.ibd文件(InnoDB引擎)。（MyISAM引擎生成.myd 和.myi文件）
+2. 分区是将一个表或索引分解成多个更小、更可管理的部分。每个分区都是独立的，可以独立处理，亦可以作为一个更大对象的一部分进行处理
+3. MySQL数据库的分区是局部分区索引，一个分区中既存了数据，又放了索引，也就是说，每个区的聚集索引和非聚集索引都放在各自区的(不同的物理文件)。目前MySQL不支持全局分区
+
+#### MySQL分区表
+
+分区表是一个独立的逻辑表，但是底层由多个物理子表组成。
+
+MySQL实现分区的方式：对底层表的封装，意味着索引也是按照分区的子表定义的，没有全局索引。这个Oracle不同，在Oracle中可以更加灵活地定义索引表和表是否进行分区。
+
+查询时，优化器会根据分区定义过滤掉那些没有在我们需要数据的分区，这样查询无需扫描所有分区，只需要查询包含需要数据的分区就可以了
+
+分区主要目的：将数据按照一个较粗的粒度划分到不同的表中
+
+以下场景中，分区可以起到非常大的作用：
+
+1. 表非常大以至于无法全部放在内存中，或只需要表里面的热点数据，其他均为历史数据
+2. 分区表的数据更容易维护，例如：想批量删除整个分区的数据，另外还可以对分区进行优化、检查、修复等等操作
+3. 分区表的数据可以分布在不同的物理设备上，从而高效地利用多个硬件设备
+
+#### 分区类型
+
+以下几种：无论哪种类型的分区，如果表中存在主键或唯一索引时，分区列必须是唯一索引的一个组成部分
+
+查看执行计划，和普通的执行计划比较多了partitions、filtered字段，partitions标识走了哪几个分区
+
+explain partitions select 语句；
+
+##### Range分区
+
+1. 是实战中最为常用的一种分区类型，行数据基于属于一个给定的连续区间的列值被放入分区。但是，当插入的数据不再一个分区中定义的值的时候，会抛异常
+
+2. ~~~mysql
+   CREATE TABLE `m_test_db`.`Order` (
+       `id` INT NOT NULL AUTO_INCREMENT,
+       `partition_key` INT NOT NULL,
+       `amt` DECIMAL(5) NULL,
+       PRIMARY KEY (`id` , `partition_key`)
+   ) PARTITION BY RANGE (partition_key) PARTITIONS 5 (
+   PARTITION part0 VALUES LESS THAN (201901) , 
+   PARTITION part1 VALUES LESS THAN (201902) , 
+   PARTITION part2 VALUES LESS THAN (201903) , 
+   PARTITION part3 VALUES LESS THAN (201904) , 
+   PARTITION part4 VALUES LESS THAN (201905));
+   #插入数据
+   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('1', '201901', '1000');
+   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('2', '201902', '800');
+   INSERT INTO `m_test_db`.`Order` (`id`, `partition_key`, `amt`) VALUES ('3', '201903', '1200');
+   
+   ~~~
+
+   - ~~~mysql
+     explain partitions select * from order where partition_key ='201902'
+     #可以看出，SQL优化器只搜索对应的part2分区
+     ~~~
+
+   - |      |             |       |            |       |               |      |         |      |      |          |       |
+     | ---- | ----------- | ----- | ---------- | ----- | ------------- | ---- | ------- | ---- | ---- | -------- | ----- |
+     | id   | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra |
+     | 1    | Simple      | order | part2      | index |               |      |         |      |      |          |       |
+
+注意事项：
+
+1. MySQL分区表如果有主键，那么必须包含分区字段，所以创建语句是一个复合主键，否则会报SQL创建表错误
+2. 对于原生分区，分区对象返回的只能是整数值
+3. 分区字段不能为null
+
+以下几种分区不常用：
+
+##### List分区
+
+LIST分区和RANGE分区很相似，只是分区列的值是离散的，不是连续的。LIST分区使用VALUES IN，因为每个分区的值是离散的，因此只能定义值
+
+##### Hash分区
+
+将数据均匀的分布到预先定义的各个分区中，以保证每个分区的熟练大致相同
+
+##### Key分区
+
+KEY分区和HASH分区相似，不同之处在于HASH分区使用用户定义的函数进行分区，KEY分区使用数据库提供的函数进行分区
+
+
+
+##### MySQL分区过滤失效
+
+1. Null值会使分区过滤无效，5.5已经解决这个问题了
+2. 分区列和索引列不匹配
+
+
+
+
 
 
 
