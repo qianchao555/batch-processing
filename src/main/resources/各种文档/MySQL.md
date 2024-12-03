@@ -1,6 +1,6 @@
 
 
-### MySQL体系结构与存储引擎
+# MySQL体系结构与存储引擎
 
 MySQL由连接池、SQL接口、解析器、优化器、缓存、存储引擎等组成。可以分为三层：MySQL Server层、存储引擎层、文件系统层。MySQL Server层又包括连接层和SQL层
 
@@ -58,7 +58,7 @@ Management Services & Utilities、SQL Interface、Parser、Optimizer 和 Caches 
 
 ---
 
-### InnoDB体系结构
+# InnoDB体系结构
 
 #### 数据库和数据库实例
 
@@ -192,7 +192,7 @@ Oracle和MySQL这种关系型数据库中，讲究日志先行策略，就是一
 
 ---
 
-### mysql 数据库文件
+# mysql 数据库文件
 
 #### 数据库层面的文件
 
@@ -237,7 +237,7 @@ InnoDB支持事务，支持MVCC多版本并发控制。InnoDB的多版本是通�
 
 ---
 
-### 数据库范式
+# 数据库范式
 
 构造数据库必须遵循一定的规则，在关系数据库中，这种规则就是范式。关系数据库中的关系必须满足一定的要求，即满足不同的范式
 
@@ -268,7 +268,7 @@ InnoDB支持事务，支持MVCC多版本并发控制。InnoDB的多版本是通�
 
 
 
-### 设计关系型数据库流程
+# 设计关系型数据库流程
 
 1. 需求分析
 2. 概念结构设计
@@ -286,7 +286,7 @@ InnoDB支持事务，支持MVCC多版本并发控制。InnoDB的多版本是通�
 
 ---
 
-### mysql数据类型
+# mysql数据类型
 
 MySQL数据类型大致分为5类，整数类型、浮点数类型和定点数类型、日期和时间类型、字符串类型、二进制类型
 
@@ -350,7 +350,7 @@ bit、binary、varBinary、tinyBlob、blob、mediumBlob、longBlob
 
 ---
 
-### 视图
+# 视图
 
 视图：本质是一种虚拟表，在物理上不存在的，其内容与真实的表相似，包含一系列带有名称的列和行数据。但是，视图并不在数据库中以存储的数据值存在。行和列数据来自定义视图的查询所引用的基本表，并且在具体引用视图时动态生成。
 
@@ -399,7 +399,7 @@ create or replace view 视图名
 
 
 
-### 存储过程
+# 存储过程
 
 存储过程是一个预编译的SQL语句。优点是允许模块化的设计，只需要创建一次，以后在程序中就可以调用多次。
 
@@ -540,7 +540,7 @@ Close cursor_name;
 
 
 
-### 函数Function
+# 函数Function
 
 #### 什么是函数
 
@@ -612,7 +612,7 @@ end;
 
 ---
 
-### 表碎片
+# 表碎片
 
 > 我们有时会在表中删除一些大量的无用数据，但发现数据文件的大小并没有减小，这是因为删除后在数据文件中遗留了大量的数据碎片所导致的
 
@@ -635,7 +635,7 @@ end;
 
 ---
 
-### MySQL存储引擎与表类型
+# MySQL存储引擎与表类型
 
 #### 表类型
 
@@ -687,7 +687,7 @@ end;
 
 
 
-### MySQL事务
+# MySQL事务
 
 > MySQL事务默认是隐式事务，执行insert、update、delete操作的时候，数据库自动开启事务、提交或回滚事务
 
@@ -884,7 +884,7 @@ next-key lock
 
 
 
-### MVCC实现原理
+# MVCC实现原理
 
 > MVCC：Multiversion concurrency control 多版本并发控制，主要是为了提高数据库并发性能，对于高并发场景，MVCC比行级锁开销更小。
 >
@@ -1172,7 +1172,7 @@ InnoDB的MVCC通过read view 和版本链实现，版本链保存有历史版本
 
 
 
-### MySQL分库分表
+# MySQL分库分表
 
 #### 水平切分
 
@@ -1195,7 +1195,7 @@ InnoDB的MVCC通过read view 和版本链实现，版本链保存有历史版本
 
 
 
-### MySQL分区
+# MySQL分区
 
 参考：
 
@@ -1295,22 +1295,22 @@ KEY分区和HASH分区相似，不同之处在于HASH分区使用用户定义的
 
 
 
----
 
 
 
-### MySQL备份
 
-#### 备份分类
+# MySQL备份
 
-##### 物理备份
+物理备份
 
 1. 物理备份：对数据库操作系统的物理文件(如：数据文件、日志文件)
 2. 冷备份(脱机备份)：关闭数据库的时候进行的
 3. 热备份(联机备份)：数据库处于运行状态，依赖于数据库的日志文件
 4. 温备份：数据库锁定表格(不可写入但可读)的状态下进行备份操作
 
-##### 逻辑备份
+
+
+逻辑备份
 
 所谓逻辑备份就是备份SQL语句，在恢复时执行备份SQL从而实现数据库数据的重现
 
@@ -1319,7 +1319,9 @@ KEY分区和HASH分区相似，不同之处在于HASH分区使用用户定义的
 3. mydumper
 4. 等等
 
-#### 常用备份方法
+
+
+常用备份方法
 
 1. 物理备份
 2. 专用备份工具
@@ -1332,19 +1334,15 @@ KEY分区和HASH分区相似，不同之处在于HASH分区使用用户定义的
 
 
 
-#### 完全备份
-
-对整个数据库进行备份、数据库结构和文件结构的备份
-
-
-
----
 
 
 
 
 
-### 索引
+
+
+
+# 索引
 
 > MySQL的索引是在**存储引擎层实现的**，所以不同存储引擎具有不同的索引类型和实现。
 
@@ -1473,25 +1471,25 @@ https://www.cnblogs.com/xiaoxi/p/6894610.html
 3. 辅助索引：叶子节点data域记录着主键的值，因此使用辅助索引进行查找时，需要先查到主键值，然后再到主索引中进行查找(回表)。单词代表非主键的索引列
 
   - 回表：根据主键再到主键索引里面去查找。所以InnoDB中数据文件和主索引文件是一致的都保存到.idb文件中，而.frm文件保存的是表结构
-  
+
    
-   
-    
-   
+
+​    
+
    回表：首先检索辅助索引获取主键，然后用主键到主索引中检索获取记录。通过二级索引查询时，回表不是必须的过程，当SELECT的所有字段在单个二级索引中都能够找到时，就不需要回表，MySQL称此时的二级索引为**覆盖索引**或触发了**索引覆盖**。 可以用Explain命令查看SQL语句的执行计划，执行计划的Extra字段中若出现**Using index**，表示查询触发了索引覆盖
+
    
+
    
-   
-   
-   
+
    ![](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/20220311151051.png)
+
    
+
    
+
    
-   
-   
-   
-   
+
 4. 为什么不建议使用过长字段作主键？
 
    因为Innodb引擎中：所有的辅助索引都会引用主键，过长的主键会导致辅助索引过大
@@ -1680,7 +1678,7 @@ where condition;
 
 ---
 
-### 执行计划 Explain 
+# 执行计划 Explain 
 
 #### explain
 
@@ -1767,57 +1765,105 @@ Explain Select 语句；
 
 
 
-### MySQL-SQL优化工具
+MySQL-SQL优化工具
 
-美团DBA团队开源工具：SQLAdvisor
+- 美团DBA团队开源工具：SQLAdvisor
 
-它可以根据输入的SQL，输出索引优化建议
+- 它可以根据输入的SQL，输出索引优化建议
 
 
 
----
 
-### MySQL日志
+
+
+
+
+
+# MySQL日志
 
 > 任何一种数据库中，都会有各种各样的日志，记录着数据库工作的各种操作。
 >
-> MySQL的日志是写前日志，即：先写日志、再写磁盘
+> ==MySQL的日志是写前日志，即：先写日志、再写磁盘==
 
 https://mp.weixin.qq.com/s/PJCq5oQ3HSzWbA73bEUNuQ
 
-MySQL中主要包括的日志：**二进制日志**、错误日志、查询日志、慢查询日志、**事务日志**(包括redo log、undo log )等等。其中比较重要的是二进制日志(binlog)、重做日志(redo log)、回滚日志(undo log)
+MySQL中主要包括的日志：**二进制日志**、错误日志、查询日志、慢查询日志、**事务日志**(包括redo log、undo log )等等。
 
+其中比较重要的是二进制日志(binlog)、重做日志(redo log)、回滚日志(undo log)
 
+==最重要的三大日志：binlog、redo log、undo log==
 
-#### Binarylog
+## binlog
 
 > bin log是Server层的日志。
 >
-> 它是逻辑日志：可以简单理解为记录的是所有能更新数据的原始sql语句，具体记录什么需要根据记录格式来看，有row、statement、mixted三种方式
+> 它是逻辑日志：可以简单理解为记录的是所有能更新数据的原始sql语句
 >
-> 物理日志：因为mysql数据最终是保存在数据页中的，物理日志记录的就是数据页变更
+> 具体记录什么需要根据记录格式来看，有row、statement、mixted三种方式
 
-https://zhuanlan.zhihu.com/p/227864607
-
-Mysql会把所有表结构变更，以及表数据修改的操作 记录到一个二进制日志文件，也即BinaryLog文件，简称binlog。使用任何存储引擎的Mysql数据库都会记录binlog日志
+使用任何存储引擎的Mysql数据库都会记录binlog日志
 
 
 
+（19.1.1有AI问答产生）
+
+### 二进制日志的内容（binlog 文件结构）
+
+binlog日志是以事件的形式记录对MySQL的操作
+
+二进制日志文件包含以下几类信息：
+
+1. **事件头信息**：每个事件都有一个头信息，包含事件类型、时间戳、服务器 ID、事件大小等。
+2. **事务开始和结束**：记录事务的开始和结束，包括 BEGIN、COMMIT 和 ROLLBACK。
+3. **数据更改事件**：记录对数据库的更改操作，包括 INSERT、UPDATE 和 DELETE。
+4. **DDL 语句**：记录数据定义语言（DDL）语句，如 CREATE TABLE、ALTER TABLE 和 DROP TABLE。
+5. **其他事件**：包括用户变量设置、存储过程调用等。
+
+记录的内容大概：和更新操作相关的sql语句，大致下列这样
+
+~~~
+数据更改事件insert、update、delet
+# at 789
+#210101 12:00:02 server id 1  end_log_pos 789 CRC32 0x34567890  Query   thread_id=1 exec_time=0 error_code=0
+SET TIMESTAMP=1609459202/*!*/;
+INSERT INTO `test`.`table` (`id`, `name`) VALUES (1, 'Alice')
+/*!*/;
+
+# at 1011
+#210101 12:00:03 server id 1  end_log_pos 1011 CRC32 0x45678901  Query   thread_id=1 exec_time=0 error_code=0
+SET TIMESTAMP=1609459203/*!*/;
+UPDATE `test`.`table` SET `name`='Bob' WHERE `id`=1
+/*!*/;
+~~~
 
 
-binlog是通过追加的方式进行写入的，通过设置max_binlog_size参数设置每个binlog文件的大小，当文件大小达到给定值之后，会生成新的文件来保存日志
 
-binlog日志是以事件的形式记录对MySQL的操作，还记录着各个操作消耗的时间
+Binlog文件结构
 
-恢复事件4 - 事件1234之间的数据操作：
+- binlog日志是以事件的形式，记录对MySQL的操作
+- 不同的修改操作对应着不同的log event
 
-```mysql
-$ mysqlbinlog --start-position=4 --stop-position=1234 /usr/local/var/mysql/binlog.000001 | mysql -uroot -p
-```
+常用的log event：Query event、Row event、Xid event等等
+
+binlog文件的内容就是各种log event的集合
+
+![image-20220323230705990](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203232307725.png)
 
 
 
-##### binlog常用的场景
+binlog文件系统里面包含2种类型文件 
+
+1. binlog索引文件(文件名后缀为.index)：用于记录哪些日志文件正在被使用
+   - 那么所有文件binlog.index里面大概是：binlog.00001，binlog.00002....
+2. binglog 日志文件(binlog.00001、binlog0002.....)：记录数据库所有的DDL和DML语句事件
+
+
+
+
+
+
+
+### binlog常用的场景
 
 1. 数据恢复
    - 误删数据之后可以通过mysql binlog工具恢复数据
@@ -1825,51 +1871,37 @@ $ mysqlbinlog --start-position=4 --stop-position=1234 /usr/local/var/mysql/binlo
    - 主库开启binlog，然后将binlog传给从库(各个slave端)，从库接收到之后读取内容写入从库，实现主从数据一致
 3. 审计
    - 通过二进制日志中的信息进行审计，判断是否对数据库进行注入攻击
-
-binlog文件包含两种类型：
-
-1. 索引文件(文件名后缀为.index)：用于记录哪些日志文件正在被使用
-2. 日志文件(文件名为.00000*)：记录数据库所有的DDL和DML语句事件
+4. 数据同步：阿里的Canal框架，就是利用了主从复制，模拟slave完成的数据同步操作
+5. 数据备份等等
 
 
 
+### binlog如何记录数据库操作的？
 
+binlog日志文件有3种记录日志的方式：Statement、row、mixed
 
-##### binlog工作原理
-
-binlog是MySQL用来记录数据库表结构变更以及表数据修改的二进制日志，它只会记录表的变更操作，但不会记录select和show这种查询操作
-
-
-
-###### binlog刷盘时机
-
-对于InnoDB存储引擎而言，只有在事务提交时才会记录biglog，此时记录还在内存中，那么biglog是什么时候刷到磁盘中的呢？
-
-事务提交时，将binlog cache写到binlog文件（实际先会写入文件缓存系统`page cache`，然后再由`fsync`写入`binlog`文件）
-
-mysql通过sync_binlog参数控制binlog的刷盘时机，取值范围是0-N：
-
-- 0：不去强制要求，由系统自行判断何时执行fsync，来写入磁盘；
-- 1：每次commit的时候，都会执行fsync，将binlog写入磁盘；
-- N：每N个事务，累积到n个事务后，才会将binlog写入磁盘
-
-从上面可以看出，sync_binlog最安全的是设置是1，这也是MySQL 5.7.7之后版本的默认值
+- 通过binlog_format=" xxx" 参数来修改日志模式
 
 
 
-binlog如何记录数据库操作的？
-
-###### binlog的3种记录模式
-
-> 通过binlog_format=" xxx" 来修改日志模式
-
-
-
-1. ROW：该格式记录的内容看不到详情信息，需要通过mysqlbinlog工具解析出来     5.7之后默认的记录模式
+1. Statement（基于语句）：记录的是执行的SQL语句
+   
+   - 这样做有一个问题：例如更新的时候，会用now()函数记录当前时间，但是若执行此语句来恢复或备份的时候，时间就会与原数据的更新时间不一致
+   - 为了解决这个问题，引入了Row记录模式
+   
+1. ROW：该格式记录的内容看不到详情信息，需要通过mysqlbinlog工具解析出来     ==5.7之后默认的记录模式==
+   
+   - 记录每一行语句的变化
    - ![image-20220324095057636](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220324095057636.png)
-2. STATEMENT：记录每一条修改数据的SQL语句（批量修改时，记录的不是单条SQL语句，而是批量修改的SQL语句事件） 
-   - 这样做有一个问题：例如更新的时候，会用now()函数记录当前时间，但是若执行此语句来恢复或备份的时候，时间就会出现不一致的问题
-3. MIXED：statement和row模式的混合
+   - 这种模式记录行，需要更大容量来记录文件，比较占用空间，恢复与同步时会更消耗IO资源
+   
+   
+   
+3. Mixed：statement和row模式的混合
+
+   - Mysql会判断这条SQL语句是否会引起数据不一致
+   - 如果会：用row模式
+   - 如果不会：用statement模式
 
 
 
@@ -1881,19 +1913,11 @@ binlog如何记录数据库操作的？
 
 
 
-###### Binlog文件结构
-
-binlog文件记录的是对数据库的各种修改操作，用来记录修改操作的数据结构的Log event。不同的修改操作对应着不同的log event
-
-常用的log event：Query event、Row event、Xid event等等
-
-binlog文件的内容就是各种log event的集合
-
-![image-20220323230705990](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203232307725.png)
 
 
+binlog是通过追加的方式进行写入的，通过设置max_binlog_size参数设置每个binlog文件的大小，当文件大小达到给定值之后，会生成新的文件来保存日志
 
-###### Binlog写入机制
+### Binlog写入机制及刷盘时机
 
 1. 根据设置的记录模式和操作生成相应的log event
 2. 事务执行过程中产生log event会先写入缓冲区，每个事务线程都有一个缓冲区，Log Event保存在一个binlog_cache_mngr数据结构中，在该结构中有两个缓冲区，一个是stmt_cache，用于存放不支持事务的信息；另一个是trx_cache用于存放支持事务的信息
@@ -1901,7 +1925,26 @@ binlog文件的内容就是各种log event的集合
 
 
 
-###### 配置binlog参数  
+binlog刷盘时机
+
+==对于InnoDB存储引擎而言，只有在事务提交时才会记录biglog==，此时记录还在内存中，那么biglog是什么时候刷到磁盘中的呢？
+
+1. 事务执行过程中，先把日志写到binlog cache
+2. 事务提交时，将binlog cache写到binlog文件（实际先会写入文件缓存系统`page cache`，然后再由`fsync`写入`binlog`文件）
+
+mysql通过sync_binlog参数控制binlog的刷盘时机，取值范围是0-N：
+
+- 0：不去强制要求，由系统自行判断何时执行fsync，来写入磁盘；
+- 1：每次commit的时候，都会执行fsync，将binlog写入磁盘；
+- N：每N个事务，累积到n个事务后，才会将binlog写入磁盘
+
+从上面可以看出，sync_binlog最安全的是设置是1，这也是MySQL 5.7.7之后版本的默认值
+
+
+
+
+
+### 配置binlog参数  
 
 windows中 my.cnf文件，在mysqld节中修改配置信息
 
@@ -1932,9 +1975,11 @@ max_binlog_cache_size = 512m
 
 
 
-#### 重做日志(redo log)
+## redo log
 
-> redo log是MySQL中innodb引擎级别，它是物理日志，记录的内容是：在某个数据页上做了什么修改
+> redo log：重做日志
+>
+> redo log是MySQL中innodb存储引擎独有的日志，它是物理日志，记录的内容是：在某个数据页上做了什么修改
 >
 > 用来记录innodb存储引擎的事务操作的日志，**不管事务是否提交都会记录下来**，redo log 让MySQL拥有了崩溃恢复的能力
 
@@ -1942,41 +1987,59 @@ max_binlog_cache_size = 512m
 
 当数据库发生故障后，重启MySQL实例后，innoDB存储引擎会使用redo log恢复到发生故障前的时刻，以此来保证数据的完整性。
 
-确保事务的持久性，防止在发生故障的时间点，尚有脏页未写入磁盘，在重启mysql服务的时候，根据redo log进行重做，从而达到事务的持久性这一特性
+- 确保事务的持久性，防止在发生故障的时间点，尚有脏页未写入磁盘，在重启mysql服务的时候，==根据redo log进行重做，从而达到事务的持久性这一特性==
 
-`MySQL` 中数据是以页为单位，你查询一条记录，会从硬盘把一页的数据加载出来，加载出来的数据叫数据页，会放入到 `Buffer Pool` 中。后续的查询都是先从 `Buffer Pool` 中找，没有命中再去硬盘加载，减少硬盘 `IO` 开销，提升性能。更新表数据的时候，也是如此，发现 `Buffer Pool` 里存在要更新的数据，就直接在 `Buffer Pool` 里更新。然后会把“在某个数据页上做了什么修改”记录到重做日志缓存（`redo log buffer`）里，接着刷盘到 `redo log` 文件里
+==MySQL 中数据是以页为单位==，mysql一个page页默认大小16K，你查询一条记录，会从硬盘把一页的数据加载出来，加载出来的数据叫数据页，会放入到 `Buffer Pool` 中，Buffer_pool默认128M
+
+后续的查询都是先从 `Buffer Pool` 中找，没有命中再去硬盘加载，减少硬盘 `IO` 开销，提升性能。
+
+更新表数据的时候，也是如此，发现 `Buffer Pool` 里存在要更新的数据，就直接在 `Buffer Pool` 里更新。
+
+- 然后会把“在某个数据页上做了什么修改”记录到重做日志缓存（`redo log buffer`）里，接着刷盘到 `redo log` 文件里
 
 
 
-##### redo_log buffer 何时刷盘
+### redo_log buffer 何时刷盘
 
 > 根据配置的刷盘策略来决定
+>
+> InnoDB会在多种情况下刷新Redo log，==以保证数据的持久性和一致性==
 
-
+InnoDB存储引擎将redo log buffer刷新到磁盘的几种情况
 
 1. 事务提交时：Innodb存储引擎为redo log的刷盘策略提供了一个参数：innodb_flush_log_at_tx_commit
-   - 该值为0：表示每次事务提交时不进行刷盘操作
+   - 该值为0：表示每次事务提交时不进行刷盘操作，不过不安全，可能会丢失最佳1s内的事务
    - 设置为1：表示每次事务提交时都将进行刷盘操作（默认值）
-   - 设置为2：表示每次事务提交时都只把 redo log buffer 内容写入 page cache
+   - 设置为2：表示每次事务提交时都只把 redo log buffer 内容写入 page cache（文件系统缓存，专门缓存文件的）
 2. log buffer空间不足时
    - log buffer 的大小是有限的，如果不停的往这个有限大小的log buffer里写入日志，很快就会被填满，**如果当前写入log buffer的redo日志量已经占满了log buffer总容量的大约一半左右，就需要把这些日志刷新到磁盘上**
 3. InnoDB中，有一个后台线程不停的刷盘
    - 默认后台有一个线程，大约每秒刷新一次redo_log buffer中的内容，写到文件系统缓存page cache，然后调用fsync，将内容到磁盘redo_log
-4. 正常关闭服务时
+4. 正常关闭服务时，redo log都会刷入磁盘去
 
 
 
-##### redo log日志文件组
+### redo log日志文件组
 
 **硬盘上**存储的redo_log日志文件不止一个，而是以一个**日志文件组的形式存在**的，每个redo_log日志文件大小都是一样的
 
 采用环形数组的形式将这些文件组构成一个环形，从第一个redo_log开始写，写满后写下一个redo_log文件
 
+Mysql8.0.30开始，日志文件组中的文件数有32个，大小为innodb_redo_log_capacity/32
+
+ib_redo1、ib_redo_2.......................
+
+==Mysql会在启动的时候加载这些redo log日志文件组==
+
+redo log侧重于重做,是物理日志，记录的时候物理层面的数据页、偏移量。
+
+redo log应对的问题是：Mysql异常宕机，如果将没来得及提交的事务数据重做出来
 
 
 
 
-#### binlog和redo log区别
+
+binlog和redo log区别
 
 1. binlog属于MySQL server层面，redo log属于Innodb层面，这样数据库用别的存储引擎时就可以达到一致性的要求
 2. binlog是逻辑日志，记录的是sql语句的原始逻辑；redo log是物理日志，记录该数据页更新的内容
@@ -1985,58 +2048,92 @@ max_binlog_cache_size = 512m
 
 
 
-#### 回滚日志(undo log)
+## Mysql二阶段提交
+
+redo log是在事务执行过程中可用不断写入的
+
+- 让InnoDB存储引擎有了崩溃恢复的能力，重启会加载这个文件来恢复数据
+
+binlog是在事务提交之后才记录的
+
+- 保证了Mysql集群架构数据一致性
+
+虽然都是属于持久化的保障，但是侧重点不同
+
+- 执行更新语句过程中，会记录这2块日志，以基本事务为单位
+  - redo log是在事务执行过程中可用不断写入的
+  - binlog只有在事务提交之后才记录
+
+假设更新过程中，redo log写入完成，binlog写入异常，那么数据恢复的时候，导致数据不一致
+
+- 主从中，主机通过redo log恢复数据
+- 从机通过复制主机的binlog同步数据，从而导致数据不一致
+
+**为了解决两份日志的逻辑不一致问题**，==InnoDB存储引擎使用了两阶段提交方案==
+
+> 原理很简单，将redo log的写入拆分成2个步骤完成：prepare、commit
+
+逻辑上看着就像这样：
+
+1. redo log  ：prepare阶段记录
+2. binlog：事务提交记录binlog
+3. redo log ：commit阶段记录
+
+现在就有了如下的场景：
+
+1. 写入binlog异常时
+   - Mysql会根据redo log日志重做，并且没有对应的binlog日志，就会回滚该事务
+2. redo log commit阶段异常
+   - Mysql会根据redo log日志重做，发现有对应的binlog日志，不会回滚该事务
+   - 虽然commit阶段失败，但是能通过事务id在binlog中找到，所以mysql认为是完整的
+
+
+
+
+
+## 回滚日志(undo log)
 
 > 在MySQL中，回滚机制是通过undo log机制实现的，所有事务进行的修改都会记录到这个回滚日志中，然后再执行相关的操作
 >
-> 使用undo log来保证事务的原子性
-
-
-
-undo：撤销、使恢复原则、撤销还原
+> 使用undo log来保证事务的原子性（出错或需要回滚）
 
 除了记录redo log之外，当进行数据修改时，还会记录 undo log，undo log用于数据的撤回操作，他保留了记录修改前的内容。
 
+undo log逻辑日志：记录的是sql语句
+
+- 例如：事务执行一个delete语句，那么undo log会记录一条对应的insert语句
+- 同时，undo log的信息也会记录到redo log中，因为undo log也要实现持久化保护
+
 回滚日志先于数据持久化到磁盘上，这就保证了即使遇到数据库突然宕机的情况，再次启动数据库时，可以通过查询回滚日志来回滚之前为完成的事务
 
-另外，MVCC多版本并发控制，依赖于undo log实现
+另外，MVCC多版本并发控制，依赖于undo log 链实现，并且有实质帮助的是：update undo log
 
 
 
-#### MySQL两阶段提交
+undo log主要有三种
 
-> 涉及到redo_log 
-
-binlog是在事务提交时才写入、redo_log是在事务执行过程中可以不断写入redo_log buffer；它们写入的时机不一样
-
-
-
-为了防止binlog和redo_log记录的数据不一致提出的
-
-InnoDB将redo_log的写入，拆分为2个步骤：prepare、commit
-
-详细地址：https://juejin.cn/post/7090530790156533773
-
-1. 使用两阶段提交后，即使写入binlog时发生异常也没关系，因为使用redo_log恢复数据时，发现redo_log日志处于prepare阶段，并且没有对应的binlog日志，所以回滚事务即可
-2. 但是，redo_log在发生commit阶段时发生异常，此时已经有了对应的binlog以及处在了prepare阶段，所以mysql认为是完整的，所以不会回滚事务
+1. insert undo log
+   - 事务insert时，至少记录这条记录的主键，回滚时，只需要把主键值删除即可
+2. Update undo log
+   - 至少把修改这条记录前的旧值记录下来，回滚时，把记录更新为旧值
+3. Delete undo log
+   - 至少要把这条记录的内容记录下来，回滚时，把这些内容插入到表中
 
 
 
 
 
+## 错误、查询、慢查询日志
 
+错误日志
 
-#### 错误日志
-
-记录mysqld启动和停止时、服务器运行过程中发生任何严重错误的相关信息。
-
-错误日志是默认开启的，默认存放目录var/lib/mysql  默认文件名为 主机.err
-
-![image-20220323233829559](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203232338770.png)
+- 记录mysqld启动和停止时、服务器运行过程中发生任何严重错误的相关信息。
+- 错误日志是默认开启的，默认存放目录var/lib/mysql  默认文件名为 主机.err
+- ![image-20220323233829559](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203232338770.png)
 
 
 
-#### 查询日志
+查询日志
 
 查询日志中记录了客户端所有操作语句，但是二进制日志不包含查询数据的日志
 
@@ -2052,7 +2149,7 @@ general_log_file=file_name
 
 
 
-#### 慢查询日志
+慢查询日志
 
 慢查询日志记录了所有执行事件超过参数long_query_time设置值并且扫描记录数不小于min_examined_row_limit的所有的sql语句的日志
 
@@ -2079,13 +2176,13 @@ https://blog.csdn.net/m_awdawdw/article/details/107665827
 
 
 
-### MySQL主从同步/复制
+# MySQL主从同步/复制
 
 > 主从同步使得数据可以从一个数据库服务器复制到其他服务器上，在复制数据时，一个服务器充当主服务器(master)，其余的服务器充当从服务器(slave)
 
 
 
-#### MySQL主从复制原理
+## MySQL主从复制原理
 
 > 主要涉及三个线程：binlog线程、I/O线程、SQL线程
 
@@ -2108,15 +2205,16 @@ MySQL主从复制，默认采用**异步复制方式进行的**，所以从服�
 
 
 
-##### 为什么要做主从同步
+## 为什么要做主从同步架构
 
 1. 读写分离，使数据库支撑更大的并发
+   - 主服务器完成写、实时性比较高的读操作
 2. 在主服务器上生成实时数据，从服务器上分析这些数据，从而提高主服务器的性能
 3. 数据备份，保证数据的安全
 
 
 
-#### MySQL 主从-读写分离
+## MySQL 主从-读写分离
 
 > 主服务器处理写操作以及实时性要求比较高的读操作。从服务器处理读操作
 
@@ -2129,7 +2227,7 @@ MySQL主从复制，默认采用**异步复制方式进行的**，所以从服�
 
 
 
-##### 如何实现读写分离
+## 如何实现读写分离
 
 读写分离常常采用代理方式来实现，代理服务器接收应用层传来的读写请求，然后决定转发到哪个服务器。
 
@@ -2137,7 +2235,7 @@ MySQL主从复制，默认采用**异步复制方式进行的**，所以从服�
 
 ![image-20230404152351685](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mysql_img/202304041523226.png)
 
-#### 读写分离带来的问题
+## 读写分离带来的问题
 
 > 主库和从库之间数据存在延迟，这是很多主-从架构的问题，并不是MySQL才存在
 
@@ -2162,11 +2260,11 @@ MySQL主从复制，默认采用**异步复制方式进行的**，所以从服�
 
 
 
-### MySQL锁机制
+# MySQL锁机制
 
 数据库锁机制简单来说主要是为了保证数据的一致性，使各种共享资源在被并发访问时变得有序而设计的一种规则。MySQL不同存储引擎支持不同的锁机制
 
-### InnoDB的锁类型
+## InnoDB的锁类型
 
 InnoDB的**行锁类型**主要有：读、写、MDL锁
 
@@ -2437,7 +2535,7 @@ show engine innodb status;
 
 
 
-### truncate、delete、drop
+# truncate、delete、drop
 
 1. truncate和delete只删数据，不删除表的结构，但是truncate在事务中不能被回滚并且会清空表的自增属性下一次从1开始记录，而delete不会删除自增属性
 1. truncate：删除内容、释放空间、但是不删除定义(表结构还在)，不能删除部分数据行，只能全表删除
@@ -2450,7 +2548,7 @@ show engine innodb status;
 
 
 
-### MySQL常见控制流函数
+# MySQL常见控制流函数
 
 case when  ....   then ....else ....  end ：适用于增删改查各类语句
 
@@ -2472,15 +2570,15 @@ where u.create_time>='2020-01-01';
 
 
 
-### MySQL分页
+# MySQL分页
 
-#### 什么是分页
+什么是分页
 
 一般在客户端实现分页功能的时候，要显示当前页的数据、当前所在页数、临近页面的按钮以及总页数等等。这些数据随着翻页的进行能够动态的变化，为了实现这样的效果，一般会采取两种办法：**真分页**和**假分页**
 
 
 
-#### 真分页(物理分页)
+## 真分页(物理分页)
 
 真分页指的是每次在进行翻页时都**只查询出当前页面的数据**，特点就是与数据库的交互次数较多，但是每次查询的数据量较少，数据也不需要一直保存在内存中。
 
@@ -2490,11 +2588,13 @@ where u.create_time>='2020-01-01';
 
 
 
-#### 假分页(逻辑、内存分页)
+## 假分页(逻辑、内存分页)
 
 假分页指的是对于要显示的数据一次性全部查出，一直存在在服务端或客户端，在前端进行分页或由服务端控制分页。将根据当前所在页来计算应该显示的数据所在下标，用循环取出目标数据。只有当会话断开或页面关闭，相应的资源才会被释放
 
-#### MySQL实现分页
+
+
+MySQL实现分页
 
 mysql使用limit来限制查询出来的数据，属于真分页，只能适用于数据量少的情况
 
@@ -2513,7 +2613,9 @@ select * from student limit 10 offset 10
 # select * from student limit ( offset pageSize)
 ~~~
 
-##### 分页公式
+
+
+分页公式
 
 1. 进行分页前，计算出总量来得出总页数
 
@@ -2547,11 +2649,11 @@ select * from student limit 10 offset 10
 
 
 
-### 大表优化
+# 大表优化
 
 MySQL方案，根据数据库的特性来优化，每种数据库优化方式各不同
 
-#### 单表优化
+## 单表优化
 
 1. 涉及表结构时
    - 避免字段null值，null查询优化很难且占用额外的索引空间，推荐加上默认值
@@ -2563,7 +2665,7 @@ MySQL方案，根据数据库的特性来优化，每种数据库优化方式各
 
 
 
-### processlist
+## processlist
 
 显示用户正在运行的线程
 
@@ -2573,7 +2675,7 @@ MySQL方案，根据数据库的特性来优化，每种数据库优化方式各
 
 
 
-### 查询执行过程
+# 查询执行过程
 
 客户端发起查询请求后：首先连接mysql，然后发布查询，如果缓存中(内存)有结果集则直接返回结果集。如果缓存中没有，那么mysql解析查询，通过优化器生成执行计划，然后运行执行计划，通过API从存储引擎获取数据并返回给客户端
 
@@ -2581,9 +2683,9 @@ MySQL方案，根据数据库的特性来优化，每种数据库优化方式各
 
 ---
 
-### MySQL一条SQL的执行过程详解
+## MySQL一条SQL的执行过程详解
 
-#### MySQL驱动
+## MySQL驱动
 
 1. 系统和MySQL数据库进行交互前，MySQL驱动会帮我们建立连接。一次SQL请求就会建立一个连接，多个请求就会建立多个连接。由于性能原因，引入数据库连接池
 
@@ -2600,21 +2702,21 @@ MySQL方案，根据数据库的特性来优化，每种数据库优化方式各
 
    
 
-#### 数据库连接池
+## 数据库连接池
 
 1. MySQL架构提供了数据库连接池，双方都是通过数据库连接池来管理各个连接的，这样一方面线程之前不需要是争抢连接，更重要的是不需要反复的创建的销毁连接
 2. ![image-20220315211635997](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152116888.png)
 
-#### 网络连接必须由线程来处理
+## 网络连接必须由线程来处理
 
 1. 所谓网络连接，说白了就是一次请求，每次请求都会有相应的线程去处理。对于 SQL 语句的请求在 MySQL 中是由一个个的线程去处理的
 2. ![image-20220315211657924](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152117993.png)
 
-#### SQL接口
+## SQL接口
 
 MySQL中处理请求的线程在获取到请求以后，获取的SQL语句交给SQL接口去处理
 
-#### 查询解析器
+## 查询解析器
 
 ~~~sql
 --例如：以下SQL
@@ -2625,18 +2727,18 @@ select studentName from students where id=1;
 2. ![image-20220315211758377](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152117498.png)
 3. 现在请求的SQL语句已经解析为MySQL数据库能认识的样子了，下一步MySQL会按照自己任务效率最高的方式去执行SQL语句
 
-#### MySQL查询优化器
+### MySQL查询优化器
 
 1. MySQL会为我们生成一条条的执行计划。比如你创建了多个索引等等
 2. 优化器选出最优索引等步骤后，由执行器去调用存储引擎接口，开始去执行被MySQL解析过和优化过的SQL语句
 3. ![image-20220315211814567](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152118692.png)
 
-#### 执行器
+### 执行器
 
 1. 执行器是一个非常重要的组件，因为前面那些组件的操作最终必须通过执行器去调用存储引擎接口才能被执行。执行器最终会根据一系列的执行计划去调用存储引擎的接口去完成 SQL 的执行
 2. ![image-20220315211830067](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/202203152118217.png)
 
-#### 存储引擎
+### 存储引擎
 
 查询优化器会调用存储引擎的接口，去执行 SQL，也就是说真正执行 SQL 的动作是在存储引擎中完成的。数据是被存放在内存或者是磁盘中的（存储引擎是一个非常重要的组件，后面会详细介绍
 
@@ -2727,7 +2829,7 @@ MySQL有一个后台线程，它会在某个时刻将Buffer Pool中的脏数据�
 
 ---
 
-### 面试题目
+# 面试题目
 
 https://blog.csdn.net/dl674756321/article/details/102987984
 
