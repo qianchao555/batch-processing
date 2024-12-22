@@ -39,24 +39,51 @@ MQ是一种常见的上下游 "逻辑解耦+物理解耦"的消息通信，消�
 
 ## 消息系统的两种模式
 
-#### 点对点模式
-
-> 一个具体的消息只能有一个消费者消费
+#### 点对点模式 P2P
 
 
 
-1. 在点对点的消息系统中，消息保留在队列中，一个或者多个消费者可以消费队列中的消息，但是消息最多只能被一个消费者消费，**一旦有一个消费者将其消费掉，消息就从该队列中消失**
-1. ![image-20220424221006967](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204242212370.png)
+在点对点的消息系统中，消息保留在队列中，一个或者多个消费者可以消费队列中的消息，但是消息最多只能被一个消费者消费，**一旦有一个消费者将其消费掉，消息就从该队列中消失**
+
+![image-20220424221006967](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204242212370.png)
+
+
+
+
 
 #### 发布/订阅模式
 
 1. 消息生产者将消息发布到消息队列中，同时有多个消息消费者（订阅）消费该消息，发布到消息队列的消息会被所有订阅者消费。消费者消费消息后，队列不会消除消息。kafka中可以通过配置使得过一段时间后自动删除以释放磁盘空间
 4. 这种模式下有两种消费方式
-   - 消费者主动消费消息  ：kafka采用此种方式poll
+   - ==消费者主动拉取消息  ：kafka采用此种方式poll==
    - 消息队列主动推送给消费者
 5. ![image-20220424221235289](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204242212437.png)
 
----
+
+
+## Java  Message Service(JMS)
+
+类似JDBC规范，Java针对消息处理的一个规范
+
+
+
+提供消息服务的软件：MQ软件
+
+
+
+message
+
+- 消息头
+- 消息属性
+- 消息主体内容
+
+
+
+遵循JMS规范的中间件有：RabbitMQ、ActiveMQ、RocketMQ、Kafka
+
+Kafa：借鉴了JMS，但是并没有完全按照其规范实现
+
+
 
 
 
@@ -135,6 +162,10 @@ Kafka支持低延迟消息传递，并在出现机器故障时提供对容错的
 1. 一个topic里保存的是同一类消息，相当于对消息的分类。数据存储在主题中
 2. 每个producer将消息发送到kafka中，都需要指明要存的topic是哪个，也就是指明这个消息属于哪一类
 
+原则上，Topic的创建不是生产者、消费者创建的，而是管理者创建的
+
+不过，应用中，都是生产方、消费方约定好，生产者直接创建了，消费方直接消费就完事儿
+
 
 
 如果一个Topic在Kafka中只对应一个存储文件，那么海量数据场景下，这个文件所在机器的I/O将会成为这个主题的瓶颈，而分区正是为了解决这类问题
@@ -195,16 +226,25 @@ Kafka通过多副本机制实现了故障的自动转移，当Kafka集群中某�
 
 ## Kafka基本原理
 
-#### 分布式和分区
+#### 分布式与Kafka分区
 
-1. 我们说 kafka 是一个分布式消息系统，所谓的分布式，实际上我们已经大致了解。消息保存在 Topic 中，而为了能够实现大数据的存储，一个 topic 划分为多个分区，每个分区对应一个文件，可以分别存储到不同的机器上，以实现分布式的集群存储。另外，每个 partition 可以有一定的副本，备份到多台机器上，以提高可用性。
-2. 一个 topic 对应的多个 partition ，分散存储到集群中的多个 broker 上，存储方式是一个 partition 对应一个文件，每个 broker 负责存储在自己机器上的 partition 中的消息读写
+1. ==kafka 是一个分布式消息系统==。消息保存在 Topic 中，而为了能够实现大数据的存储，一个 topic 划分为多个分区，每个分区对应一个文件，可以分别存储到不同的机器上，以实现分布式的集群存储。另外，每个 partition 可以有一定的副本，备份到多台机器上，以提高可用性。
+2. 一个 topic 对应的多个 partition ，分散存储到集群中的多个 broker 上，存储方式是一个 partition 对应一个文件，每个 broker 负责存储在自己机器上的 leader—partition 中的消息读写
 
 #### partition副本
 
+每一个Topic数据，可以通过partition的方式，拆分到多台机器上去
+
+
+
 1. kafka可以配置partition需要备份的个数(replicas)，每个partition将会被备份到多台机器上，以提高高可用性，备份的数量可以通过配置文件指定
-2. 既然有副本，就涉及到对同一个文件的多个备份如何进行管理和调度。kafka 采取的方案是：每个 partition 选举一个 server 作为“leader”，由 **leader分区负责所有对该分区的读写**，其他 server 作为 follower 只需要简单的与 leader 同步，保持跟进即可。如果原来的 leader 失效，会重新选举由其他的 follower 来成为新的 leader。如何选取：kafka所以zookeeper在broker中选出一个controller，用于partition分配和leader选举
-2. 一个分区只能被一个消费者消费
+2. 既然有副本，就涉及到对同一个文件的多个备份如何进行管理和调度。
+   - kafka 采取的方案是：每个 partition 选举一个 server 作为“leader”，由 **leader分区负责所有对该分区的读写**
+   - 其他 server 作为 follower 只需要简单的与 leader 同步，保持跟进即可。
+   - 如果原来的 leader 失效，会重新选举由其他的 follower 来成为新的 leader。如何选取：kafka所以zookeeper在broker中选出一个controller，用于partition分配和leader选举
+3. 一个分区只能被一个消费者消费
+
+
 
 #### 整体数据流
 
@@ -347,64 +387,7 @@ offsets节点：记录每个topic的每个分区的offset；
 
 
 
-## kafka数据可靠性- ack机制
 
-kafka采用ack机制保证数据可靠性，类似与TCP的三次握手四次挥手
-
-
-
-### 生产者的可靠性
-
-> 1. 存储层方面：前面提到的为每个partition设置副本，即leader和follower
-> 2. 发送层面：生产者向broker发送消息后，broker上的leader会向生产者发送ack确认消息，如果生产者没有收到ack，将会触发重试机制
-
-
-
-
-
-生产者的ISR机制
-
-生产者把消息发送到服务器的leader后，leader将消息同步给自己所有的follower。默认情况下，kafka默认当所有follower都完成同步消息后，再给生产者返回ack。但是当其中的一个follower发生故障后，迟迟不能同步完成，此时leader就会一致等下去。这个问题该怎么办？kafka利用ISR机制解决这个问题。
-
-![image-20230315210138770](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303152101882.png)
-
-
-
-
-
-在kafka中，一个主题的**分区的所有的副本集合称之为AR**(Assigned Replicas)。AR=ISR+OSR
-
-**leader节点维护了一个动态的集合，即in-sync replica set (ISR)**，指的是：和leader保持一定程度同步的follower集合(包括leader节点在内)。
-
-**与leader副本同步滞后过多的副本组成OSR(Out-of-Sync Replicas)集合**
-
-因此AR=ISR+OSR。正常情况下所有的follower都应该和leader保持一定程度的同步，即AR=ISR
-
-
-
-kafka何时给生产者返回ack相应：kafka根据用户配置的ack级别来确认何时返回客户端ack消息
-
-**acks参数：用来指定分区中有多少副本收到这条消息后，生产者才能确认这条消息是写入成功的**，这直接影响kafka集群的吞吐量和消息可靠性
-
-
-
-ack有3个可选值0、1、-1
-
-1. ack=1：默认值1，可能出现消息丢失
-   - producer发送消息后，只要**分区的leader成功写入消息后，就会收到服务器的ack成功响应**
-   - 如果消息写入leader失败，比如leader挂了，正在重新选举，此时生产者客户端会收到错误相应，可以进行重发
-   - 如果leader成功写入后，还没有来得及把数据同步到follower节点就挂了，这时候消息就丢失了。
-   - ack=1是kafKa消**息可靠性和吞吐量之间的折中方案**，也是默认的配置
-2. ack=0，可能出现消息丢失
-   - 就是生产者不等待broker响应。这种情况模式下延迟最低，但是可能丢失数据。**适合高吞吐量、接受消息丢失的场景。**
-3. ack=-1 或 ack=all：
-   - producer**需要收到分区内所有副本的成功写入的通知才认为推送消息成功了**
-   - 即：生产者在消息发送之后，需要等待ISR 中的所有副本都成功写入消息之后才能够收到来自服务端的ack响应
-   - ack=-1可以达到最高的数据可靠性，但是，在所有follower成功写入后，leader发送ack之前，leader挂了，此时生产者认为发送失败了，此时重新发送数据给新的leader，造成数据重复发送
-
-
-
----
 
 
 
@@ -412,33 +395,41 @@ ack有3个可选值0、1、-1
 
 kafka producer发送消息可以采用同步或者异步的方式
 
-核心类
+- KafkaProducer：生产者对象，用来发送数据
 
-KafkaProducer：生产者对象，用来发送数据
-
-ProducerConfig：设置生产者的一系列配置参数
-
-ProducerRecord：每条数据都要封装成一个ProducerRecord对象
+- ProducerRecord：每条数据都要封装成一个ProducerRecord对象
 
 
 
 ### 生产者发送消息流程
 
-1. 生产者生成消息后，首先会经过一个或多个拦截器链
-   - producer->send(ProducerRecord)->[Interceptors拦截器可有可无]->
-2. 当消息通过所有拦截器链后，会根据key、value的序列化配置进行序列化消息内容。Serializer序列化器(kafka自己实现的，没有Java的)
+1. 生产者组装消息后
+2. 首先会经过一个或多个拦截器链
+3. 根据key、value的序列化配置进行序列化消息内容。
+   - Serializer序列化器(kafka自己实现的)
    - 生产者和消费者必须使用相同的k-v序列化方式
-3. 序列化后，根据自定义的分区器后默认分区器，进行获取消息的所属分区
-   - 一个分区会创建一个队列
-4. 获取到消息所属的分区后，消息会被追加放到消息缓冲区中  
-   - Java对象为：RecordAccumulator
-   - 可配置大小为：buffer.memory
+4. 序列化后，计算分区编号，根据自定义的分区器或系统自带的分区器，获取消息的所属分区
+   - 配置的分区器
+     - 自定义的
+     - 系统自带的RoundRobinPartitioner分区器，其他的都标记为弃用了
+   - 没有配置分区器
+     - 系统根据key，自动计算（类似hash，取模分区数）
+     - 如果没有传key，当前不管了。在后续底层步骤，一定会算出一个分区编号
+       - 数据收集器会根据一个==粘性分区策略==，尽可能将数据发往一个分区
+5. 数据校验
+   - 对参数做一些校验：max-request-size、缓存区大小 buffer.memory 校验
+6. 获取到消息所属的分区后，消息会被追加放到消息缓冲区中  (数据收集器)
+   - 将生产的数据做一个临时存储，buffer.memory ：默认大小32M，可配置
+   - Java对象为：RecordAccumulator()
+   - 每一个Topic会构建一个Deque队列，一个批次对象默认16K
 
 
 
-sender线程
+==sender线程==
 
-Sender(读取数据)
+> 主线程将数据放入缓冲区，Sender线程，取出数据，通过网络发送给Kafka Server
+>
+> Sender线程与主线程，实现异步
 
 batch.size：只有数据累积到batac.size后，sender才会发送数据这一批数据。默认16k
 
@@ -450,7 +441,7 @@ sender成功后，清理队列里的消息，失败会去重试
 
 
 
-### 异步发送
+#### 异步发送
 
 > Kafka的**Producer发送消息采用的是异步发送的方式**，主要涉及main线程、sender线程以及一个线程共享变量RecordAccumulatro
 >
@@ -458,79 +449,19 @@ sender成功后，清理队列里的消息，失败会去重试
 
 ![image-20230316162408650](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161624276.png)
 
+Kafka server收到消息后的回调方法
 
-
-异步不带回调
-
-~~~java
-public class MyProducer1 {
-    public static void main(String[] args) throws Exception{
-      Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "vm1:9092,vm2:9092,vm3:9092");
-      props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, 1);
-      props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1024 * 32);
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
-      props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 32 * 1024 * 1024);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
-        for (int i = 0; i < 20; i++) {
-            producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(i), "value:" + i));
-        }
-
-        producer.close();
-    }
-}
-
-~~~
-
-
-
-### 带回调函数的异步发送
-
-KafkaProducer#send(ProducerRecord<K,V>, Callback)
-
-~~~java
-
-public class MyProducer2 {
-    public static void main(String[] args) {
-        Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "vm1:9092,vm2:9092,vm3:9092");
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, 1);
-        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1024 * 32);
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
-        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 32 * 1024 * 1024);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        KafkaProducer<String, String> producer = new KafkaProducer<>(props);
-        for (int i = 0; i < 100; i++) {
-            producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(i), "value:" + i), new Callback() {
-                @Override
-                public void onCompletion(RecordMetadata metadata, Exception exception) {
-                    if (null == exception) {
-                        System.out.println("send success->" + metadata.offset());
-                    } else {
-                        exception.printStackTrace();
-                    }
-                }
-            });
-        }
-        producer.close();
-    }
-}
-~~~
-
-回调函数在producer收到ack时异步调用，该方法有两个参数：RecordMetadata、Exception
-
-这两个参数是互斥关系，即如果exception为null，则发送消息成功，此时RecordMetadata必定不为null。消息发送异常时，RecordMetadata为null，而exception不为null。消息发送失败会自动重试，不需在回调函数中手动重试。重试次数由参数retries设定
+1. 异步不带回调
+2. 异步带回调
+   - KafkaProducer#send(ProducerRecord<K,V>, Callback)
+   - 回调函数在producer收到ack时异步调用，该方法有两个参数：RecordMetadata、Exception
+   - 这两个参数是互斥关系，即如果exception为null，则发送消息成功，此时RecordMetadata必定不为null。消息发送异常时，RecordMetadata为null，而exception不为null。消息发送失败会自动重试，不需在回调函数中手动重试。重试次数由参数retries设定
 
 KafkaProducer设定参数retries，如果发送消息到broker时抛出异常，且是允许重试的异常，那么就会最大重试retries参数指定的次数
 
 
 
-### 同步发送
+#### 同步发送
 
 指一条**消息发送后会阻塞当前线程，直到返回ack消息**
 
@@ -539,6 +470,18 @@ producer的send方法返回对象是Future类型，因此可以通过调用**Fut
 ~~~java
 producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(i), "value:" + i)).get();
 ~~~
+
+
+
+
+
+### 生产者拦截器
+
+>  ProducerInterceptor接口
+
+**kafka 生产者会在消息序列化和计算分区之前调用一系列的拦截器**的onSend方法，我们可以在此拦截器中进行==消息发送前的业务定制==
+
+
 
 
 
@@ -557,7 +500,7 @@ producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(
 1. 便于合理使用存储资源，每个分区在一个Broker上存储，可以把海量的数据按照分区切割成一块一块数据存储在多台Broker上。合理控制分区的任务，可以实现负载均衡的效果
 2. 提高并行度，生产者可以以分区为单位发送数据，消费者可以以分区为单位进行消费数据
 
-**（默认？）分区原则**
+**分区原则**
 
 1. 构造器中指明partiton时，直接将指定值作为partition值
 2. 没有指明partition值但是有key的情况，将key的hash值与topic的partition数进行取余得到partiton值
@@ -575,44 +518,63 @@ producer.send(new ProducerRecord<String, String>("topic_test", Integer.toString(
 
    - ~~~java
      public int partition(String topic，Object key，byte[] keyBytes，Object value，byte[] valueBytes，Cluster cluster) {
-         //获取数据
-         String msgValue=value.toString();
-         int partition;
-         if(msgValue.contains("qc")){
-             partition=0;
-         }else{
-             partition=1;
-         }
-         return partition;
+         //具体的逻辑
+         return 0;
      }
      ~~~
-
-   - 关联自定义分区器
 
 
 
 ### 生产者如何提高吞吐量
 
-通过修改参数配置：缓冲区大小
+> 数据收集器：即缓冲区，Producer会将数据放入这个缓冲区中
 
-RecordAccumulator:缓冲区大小，修改为64m
+- 所以，修改缓冲区大小，RecordAccumulator:buffer_memory 大小，默认32M，可以修改为64m
+
+
 
 
 
 ### 生产者数据可靠性
 
-应答机制ack
+> 1. 存储层方面：每个partition设置副本，且副本分布在不同的Broker上面，即leader和follower
+> 2. 发送层面：生产者向broker发送消息后，broker上的leader会向生产者发送ack确认消息，如果生产者没有收到ack，将会触发重试机制
 
-1. ack=0：生产者发送过来的数据，broker不需要落盘应答
-   - 数据可靠性：丢数
-2. ack=1：生产者发送过来的数据，需要leader收到数据后应答
-   - 数据可靠性：丢数
-   - leader应答完后，还没有开始同步副本follower，leader挂了
-3. ack=-1/all：生产者发送过来的数据，leader和ISR队列(follower)里面的所有节点收齐数据后应答
-   - 问题：leader收到数据，所有follower开始同步数据，但有follower挂了，迟迟不能与leader进行同步，怎么解决?
-   - Leader维护了一个动态的ISR：和leader保持同步的follower+leader集合(leader:broker0，isr：follower0，1，2)
-   - 如果follower长时间未向leader发送通信请求或同步数据，则将该follower提出ISR，该时间阈值由replica.lag.time.max.ms参数设定，默认30s
-   - 数据可靠性：如果分区数副本设置为1个，或者isr里应答的最小副本数量设置为1，则和ack=1是一样的
+
+
+#### Ack机制保证可靠性
+
+kafka生产者数据可靠性主要靠以下2个方式
+
+1. ack确认机制
+2. producer重试机制
+
+
+
+==kafka何时给生产者返回ack响应：kafka根据用户配置的ack级别来确认何时返回客户端ack消息==
+
+- **acks参数：用来指定分区中有多少副本收到这条消息后，生产者才能确认这条消息是写入成功的**，这直接影响kafka集群的吞吐量和消息可靠性
+
+
+
+ack有3个可选值0、1、-1
+
+1. ack=0
+   - Sender线程已经将数据通过网络发送给Kafka Broker了
+   - ==但是，生产者不等待broker响应==。
+   - 这种情况模式下延迟最低，但是可能丢失数据。**适合高吞吐量、接受消息丢失的场景。**
+2. ack=-1 或 ack=all：==考虑数据安全，但是效率相应的下降==
+   - producer**需要收到分区内==所有副本==的成功写入的通知才认为推送消息成功了**
+   - 即：生产者在消息发送之后，需要等待==ISR (和leader保持着同步的)中的所有副本都成功写入消息之后==才能够收到来自服务端的ack响应
+   - ack=-1可以达到最高的数据可靠 性，但是，在所有follower成功写入后，leader发送ack之前，leader挂了，此时生产者认为发送失败了，此时重新发送数据给新的leader，造成数据重复发送
+3. ack=1：==默认值1，可能出现消息丢失==
+   - producer发送消息后，只要**分区的leader成功写入消息后，就会收到服务器的ack成功响应**
+     - 即：kafka已经保存了数据，只是没有备份
+   - 如果消息写入leader失败，比如leader挂了，正在重新选举，此时生产者客户端会收到错误相应，可以进行重发
+   - 如果leader成功写入后，还没有来得及把数据同步到follower节点就挂了，这时候消息就丢失了。
+   - ack=1是kafKa消**息可靠性和吞吐量之间的==折中方案==**，也是默认的配置
+
+
 
 数据完全可靠条件=ack级别设置为-1 +分区副本数大于等于2 + ISR里应答的最小副本数量大于等于2
 
@@ -622,52 +584,75 @@ ack=-1：一般用于传输和钱相关的数据，对可靠性要求高的场�
 
 
 
-### 生产者的ExactlyOnce
-
-exactlyOnce：精确的一次、正好一次
-
-kafka能保证精准一次性吗？
-
-> 在交易业务里，对于精准一次性要求是比较高的，我们绝不能丢失交易数据，也不应该发起重复交易，这就是ExactlyOnce的定义
 
 
+生产者的ISR机制
 
-#### 消息传送机制
+生产者把消息发送到服务器的leader后，leader将消息同步给自己所有的follower。
 
-kafka支持3中消息投递语义，通常使用At least once模型
+默认情况下，kafka默认当所有follower都完成同步消息后，再给生产者返回ack。（ack=all、-1)
 
-1. At most once：最多一次，消息可能会丢失，但不会重复
+但是当其中的一个follower发生故障后，迟迟不能同步完成，此时leader就会一致等下去。这个问题该怎么办？
 
-   - ack=0，可以保证每天消息只会发送一次，不会重复
+- kafka利用ISR机制解决这个问题。
 
-2. At least once：最少一次，消息不会丢失，可能会重复
+![image-20230315210138770](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303152101882.png)
 
-   - ack=-1，可以保证生产者和broker之间不丢失数据，但是可能会重复
+Test_Topic_t1：例如这个Topic被分为3个分区
 
-3. **Exactly once：只且一次，消息不丢失不重复，只且消费一次**
+- partition0（leader分区）
+- partition1（follower分区）
+- partition2（follower分区）
 
-   - **ack=-1，消息可能重复，所以只需要在at least once基础上保证幂等性即可**
-   - **开启kafka幂等性，enable.idompotence=true**
 
-   
 
-#### kafka如何保证幂等性
+在kafka中，一个主题的**分区的所有的副本集合称之为AR**(Assigned Replicas)。AR=ISR+OSR
 
-> 对于每一个生产者，会分配一个唯一的Pid，在发送到同一个broker的消息会附带一个sequence number。sequence number是单调自增的，broker会对<pid,partitionId,Seq num>做一个缓存，当具有相同主键的消息提交时，kafka只会持久化一条。
->
-> 但是，Pid会随着生产者的重启而分配一个新的，并且不同的partition对应的partitionId也不相同，所以kafka的幂等性无法保证跨分区、跨会话
->
-> 所以，kafka幂等性只能保证单分区会话内不重复
+**leader节点维护了一个动态的集合，即in-sync replica set (ISR)**，指的是：和leader保持一定程度同步的follower集合(包括leader节点在内)。
+
+**与leader副本同步滞后过多的副本组成OSR(Out-of-Sync Replicas)集合**
+
+因此AR=ISR+OSR。正常情况下所有的follower都应该和leader保持一定程度的同步，即AR=ISR
+
+
+
+#### 重试机制保证可靠性
+
+> producer没有收到Ack确认，会触发Retry机制
+
+重试机制实现原理
+
+例如：ack=1的机制下
+
+- Broker leader收到消息后，leader宕机了
+- producer等待响应超时，为了保证数据不丢失，producer触发retry机制
+  - 把上次发送的data，放回缓冲区中，sender线程重新发送
+
+
+
+retry机制引起的问题
+
+- 可能==导致生产者的数据重复==
+- 可能引起==数据乱序问题==
+  - 同一时间内，生产者每一个连接，可以并发处理的请求数，默认为5：max.in.flight.requests.per.connectio参数控制
+  - 缓存区里有3条数据，现在data2、data3发送后响应成功，data1响应失败，触发重试，导致数据乱序问题
+  - 对于数据要求顺序的场景是不能接收的
 
 
 
 ### Producer数据重复写入性
 
-大多出现在ack=-1情况下
+大多出现在ack=-1、1情况下
 
-例如：producer发送消息到broker，broker里的leader、follower已经落盘，准备回应producer的时候，突然这个leader挂了，ack没有发送出去，producer没有收到确认消息。这时候，会重新选举出一个leader，由于上一次leader未应答，所以，producer会重新发送消息到新的leader，这就造成了数据重复写入
+例如：producer发送消息到broker，broker里的leader、follower已经落盘，准备回应producer的时候，突然这个leader挂了，ack没有发送出去，producer没有收到确认消息。
 
+这时候，Producer会触发重试机制。
 
+由于，kafka会重新选举出一个leader，由于上一次leader未应答，所以，producer会重新发送消息到新的leader，这就造成了数据重复写入
+
+ 
+
+==出现问题不可怕，如何解决是关键！！==
 
 #### 数据重复写入-解决方法
 
@@ -679,28 +664,6 @@ kafka支持3中消息投递语义，通常使用At least once模型
 2. 出现重复不可怕，怎么解决是关键。即：去重
    - **可以利用Redis(BloomFilter)去重(公司项目就是这样搞得)**
    - 手段：分组、按照id开窗只取第一个值
-
-
-
-### Producer的数据一致性
-
-> 这里的数据一致性值得是：无论是老leader还是新选举的leader，消费者读到的都是一样的数据
->
-> kafka利用了一个高水位机制解决：High water mark (木桶原理)
-
-![image-20230316164035982](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161640383.png)
-
-![image-20230316164712302](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161647509.png)
-
-
-
-1. follower故障
-   - follower发生故障后，会被踢出ISR。等待其回复后，follower读取本地记录的删除HW，并将log文件中高于HW的部分截取掉，从HW处开始向leader同步
-   - 等该follower的LEO大于等于该partition（leader）的HW，即follower追上leader之后，就可以重新加入ISR了
-2. leader故障
-   - 会从ISR中选取出一个新的leader，为了保证多副本之间的数据一致性，其余的follower会先将各自的log文件中高于HW的部分截取掉，然后从新的leader同步数据
-
-
 
 
 
@@ -731,25 +694,195 @@ kafka支持3中消息投递语义，通常使用At least once模型
 
 
 
-### Producer数据乱序
+### kafka 生产者消息幂等性
 
-kafka1.x后，启用幂等后，kafka服务端会缓存producer发来的最近5个request的元数据，所以，无论如何都可以保证最近5个request的数据是有序的
+不管Producer重试多少次，Kafak Broker都只当作一条数据处理
 
-开启了幂等性且缓存的请求个数小于5个，会在服务端重写排序
-
-
-
-### 生产者拦截器
-
-ProducerInterceptor
-
-**kafka 生产者会在消息序列化和计算分区之前调用拦截器**的onSend方法，我们可以在此方法中进行消息发送前的业务定制
-
-自己实现这个拦截器即可
+需要在Producer操作中，开启幂等性配置 
 
 
 
----
+幂等性：解决重复
+
+==生产者消息幂等性实现原理==
+
+- 对于每一个生产者，会分配一个唯一的Pid，在发送到同一个broker的消息会附带一个seq number
+- seq number是单调自增的，broker会对<pid,partitionId,Seq num>做一个缓存，当具有相同主键的消息提交时，kafka只会持久化一条
+- 针对每一个分区，里面的Seq Num是递增的，不同的分区，Seq Num可能是相同的
+- **但是**，Pid会随着生产者的重启而分配一个新的，并且不同的partition对应的partitionId也不相同，所以kafka的幂等性无法保证跨分区、跨会话
+  - 跨会话：pid变了，无法比较了
+  - kafka通过事务来解决跨会话问题，保证生产者的pid是一致的
+- ==所以，kafka幂等性只能保证单分区会话内不重复==
+
+
+
+幂等性：解决顺序问题
+
+- 根据seq num判断是否连续
+- 不连续，则将数据重新放回buffer，在buffer里面进行排序，sender重新获取发送
+- kafka服务端会缓存producer发来的最近5个request的元数据，所以，无论如何都可以保证最近5个request的数据是有序的
+
+
+
+### 生产者-事务
+
+
+
+kafka事务是为了实现，消息数据的精准一次性处理，而诞生的
+
+
+
+
+
+
+
+
+
+#### 生产者的ExactlyOnce
+
+exactlyOnce：精确的一次、正好一次
+
+kafka能保证精准一次性吗？
+
+> 在交易业务里，对于精准一次性要求是比较高的，我们绝不能丢失交易数据，也不应该发起重复交易，这就是ExactlyOnce的定义
+
+
+
+数据传输语义：
+
+kafka支持3中消息投递语义，通常使用At least once模型
+
+1. At most once：最多一次，消息可能会丢失，但不会重复
+
+   - ack=0，可以保证每天消息只会发送一次，不会重复
+
+2. At least once：最少一次，消息不会丢失，可能会重复
+
+   - ack=-1，可以保证生产者和broker之间不丢失数据，但是可能会重复
+
+3. **Exactly once：精确一次，消息不丢失不重复，只且消费一次**
+   - **ack=-1，消息可能重复，所以只需要在at least once基础上保证幂等性即可**
+   - **开启kafka幂等性，enable.idompotence=true**
+
+
+
+
+
+
+
+### 存储数据：数据同步一致性问题
+
+所谓kafka数据同步：follower副本拉取leader副本的数据，拉取保存到本地的过程
+
+Follower有一个FetcherThread线程，会周期性的抓取
+
+> 这里的数据一致性值得是：无论是老leader还是新选举的leader，消费者读到的都是一样的数据
+>
+> kafka利用了一个高水位机制解决：High water mark (木桶原理)
+
+![image-20230316164035982](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161640383.png)
+
+![image-20230316164712302](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202303161647509.png)
+
+
+
+1. follower故障
+   - follower发生故障后，会被踢出ISR。等待其回复后，follower读取本地记录的删除HW，并将log文件中高于HW的部分截取掉，从HW处开始向leader同步
+   - 等该follower的LEO大于等于该partition（leader）的HW，即follower追上leader之后，就可以重新加入ISR了
+2. leader故障
+   - 会从ISR中选取出一个新的leader，为了保证多副本之间的数据一致性，其余的follower会先将各自的log文件中高于HW的部分截取掉，然后从新的leader同步数据
+
+
+
+
+
+
+
+
+
+## 存储消息
+
+topic是逻辑结构，真正物理结构是Partition分区
+
+20位组成，三个文件为一组
+
+LogSegment
+
+- 000000000xx.index
+- 000000000xx.log
+- 000000000xx.timeindex
+
+
+
+1. 000000xxx.index：偏移量的索引文件，将偏移量与当前文件的数据的具体物理位置做关联，保存这个文件中
+   - 便于按照偏移量的方式对数据在这个文件中的定位
+   - 定位后进行读取
+   - ==index文件：称为稀疏索引文件==
+2. 00000xxx.log：存储数据的文件
+3. 00000xxx.timeindex：时间索引 文件
+   - 保存数据时间戳，与数据偏移量的关系
+   - 便于按照时间的方式读取数据
+
+
+
+每一段Segment：例如超过4k就，生成新的index、log、timeindex文件
+
+
+
+存储在00000000000xxxx.log文件中
+
+- 为什么叫Log?
+- ==Kafka最初就是做日志数据传输的==
+- Acca-凯亚 项目中：KafkaAppender，收集日志到kafka，ELK展示的
+- 数据文件会被切分为很多log，称为文件段，一个默认1G
+  - 文件名和offset偏移量有关系，根据第一个偏移量来命名的
+
+
+
+LogManager：负责将数据刷盘到磁盘文件
+
+- log.flush.interval.message
+  - 官网写的是默认是long的最大值
+  - 配置文件默认1000条
+- 为什么这么长：
+
+
+
+==数据查找定位过程==
+
+- 根据startOffset，查找对应的LogSegment文件段
+-  找LogSegment里面的00000xx.index索引文件
+  - index索引文件，存储的就是offset->pos数据
+  - 如果index文件没定位到offset，那么在log文件查找
+- 在0000xx.log文件pos位置查找
+
+
+
+timeIndex file定位也是类似的，根据时间戳先定位到index file偏移量，再去找
+
+
+
+~~~shell
+//一个块儿就是一批数据。一批数据里面可能是很多条，这里是一条。多条就是一个baseOffset下面有多个offset
+baseOffset: 39 lastOffset: 39 count: 1 baseSequence: 8 lastSequence: 8 producerId: 1007 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: true isControl: false deleteHorizonMs: OptionalLong.empty position: 4601 CreateTime: 1734782100257 size: 118 magic: 2 compresscodec: none crc: 1540875814 isvalid: true
+| offset: 39 CreateTime: 1734782100257 keySize: 19 valueSize: 31 sequence: 8 headerKeys: [] key: 1320117339192750086 payload: hello, kafka,这里是producer8
+
+
+baseOffset: 40 lastOffset: 40 count: 1 baseSequence: 9 lastSequence: 9 producerId: 1007 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: true isControl: false deleteHorizonMs: OptionalLong.empty position: 4719 CreateTime: 1734782100257 size: 118 magic: 2 compresscodec: none crc: 980549158 isvalid: true
+| offset: 40 CreateTime: 1734782100257 keySize: 19 valueSize: 31 sequence: 9 headerKeys: [] key: 1320117339192750087 payload: hello, kafka,这里是producer9
+
+
+~~~
+
+
+
+==数据文件-字节计算方式==
+
+常规数据由：批次头+数据体
+
+- 批次头总字节数：61 Bytes
+
+
 
 
 
@@ -797,9 +930,11 @@ OSR：表示Follower与Leader副本同步时延迟过多的副本
 
 
 
-#### Controller leader (broker leader)选举机制
+#### ==Controller leader== (broker leader)选举机制
 
 kafka集群启动时，会自动选举一台broker作为controller来管理整个集群。
+
+每一个broker都能当作备份（controller leader故障后，选举一个来当Controller leader）
 
 选举过程是：**每个broker都尝试在zk上创建一个/controller的临时节点，zk会保证有且仅有一个broker能创建/controller节点成功。这个broker就是集群的总控器controller**
 
@@ -896,7 +1031,7 @@ index和log文件以当前segment的第一条消息的offset命名
 
 
 
-### Broker文件清除策略与压缩策略
+### Broker文件清除与压缩策略
 
 **kafka中默认的日志保存时间为7天**，可以通过参数进行调整
 
@@ -911,7 +1046,16 @@ kafka提供的日志清理策略有delete和compact
 
 
 
-### 高效读写数据（明天还要看一下）
+删除策略：使用zk时候，这里的删除指的是数据，不是kafka运行的日志
+
+- zk会在/admin节点下面新建一个/delete_topics，用于记录哪些topic删除了
+- 收到删除后，重启后，kafka会从zk拉取元数据信息，只是数据没有了
+
+删除策略：使用Kraft模式时
+
+
+
+### 高效读写数据
 
 kafka读写为什么那么快？
 
@@ -953,7 +1097,19 @@ Kafka 中存在大量的网络数据持久化到磁盘（Producer 到 Broker）�
 
 
 
----
+
+
+Broker中 Controller的选举
+
+- 第一个Broker注册在zk上时，zk会创建一个controller临时节点且只会创建一个contoller节点，并把这个broker当作controller
+- 第二个Broker注册在zk上时，也想注册controller，但是被broker1注册了，所以broker2会去注册watcher监听，用来监听controller
+- broker3同理
+- 当broker1挂掉后，会触发broker2与broker3去选举controller流程
+  - zk通过ZAB协议选举
+
+
+
+
 
 
 
@@ -964,6 +1120,8 @@ Kafka 中存在大量的网络数据持久化到磁盘（Producer 到 Broker）�
 
 
 ## kafka消费者
+
+
 
 
 
@@ -1011,9 +1169,73 @@ offset为什么移除zookeeper？
 
 
 
-### Consumer Group原理
 
-消费组(Consumer Group)是Kafka的消费理念中一种特有的概念，每个消费者都属于一个消费组。生产者的消息发布到主题后，只会被投递给订阅该主题的每个消费组中的一个消费者。消费者组内每个消费者负责消费不同分区的数据，**一个分区只能由一个消费者组内的消费者消费**；所有的消费者都有一个与之对应的消费者组，即消费者组是逻辑上的一个订阅者。**消费者组之间互不影响，多个不同的消费者组可以同时订阅一个Topic**，此时消息会同时被每个消费者组中一个消费者消费。
+
+
+
+### 数据消费的偏移量问题
+
+默认kafka设置好了：offset=当前订阅主题分区的LEO，Log End Offset=offset最大+1
+
+- 意味着，topic中，提前往分区中写入的数据是消费不到的
+- 如何解决：修改配置，auto.offset.reset
+
+
+
+kafka consumer group，消费完成后，会把offset偏移量==每隔5s保存==最新的，下一次启动后不会从配置读取，而是从最新的offset开始消费
+
+- 自动提交偏移量：auto.commit.interval.ms:5s
+- 可能重复消费，5s内没有保存，宕机了，下次来又继续消费了
+
+
+
+kafka提供了手动提交ack功能
+
+- @KafkaLinster方式
+- Consumer方式
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Consumer Group
+
+消费组(Consumer Group)是Kafka的消费理念中一种特有的概念，每个消费者都属于一个消费组。
+
+生产者的消息发布到主题后，只会被投递给订阅该主题的每个消费组中的一个消费者。
+
+消费者组内每个消费者负责消费不同分区的数据，**一个分区只能由一个消费者组内的消费者消费**；
+
+所有的消费者都有一个与之对应的消费者组，即消费者组是逻辑上的一个订阅者。
+
+**消费者组之间互不影响，多个不同的消费者组可以同时订阅一个Topic**，此时消息会同时被每个消费者组中一个消费者消费。
+
+==一个消费者可以消费多个分区的数据，但是同一个分区，只能由一个消费者组里面的一个消费者消费==
+
+- 多个Consumer，配置为同一个consumer group是多个消费者了
+- 通常，分区数量与消费者数对应即可
+- 但是，若担心消费者宕机，可以多于分区数
+  - 新的机器如何消费呢，从头还是继续消费？
+  - 核心：无非就是找个地方存起来
+  - kafka就是采用这种形式
+    - 有一个__consumer_offsets内部主题
+    - 将消费者组和偏移量关系保存在主题中
+    - 切换消费者，就从这个主题中获取偏移量
+    - 默认50个分区，主题消费偏移量的信息，就会存放在这某一个分区中
+      - 多个broker集群时，这50个分区就会均匀分配在不同broker上
+  - kafka采用了：消费者协调器（consumer提供）、消费者组协调器（broker提供）交互自动完成
+
+
 
 
 
@@ -1072,62 +1294,9 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 
 
+### 消费者分区分配策略
 
 
-### 独立消费者-消费主题
-
-例子：一个独立消费者，消费first主题。其中first主题有3个分区（每一个分区都在一台broker上）
-
-~~~java
-//0、配置
-	连接kafka、反序列化方式、消费者组id
-//1、创建消费者
-     
-//2、订阅主题
-        kafkaconsumer.subscribe("first")
-//3、消费数据
-        while(true){
-            if(flag==true){
-                break;
-            }
-     ConsumerRecords<String,String>cr=kafkaconsumer.poll();
-        }
-~~~
-
-
-
-### 独立消费者-消费分区
-
-例如：消费first主题的0号分区
-
-~~~java
-//0、配置
-	连接kafka、反序列化方式、消费者组id
-//1、创建消费者
-     kafkaconsumer=
-        new KafkaConsumer<String,String>(properties);
-//2、订阅主题对应的分区
-	Collection<TopicPartition>  topicPartition;
-	topicPartition.add(new TopicPartition("first",0));
-     kafkaconsumer.assign(topicPartition)
-//3、消费分区的数据
-        while(true){
-            if(flag==true){
-                break;
-            }
-  ConsumerRecords<String,String>cr=kafkaconsumer.poll(xxx);
-        }
-~~~
-
-
-
-
-
-### 消费者组 消费
-
-例如：同一个主题的分区数据，只能由一个消费者组中的一个消费
-
-多个消费者，配置在一个组里面
 
 
 
@@ -1486,6 +1655,19 @@ kafka事务指的是：一系列的生产者生产消息，和消费者提交偏
 2. 关系型数据库具备事务的特性，当数据入库时，同时也将offset信息更新，借用关系型数据库事务的特性保证数据入库和修改offset记录这两个操作是在同一个事务中进行
 3. 使用ConsumerRebalanceListener来完成在分配分区时和Relalance时作出相应的处理逻辑
 
+
+
+事务的隔离级别
+
+- 默认是：不管提交与否都读取
+- 正确的提交后，才能读取
+
+
+
+
+
+
+
 ---
 
 
@@ -1518,9 +1700,11 @@ kafka-eagle.org   最新名字：efak
 
 ## kafka-Kraft模式
 
-已经可以不需要Zookeeper了，但是是兼容的
+kafka2.8x后，已经可以不需要Zookeeper了，但是是兼容的
 
-kafka2.8x后
+Kafka4.0之后，会正式的去除Zookeeper组件
+
+
 
 ![image-20220428221103795](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204282211144.png)
 
@@ -1578,16 +1762,15 @@ kafka 内存= kafka堆内存（kafka内部配置） +页缓存（服务器的内
 
 
 
----
-
 
 
 ## 消息队列连环炮面试
 
-#### 项目中怎么用消息队列的（我们公司用的kafka)
+#### 项目中怎么用消息队列的
 
 1. 上下游传递消息(利用kafka实现了一套消息发布/订阅机制)
-2. 日志发送kafka然后采用ELK那一套来对日志进行处理
+2. 前后端异步导出文件，前端订阅kafka特定的topic，然后根据具体生成的文件路径完成下载
+3. 日志发送kafka然后采用ELK那一套来对日志进行处理
 
 
 
@@ -1928,8 +2111,6 @@ RabbitMQ就有过期失效的问题，消息在队列中，超过过期实际，
 
 
 
----
-
 
 
 ## KafkaTemplate
@@ -1951,6 +2132,10 @@ KafkaTemplate<byte[],byte[]> kafkaTemplate2;
 kafkaTemplate底层实现：send方法发送消息给kafka，底层都会调用doSend方法，消息发送完会进行callback回调并关闭生产者，刷新缓存
 
 底层用Sender线程来跑的
+
+KafkaTemplate
+
+- 是对KafkaProducer生产者的封装
 
 
 
