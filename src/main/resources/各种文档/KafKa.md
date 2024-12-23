@@ -1345,6 +1345,41 @@ Consumer Grop：由多个consumer组成，形成一个消费者组
 
 ### 消费者分区分配策略
 
+消费者应该消费哪个分区？
+
+- 其实是由消费者组的Leader决定的，其他的消费者称为Follower
+- 第一个加入Consumer group的是consumer leader
+
+
+
+Kafka提供的分区分配策略有4个
+
+1. RoundRobinAssignor：轮询分配策略
+
+   - 每个消费者组中的消费者，都会含有一个自动生产的UUID作为memberId
+   - 轮询策略会将每个消费者按照memberId进行排序，所有member消费的主体分区，根据主题名称进行排序
+   - 缺点：分配并不是很均衡
+
+2. RangeAssignor：范围分配策略
+
+   - 分配原则就是尽可能的平均分配，先算出每个消费者平均得到的数量
+   - 不能平均分，就按照顺序向前补齐
+   - 5/3 consumer=1，余数2：[1,2]、[3,4]、[5]
+   - 缺点：消费者组多时，第一个消费者的压力大
+
+3. StickyAssignor：粘性分区
+
+   - 之前分配给你的分区，尽量保持不变
+   - 当进行consumer再平衡时，原来的consumer分配的分区，尽可能改动不大
+
+4. CooperativeStickyAssignor：优化后的粘性分区
+
+   - 粘性分区的策略没变，只是底层的算法更优
+
+   
+
+kafka默认第一次采用：RangeAssignor，当发生consumer 再平衡时，采用CooperativeStickyAssignor
+
 
 
 
