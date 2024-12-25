@@ -899,6 +899,14 @@ controller感知到分区leader所在的broker挂了(controller监听了很多zk
 
 
 
+Broker中 Controller的选举
+
+- 第一个Broker注册在zk上时，zk会创建一个controller临时节点且只会创建一个contoller节点，并把这个broker当作controller
+- 第二个Broker注册在zk上时，也想注册controller，但是被broker1注册了，所以broker2会去注册watcher监听，用来监听controller
+- broker3同理
+- 当broker1挂掉后，会触发broker2与broker3去选举controller流程
+  - zk通过ZAB协议选举
+
 
 
 ## 分区副本分配规则
@@ -1104,15 +1112,17 @@ Follower有一个FetcherThread线程，会周期性的抓取
 
    
 
-## 高效读写数据
+## Kafka高效读写数据
 
 kafka读写为什么那么快？
 
-#### 1. kafka本身是分布式集群，利用分区技术，实现并行处理
+1. kafka本身是分布式集群，利用分区技术，实现并行处理
+2. 顺序写磁盘
+3. 零拷贝技术
 
 
 
-#### 2. 顺序写磁盘
+### 顺序写磁盘
 
 kafka的消息是保存在磁盘上的，那么磁盘的读写效率尤为重要。磁盘的读写速度的快慢取决于是顺序读写或随机读写。
 
@@ -1123,9 +1133,9 @@ kafka的消息是保存在磁盘上的，那么磁盘的读写效率尤为重要
 
 
 
-#### 3. 页缓存和零拷贝技术
+### 页缓存和零拷贝技术
 
-##### 零拷贝
+#### 零拷贝
 
 Kafka 中存在大量的网络数据持久化到磁盘（Producer 到 Broker）和磁盘文件通过网络发送（Broker 到 Consumer）的过程。这一过程的性能直接影响 Kafka 的整体吞吐量。
 
@@ -1133,28 +1143,38 @@ Kafka 中存在大量的网络数据持久化到磁盘（Producer 到 Broker）�
 
 为了避免用户进程直接操作内核，保证内核安全，操作系统将虚拟内存划分为两部分，一部分是内核空间（Kernel-space），一部分是用户空间（User-space）。
 
-传统的 Linux 系统中，标准的 I/O 接口（例如read，write）都是基于数据拷贝操作的，即 I/O 操作会导致数据在内核地址空间的缓冲区和用户地址空间的缓冲区之间进行拷贝，所以标准 I/O 也被称作缓存 I/O。这样做的好处是，如果所请求的数据已经存放在内核的高速缓冲存储器中，那么就可以减少实际的 I/O 操作，但坏处就是数据拷贝的过程，会导致 CPU 开销。
 
-##### PageCache页缓存
+
+传统的 Linux 系统中
+
+- 标准的 I/O 接口（例如read，write）都是基于数据拷贝操作的，即 I/O 操作会导致数据在内核地址空间的缓冲区和用户地址空间的缓冲区之间进行拷贝，所以标准 I/O 也被称作缓存 I/O。
+- 这样做的好处是，如果所请求的数据已经存放在内核的高速缓冲存储器中，那么就可以减少实际的 I/O 操作，但坏处就是数据拷贝的过程，会导致 CPU 开销。
+
+
+
+传统Linux中，缓存的两大分类
+
+1. Buffer Cache
+   - 块缓存，主要是写缓存，数据写入到其他地方
+2. PageCache
+   - 页缓存，主要是读缓存，提高文件读取效率
+
+
 
 
 
 1. 页缓存+零拷贝技术
    - 零拷贝：kafka的数据加工处理操作交由kafka生产者和kafka消费者处理，kafka broker应用层不关心存储的数据，所以不用走应用层，传输效率高
    - PageCache页缓存：kafka重度依赖底层操作系统提高的pagecache功能。当上层有写操作时，操作系统只是将数据写入pagecache，当读操作发生时，先从pagecache查找，如果找不到，再去磁盘中读取。
-   - ![image-20220427205334342](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/kafka_img/202204272053956.png)
+   - ![image-20241225145233028](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/image-20241225145233028.png)
+   - kafka零拷贝技术：不需要从页缓存中拷贝数据
+     - ![image-20241225145420537](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/mybatis_img/image-20241225145420537.png)
 
 
 
 
 
-Broker中 Controller的选举
 
-- 第一个Broker注册在zk上时，zk会创建一个controller临时节点且只会创建一个contoller节点，并把这个broker当作controller
-- 第二个Broker注册在zk上时，也想注册controller，但是被broker1注册了，所以broker2会去注册watcher监听，用来监听controller
-- broker3同理
-- 当broker1挂掉后，会触发broker2与broker3去选举controller流程
-  - zk通过ZAB协议选举
 
 
 
@@ -1766,7 +1786,9 @@ kafka事务指的是：一系列的生产者生产消息，和消费者提交偏
 
 
 
-kafka如何保证
+### Consumer Leader选举
+
+
 
 
 
