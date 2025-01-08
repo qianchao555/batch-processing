@@ -2897,13 +2897,154 @@ Size:期望获取文档的总数
 
 #### ES分布式系统中深度分页问题
 
+![image-20250107231751829](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250107231753417.png)
+
 - ES天生就是分布式的。查询信息时，数据分布在多个分片上，多台机器上，ES天生就需要满足排序的需要（按照相关性算分）
+
 - 当查询：From=990,Size=10，需要查询的数据：from+size
+
   - 会在每个分片上先都获取1000个文档，然后，通过coordinating node整合所有结果。最后，再通过排序选择前1000个文档
+
   - 页数越深，占用内存越多
+
     - 为了避免深度分片带来的内存开销
     - ==ES有一个设定，默认限定到了10000个文档==
 
+    
+
+如何避免深度分页问题？
+
+- `search_after`,可以实现实时获取下一页文档信息
+  - 不支持指定页数（From)
+  - 只能往下翻
+- 第一步搜索需要指定sort，并保证值是唯一的
+- 然后使用上一次结果的sort值，在下一个文档的sort值进行查询，从而实现翻页
+
+
+
+Scroll Api
+
+> 对结果进行遍历的操作
+
+- 创建一个快照，有新的数据写入后，无法被查到
+- 每次查询后，输入上一次的scorll Id
+
+
+
+不同的搜索类型和使用场景
+
+- Regular
+  - 需要实时获取顶部部分文档（平时普通的10条记录）
+- Scorll
+  - 需要全部文档，例如：导出全部数据
+- Pagination
+  - 普通：选用From和Size
+  - 如下需要深度分页：选用Search After（考虑局限性）
+
+
+
+### ES中并发读写操作
+
+
+
+#### ES采用乐观并发控制
+
+- ES中的文档是不可变更的。如果要更新一个文档，会将文档标记为删除，同时增加一个全新的文档，同时新文档的version字段加1
+- 内部版本控制
+  - ES早期采用的是：version
+  - ES新版中采用的是：`if_seq_no`+`if_primary_term`
+- 使用外部版本（使用其他数据库作为主要数据存储）
+  - `version`+`version_type`=external
+
+
+
+### Bucket & Metric Aggregation
+
+~~~mysql
+select
+count(brand)     //Metric:一系列的统计方法
+from cars
+group by brand;  //Bucket：一组满足条件的文档
+~~~
+
+~~~json
+post employees/_search
+{
+    "aggs":{
+        //agg1
+        "max_salary":{
+            "max":{
+                "field":"salary"
+            }
+        },
+        //agg2
+        "min_salary":{
+            "min":{
+                "field":"salary"
+            }
+        }
+    }
+}
+~~~
+
+
+
+Bucket
+
+- 按照一定的规则，将文档分配到不同的桶Bucket中，从而达到分类的目的
+- ES提供了一些常见的Bucket Aggregation
+  - Terms
+  - 数字类型
+    - Range/Data Range
+    - Histogram/Date Histogram
+- 支持嵌套：桶里面再做分桶
+
+
+
+#### Pipeline聚合分析
+
+支持对聚合分析的结果，再次进行聚合分析
+
+`buckets_path`:指定聚合的层级关系
+
+
+
+#### 聚合的作用范围与排序
+
+(分组的条件)
+
+- ES聚合分析的默认作用范围是：query的查询结果集
+- ES同时还支持以下方式聚合的作用范围
+  - query
+  - Filter
+  - Post Filter
+  - Global：忽略query中的条件
+
+
+
+聚合中的排序
+
+- 指定order,按照conunt和key进行排序
+  - 默认按照count降序排序
+  - 指定size，就能返回相应的桶
+
+
+
+#### 聚合分析的原理及精准度问题
+
+
+
+分布式系统的近似统计算法
+
+![image-20250108143145040](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143146652.png)
+
+
+
+![image-20250108143354007](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143355382.png)
+
+
+
+![image-20250108143427699](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143429289.png)
 
 
 
@@ -2912,7 +3053,488 @@ Size:期望获取文档的总数
 
 
 
-### ES原理初步认识
+
+
+
+### 对象及嵌套对象（Nested)
+
+==ES不善于处理关联关系==
+
+- ES采用反范式化设计
+  - 反范式的好处：读取速度更快、无需联表、无需行锁
+- ES通常采用以下四种方式处理关联
+  - 对象类型
+  - 嵌套对象（Nested Object)
+  - 父子关联关系（Parent、Child)
+  - 应用端关联：程序端处理
+
+
+
+Nested Data Type
+
+- ES中的一种类型，==允许对象数组中的对象被独立索引==
+- 在内部，Nested类型的文档，每个对象会单独保存在一个Lucene文档中，在查询时做Join处理
+
+
+
+使用场景：查询为主，子文档偶尔更新
+
+
+
+对象和Nested对象的局限性
+
+- 更新时，需要重新索引整个对象，包括根对象和嵌套对象
+
+
+
+文档的父子级关系
+
+> ES提供了类型关系型数据库中Join的实现方式，使用Join数据类型实现，可以通过维护Parent/Child的关系，从而分离2个文档
+
+- 父文档和子文档是2个独立文档
+- 更新父文档无需重新索引子文档。子文档被添加，更新或删除也不会父文档和其他子文档
+
+
+
+适用场景：子文档更新频繁
+
+
+
+### Reindex
+
+一般以下几种情况，我们需要重建索引
+
+- 索引的Mappings发生变更：字段类型更改、分词器、字典更新等
+- 索引的Settings发生变更：索引的主分片数发生改变
+- 集群内，集群间需要做数据迁移
+
+
+
+ES提供了内置的API
+
+- Update By Query:在原有索引上重建
+- Reindex:在其他索引上重建索引
+  - 先建一个新的索引，在将原有的链接上去
+  - 如果涉及跨集群Reindex，需要修改配置文件
+
+
+
+### Ingest Pipline
+
+![image-20250108171637255](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108171638479.png)
+
+ES5.0之后，引入了一种新的节点类型Ingest Node。默认配置下，每个节点都是Ingest Node
+
+- 具有预处理数据的能力，可拦截Index或Bulk Api的请求
+- 对数据进行转换，并重新返回给Index或Bulk APi
+
+无需Logstash，就可以进行数据的预处理
+
+- 例如：为某个字段设置默认值、重命名某个字段的字段名、对字段值进行split操作等等
+- 支持设置Painless脚本，对数据进行更复杂的加工
+
+
+
+![image-20250108172115439](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108172116975.png)
+
+
+
+一些内置的Processors
+
+- Split Processor
+  - 例如：将给定字段值分成一个数组
+- Remove/Rename
+  - 例：移除一个重命名字段
+- Append
+  - 例:为商品增加一个标签
+- Covert
+  - 例:从字符串转换为float
+- Data/Json
+  - 例：日期格式转换、字符串-Json格式转换
+- Date Index Name
+  - 例：通过该处理器的文档，分配到指定时间格式的索引中
+- 等等，官网去看
+
+
+
+Ingest Node VS Logstash
+
+Ingest Node与Logstash有一些功能上的重合
+
+![image-20250108173426137](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108173431282.png)
+
+
+
+#### painless script
+
+- ES5.0后引入，专门为ES设计的，扩展了Java语法
+
+- 6.0开始，ES只支持Painless。Groovy、JavaScript、Python都不再支持
+
+- Painless支持所有Java的数据类型及Java API子集
+
+- Painless Script特性
+
+  - 高性能/安全
+
+  - 支持显示类型或动态定义类型
+
+    
+
+painless script作用
+
+- 对文档字段进行加工处理
+  - 例如：更新、删除字段，处理数据聚合操作
+  - scrip field：对返回的字段提前进行计算
+  - Function Score：对文档的算分进行处理
+- 在Ingest node Pipeline中执行脚本
+- Reindex API、Update By Query中，对数据进行处理
+
+![image-20250108174138029](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108174139353.png)
+
+脚本缓存
+
+- ES中脚本的编译开销相对较大
+- ES会将脚本编译后缓存在cache中
+  - Inline Script和Stored scripts都会被缓存
+  - 默认缓存100个脚本
+- 缓存参数
+  - script.cache.max_size:设置最大缓存数
+  - script.cache.expire：设置缓存超时
+  - script.max_compilation_rate：默认5分钟最多75次编译
+
+
+
+
+
+# ES数据建模
+
+功能需求+性能需求
+
+
+
+建模时候，通常要考虑以下四点：
+
+- 字段类型
+- 是否需要搜索及分词
+- 是否需要聚合及排序
+- 是否需要额外的存储
+
+
+
+## 字段类型 text vs keywork
+
+- Text
+  - 适用于全文本字段，文本会被分词
+  - 默认不支持聚合分析及排序，需要设置fielddata为true来支持
+- Keyword
+  - 用于id、枚举及不需要分词的文本
+    - 例如：电话号码、email、邮编、性别等
+  - 适用于：filter(精确匹配)，sorting、aggregations
+- 设置多字段类型
+  - 默认会为文本设置text类型，并设置一个keyword的子字段
+  - 处理人类语言时，通过增加“英文”、“拼音”、和“标准”分词器，提供搜索结构
+
+## 字段类型:结构化数据
+
+- 数值类型
+  - 尽量选择贴近的类型，例如可以用byte就不要用long
+- 枚举类型
+  - 设置为keyword,即使是数字的枚举，也应该设置为keyword，获得更好的性能
+- 其他
+  - 布尔/日期/地理信息等
+
+
+
+## 是否需要-检索
+
+- 如果不需要检索、排序、聚合分析
+  - Enable设置为false
+- 如果不需要检索
+  - Index设置为false
+- 对需要检索的字段，可以通过配置，设定存储粒度
+  - Index options/Norms：不需要归一化数据时，可以关闭
+
+
+
+
+
+## 是否需要-聚合和排序
+
+- 如果不需要检索、排序、聚合分析
+  - Enable设置为false
+- 如不需要排序或聚合分析功能
+  - Doc_values/fielddata设置为fasle
+- 更新频繁，聚合查询频繁的字段，设置为keyword
+  - 推荐将eager_global_ordinals设置为True
+
+
+
+## 是否需要-额外的存储
+
+- 是否需要专门的存储当前字段的数据
+  - Store设置True，可以存储该字段的原始内容
+  - 一般结合`_source`的Enable为false时使用
+- Disable _source:节约测评，适合于指标型数据
+  - 一般建议先考虑增加压缩比
+  - source disable后，无法做reindex,无法update
+
+
+
+## 建模建议
+
+### 如何处理关联关系
+
+- Object:优先考虑反范式设计
+- Nested Object:当数据包含多值对象，同时有查询需求时
+- Parent/Child:关联文档更新频繁时
+
+> [!WARNING]
+>
+> ==Kibana目前不支持==nested类型和Parent/Child类型
+>
+> 如果需要使用Kiban进行数据分析，在数据建模时，需要对嵌套对象和父子关联类型做出取舍
+
+
+
+### 避免过多字段
+
+- 一个文档中，避免大量的字段
+  - 不易维护
+  - Mapping信息保存在cluster state中，数据量过大，对集群性能会有影响（Cluster state信息需要同步所有的节点）
+  - 删除或修改数据需要reindex
+- 默认最大字段数是1000，可以配置限定最大字段数
+- 什么原因导致文档中会有成百上千的字段？
+  - Dynamic(生产中，尽量不要开)
+    - true:未知字段会被自动加入
+    - false:新字段不会被索引，但是，会保存在`_source`中
+    - strict:新字段不会被索引，文档写入也会失败
+  - Strict
+    - 可控制字段级别
+
+
+
+
+
+### 避免正则查询
+
+- 正则，通配符查询，前缀查询属于Term查询，但是性能不好
+- 特别是将通配符放在开头，会导致性能的灾难
+
+
+
+
+
+### 避免空值引起聚合不准
+
+
+
+
+
+
+
+## ES集群身份认证和用户鉴权
+
+- ES默认安装后，不提供任何形式的安全防护
+- 错误的配置信息导致公网可以访问ES集群
+  - 例如：elasticsearch.yml中，将server.host配置为0.0.0.0
+
+
+
+### 数据安全性的基本需求
+
+- 身份认证
+  - 鉴定用户是否合法
+- 用户鉴权
+  - 哪个用户可以访问哪些索引
+- 传输加密
+- 日志审计
+
+
+
+一些免费的方案
+
+- 设置Nginx反向代理
+- 安装免费的Security插件
+  - Search Guard
+  - ReadOnly Rest
+- X-Pack的Basic版
+
+
+
+### 身份认证
+
+认证体系的几种类型
+
+- 提供用户名和密码
+- 提供密钥或Kerberos票据
+
+
+
+Realms:X-Pack中的认证服务
+
+- 内置Realms(免费)
+  - File/Native:用户名密码保存在ES
+- 外部Realms（收费）
+  - LDAP/Active Directory/PKI/SAML/Kerberos
+
+
+
+
+
+### 用户鉴权
+
+ES中权限包括：索引级别、字段级、集群级别的不同操作
+
+RBAC:Role Based Access Contrl,定义一个角色，并分配一组权限
+
+通过将角色分配给用户，使得用户拥有这些权限
+
+
+
+ES内置的用户和角色
+
+- elastic:超级用户
+- kibana
+- logstsh_system
+- beats_system
+- apm_system
+- Remote_monitoring_user
+
+
+
+管理员可以在kibana里面配置用户来限制
+
+
+
+上述是通过身份认证及用户鉴权，对rest APi的一个保护
+
+
+
+
+
+### 集群内部安全通信
+
+比如别人可以启动一个es节点，加入你的集群，存在风险
+
+
+
+- 加密数据
+  - 避免数据抓包，敏感信息泄露
+- 验证身份
+  - 避免Impostor Node
+  - Data/Cluster State
+
+
+
+1. 为节点签发CA证书来解决
+2. 配置节点间通讯
+
+
+
+### 集群与外部系统的安全通信
+
+浏览器->Kibana->ES<->Logstash
+
+这些组件之间通信都是需要Https的
+
+
+
+
+
+
+
+## 集群部署方式
+
+
+
+### 节点类型
+
+不同角色的节点:默认这些角色都承担
+
+- Master eligible/Data Node/Ingest Node/Coordinating Node/Machine Learning Node等
+
+
+
+开发环境：一个节点可承担多个角色
+
+生产环境中：
+
+- 根据数据量，写入和查询的吞吐量，选择合适的部署方式
+- ==建议设置单一角色的节点==
+
+
+
+节点参数配置，通过参数配置不同的角色
+
+![image-20250108223402048](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108223403335.png)
+
+
+
+
+
+![image-20250108223302841](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108223304243.png)
+
+
+
+单一角色职责分离的好处
+
+- 不同节点负责处理不同的事情
+- master eligible node:负责集群状态的管理
+  - 那么可以使用低配置的CPU、RAM和磁盘
+- Data Node：负责存储数据及处理客户端的请求
+  - 使用高配置的Cpu、Ram、磁盘等
+- Ingest Node：负责处理数据
+  - 使用高配CPU、中的RAM，低配的磁盘
+
+
+
+
+
+Coordinating Only Node
+
+- 生产环境中，建议为一些大的集群配置Coordinating Only Nodes
+- 扮演Load Balancers,降低Master和Data Nodes的负载
+- 负载搜索结构的Gather/Reduce
+- 有时候无法预知客户端会发送怎样的请求
+  - 大量占用内存的结合操作，一个深度聚合可能引发OOM
+
+
+
+Delicate Master Node
+
+- 从高并发、避免脑裂角度出发
+  - 一般生产配3台
+  - 一个集群只有一台活跃的主节点
+    - 负责分片管理，索引创建，集群管理等操作
+- 如果和Data Node或Coordinating Node节点混合部署
+  - 数据节点相对有比较大的内存占用
+  - Coordinating节点有时候可能会有开销很高的查询,导致OOM
+  - 这些都是可能影响Master Node，导致集群不稳定
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ES原理初步认识
 
 集群中，一个白正方形代表一个节点-Node，节点之间多个绿色小方块组成一个ES索引，一个ES索引本质是一个Lucene Index
 
