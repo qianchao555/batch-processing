@@ -4222,6 +4222,84 @@ ES中的查询分为两类：
 
 
 
+## Logstash consepts(概念)
+
+- Pipline
+  - 包含了input->filter->output三个阶段处理流程
+  - 插件生命周期管理
+  - 队列管理
+- Logstash Event
+  - 数据在Logstash内部流转时的具体表现形式
+    - 数据在Input阶段被转换为Event，在Output被转换完成目标格式的数据
+  - Event其实是一个Java Object，在配置文件中，对Event的属性进行增删改查
+
+
+
+## Logstash架构
+
+![image-20250110141821379](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250110141822597.png)
+
+
+
+## Input Plugins
+
+一个Pipline可以有多个input插件。可官网查看
+
+- Stdin/File
+- Beats/Log4j/ES/JDBC/Kafka/Mq/Redis/..
+- JMX/Http/Websocket/Upd/Tcp
+- Google Cloud Storage/Amazon S3...
+- Github/Twitter
+
+
+
+## Output Plugins
+
+- 将Event发送到特定的目的地，是Pipline的最后一个阶段
+- 常见的Output Plugins，可官网查看
+  - ES
+  - Email/Pageduty(事件管理平台)
+  - Influxdb/Kafka/MongoDB/Opentsdb/Zabbix
+  - Http/Tcp/Websocket
+
+
+
+## Codec Plugins
+
+将原始数据decode成Event、将Event encode成目标数据
+
+- 内置Codec Plugins，可官网查看
+- Line/Multiline:行数据转换
+- Json/Avro/Cef
+- Dots/Rubydebug
+
+
+
+## Filter Plugins
+
+处理Event，一个filter里面可以包含多个plugins
+
+内置的Filter plugins,可官网查看
+
+- Mutate:操作Event的字段
+- Metrics:Aggregate metrics
+- Ruby:执行Ruby代码
+
+
+
+## Queue
+
+一个Logstash是支持多个Input的，引入Queue防止消息丢失
+
+![image-20250110144123202](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250110144124402.png)
+
+
+
+- In Memory Queue
+  - 进程Crash（崩溃）、机器宕机，会导致数据丢失
+- Persistent Queue
+  - Queue.type.persisted(默认是memory)
+  - Logstash即使宕机，数据也不会丢失，数据保证会被消费，可以替代Kafka等消息队列缓冲区的作用
 
 
 
@@ -4229,6 +4307,54 @@ ES中的查询分为两类：
 
 
 
+# Beats
+
+- 以搜集数据为主
+- 支持与Logstah或ES集成
+- 全品类采集器/轻量级/开箱即用/可插拔/可扩展/可视化
+
+
+
+能收集的数据源
+
+- Filebeat：日志文件
+- Metricbeat：收集指标数据
+- Packetbeat:网络数据
+- Winlogbeat:Windows事件日志
+- Auditbeat：审计数据
+- Heartbeat：运行时间监控
+- Functionbeat:无需服务器的采集器
+- 等
+
+
+
+这些bests启动后，可以在Kibana的Dashboard里面查看分析
+
+
+
+## Metricbeat
+
+- 用来定期搜集操作系统、软件等的指标数据
+- 收集后，指标存储到ES，可通过Kibana进行实时的数据分析
+
+
+
+Metric VS Logs
+
+- Metric：可聚合的数据，定期搜索
+- Log:文本数据，可随机搜集
+
+
+
+### Metricbeat组成
+
+- Moudule
+  - 搜集的指标对象。例如：不同的操作系统、不同的数据库、不同的应用系统
+  - Metricbeat提供了许多内置的Module,亦可以自定义
+- Metricset
+  - 一个Module可以有多个metricset
+  - 具体的指标集合。以减少调用次数为原则进行划分
+    - 不同的metricset可以设置不同的抓取时长
 
 
 
@@ -4236,7 +4362,65 @@ ES中的查询分为两类：
 
 
 
+# Kibana基本可视化组件介绍
 
+- Discover:探索数据，就是平时我们看日志那个界面
+- Dashboard：用于数据可视化展示和交互式分析，其实是一组相关主题的组件
+- Visualize:数据可视化（将数据聚合以图表等形式查看）
+- Cavans:更加炫酷的方式，演绎你的数据，做一些大屏展示，可以针对像素级做一些高度定制。
+- Maps
+
+
+
+
+
+# APM进行程序性能监控
+
+ES提供了APM功能，类似Peromethus普罗米修斯那种
+
+可以监控类似Java程序、Python程序等,在Kibana中查看各种指标
+
+
+
+# ES平台机器学习功能
+
+ES机器学习功能，是X-Pack里面的收费功能
+
+- 主要是针对==时序数据的异常检测和预测==
+  - 异常检测：异常代表是不同的，但是，未必代表是坏的。定义异常需要一些指导标准，从哪些方面去看认为是异常
+- ES的机器学习使用的是：贝叶斯统计，一种概率计算方法
+
+
+
+
+
+# ELK对日志进行集中管理
+
+日志搜集->格式化分析->检索与可视化->风险告警
+
+
+
+## Filebeat
+
+- 读取日志文件，Filebeat不做数据的解析
+  - 日志是非结构化的数据，需要进行处理后，以结构化的方式保存到ES
+- 保证数据至少被读取一次
+- 处理多行数据，解析JSON，简单的过滤
+
+
+
+Filebeat简单工作原理
+
+![image-20250110174102588](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250110174103844.png)
+
+
+
+Filebeat执行流程
+
+1. 定义数据采集：Prospector配置
+2. 建立数据模型：Index Template
+3. 建立数据处理流程：Ingest Pipline
+4. 存储并提供可视化分析：ES+Kibana,Logstash+ES+Kibana
 
 
 
