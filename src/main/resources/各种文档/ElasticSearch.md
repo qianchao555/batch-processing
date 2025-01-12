@@ -4374,6 +4374,8 @@ Metric VS Logs
 
 
 
+
+
 # APM进行程序性能监控
 
 ES提供了APM功能，类似Peromethus普罗米修斯那种
