@@ -239,13 +239,17 @@ Kibana 实现 **数据可视化**，其作用就是在 ElasticSearch 中进行�
 ![image-20220623213234829](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206232132945.png)
 
 1. Gateway 是 ES 用来存储索引的文件系统，支持多种类型
+   - 默认使用本地文件系统：Local
 2. Gateway 的上层是一个分布式的 lucene 框架。
 3. Lucene 之上是 ES 的模块，包括：索引模块、搜索模块、映射解析模块等
-4. ES 模块之上是 Discovery、Scripting 和第三方插件。
-5. Discovery 是 ES 的节点发现模块，不同机器上的 ES 节点要组成集群需要进行消息通信，集群内部需要选举 master 节点，这些工作都是由 Discovery 模块完成。支持多种发现机制，如 Zen 、EC2、gce、Azure。
-6. Scripting 用来支持在查询语句中插入 javascript、python 等脚本语言，scripting 模块负责解析这些脚本，使用脚本语句性能稍低。ES 也支持多种第三方插件。
-7. 再上层是 ES 的传输模块和 JMX.传输模块支持多种传输协议，如 Thrift、memecached、http，默认使用 http。JMX 是 java 的管理框架，用来管理 ES 应用。
-8. 最上层是 ES 提供给用户的接口，可以通过 RESTful 接口和 ES 集群进行交互
+4. ES 模块之上是 Discovery、Scripting 和第三方插件
+   - Discovery 是 ES 的节点发现模块，不同机器上的 ES 节点要组成集群需要进行消息通信，集群内部需要选举 master 节点，这些工作都是由 Discovery 模块完成
+   - 支持多种发现机制，如 Zen 、EC2、gce、Azure。
+   - Scripting 用来支持在查询语句中插入 javascript、python 等脚本语言
+   - scripting 模块负责解析这些脚本，使用脚本语句性能稍低
+   - ES 也支持多种第三方插件。
+5. 再上层是 ES 的传输模块和 JMX.传输模块支持多种传输协议，如 Thrift、memecached、http，默认使用 http。JMX 是 java 的管理框架，用来管理 ES 应用。
+6. 最上层是 ES 提供给用户的接口，可以通过 RESTful 接口、Java API和 ES 集群进行交互
 
 
 
@@ -253,7 +257,7 @@ Kibana 实现 **数据可视化**，其作用就是在 ElasticSearch 中进行�
 
 
 
-## ES 基础概念-相关名词
+## ES 基础-相关名词
 
 - Near Realtime(NRT) 
   - 近实时，数据提交索引后，立马就可以搜索到
@@ -322,7 +326,7 @@ ES 是面向文档的，文档是所有可搜索数据的最小单位
 > 用于标注文档的相关信息
 
 - _index：文档所在的索引名称
-- _type：文档的所属类型，ES7 开始，只有一个那就是 _doc
+- _type：文档的所属类型，ES7 开始，只有是`_doc`
 - _id：文档唯一 id
 - _score：相关性打分
 - _version：文档版本，若文档修改了，该字段会增加
@@ -369,7 +373,22 @@ Master eligible Nodes
 
 
 
-Data Node
+Master Node角色
+
+- master节点是ES集群的管理者，负责维护集群的全局状态和协调操作
+- 主要功能
+  - 集群管理、协调
+  - 节点管理
+  - 分片管理
+  - 安全性
+
+Master eligilble
+
+- 有资格成为Master节点的节点角色
+
+
+
+Data Node角色
 
 - 可以保存数据的节点，负责保存分片信息，在数据扩展上起到了至关重要的作用
 
@@ -404,9 +423,11 @@ Tribe Node
 
 
 
-当一个节点被选举成为 *主* 节点时， 它将负责管理集群范围内的所有变更，例如增加、删除索引，或者增加、删除节点等。 而 **主节点并不需要涉及到文档级别的变更和搜索等操作**，所以当集群只拥有一个主节点的情况下，即使流量的增加它也不会成为瓶颈。 任何节点都可以成为主节点
+当一个节点被选举成为 *主* 节点时， 它将负责管理集群范围内的所有变更，例如增加、删除索引，或者增加、删除节点等。 
 
-作为用户，我们可以将请求发送到 *集群中的任何节点* ，包括主节点。 每个节点都知道任意文档所处的位置，并且能够将我们的请求直接转发到存储我们所需文档的节点。 无论我们将请求发送到哪个节点，它都能负责从各个包含我们所需文档的节点收集回数据，并将最终结果返回給客户端。 Elasticsearch 对这一切的管理都是透明的
+而 **主节点并不需要涉及到文档级别的变更和搜索等操作**，所以当集群只拥有一个主节点的情况下，即使流量的增加它也不会成为瓶颈。 任何节点都可以成为主节点
+
+作为用户，我们可以将请求发送到 *集群中的任何节点* ，包括主节点。 每个节点都知道任意文档所处的位置，并且能够将我们的请求直接转发到存储我们所需文档的节点。==无论我们将请求发送到哪个节点，它都能负责从各个包含我们所需文档的节点收集回数据==，并将最终结果返回給客户端。 Elasticsearch 对这一切的管理都是透明的
 
 
 
@@ -483,9 +504,15 @@ GET /_cluster/health
 
 status 字段
 
-1. green：所有主分片和副本分片都正常运行
-2. yellow：所有主分片运行正常，但不是所有的副本分片都正常运行
-3. red：有的主分片没正常运行
+- Green
+  - 所有主分片和副本分片都已分配并正常运行
+- Yellow
+  - 所有主分片运行正常，但不是所有的副本分片都正常运行
+  - 影响：数据的高可用性降低
+- Red
+  - 集群不健康
+  - 部分或全部主分片未分配
+  - 影响：数据丢失或不可以、集群功能部分或全部失效
 
 
 
@@ -493,7 +520,11 @@ status 字段
 
 ### 添加索引
 
-> 往 ES 添加数据时，需要用到索引，它是保存数据的地方，索引实际上是指向一个或多个物理分片的逻辑命名空间。即：一个索引中的数据，可能保存在多个分片上面。（和 kafka 里面 topic 的分片类似）
+> 往 ES 添加数据时，需要用到索引，它是保存数据的地方，索引实际上是指向一个或多个物理分片的逻辑命名空间
+
+即：一个索引中的数据，可能保存在多个分片上面。（和 kafka 里面 topic 的分片类似）
+
+
 
 一个分片是一个底层的工作单元，它仅保存了全部数据中的一部分，一个分片是一个 Lucene 实例，并且一个分片本身就是一个完整的搜索引擎
 
@@ -511,7 +542,7 @@ Elasticsearch 是利用分片将数据分发到集群内各处的。分片是数
 
 一个副本分片只是一个主分片的拷贝，副本分片是作为硬件故障时保障数据不丢失的冗余备份，**并且为搜索和返回文档等读操作提供服务**
 
-索引建立的时候就确定了主分片数，但是 **副本分片是可以随时修改** 的
+==索引建立的时候就确定了主分片数，但是 **副本分片是可以随时修改** 的==
 
 
 
@@ -561,7 +592,7 @@ PUT /blogs
 
 ### 添加故障转移
 
-> 集群中只有一个节点运行时，意味着单节点故障问题—没有设计冗余
+> 集群中只有一个节点运行时，意味着单节点故障问题
 
 启动一个节点时候，将 cluster.name 配置为之前集群的名字，这个节点就会 **自动发现集群并加入到其中**
 
@@ -580,8 +611,6 @@ PUT /blogs
 ![image-20230410104200452](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202304101042297.png)
 
 `Node 1` 和 `Node 2` 上各有一个分片被迁移到了新的 `Node 3` 节点，现在每个节点上都拥有 2 个分片，而不是之前的 3 个。 这表示每个节点的硬件资源（CPU, RAM, I/O）将被更少的分片所共享，每个分片的性能将会得到提升
-
-分片是一个功能完整的搜索引擎，它拥有使用一个节点上的所有资源的能力。 我们这个拥有 6 个分片（3 个主分片和 3 个副本分片）的索引可以最大扩容到 6 个节点，每个节点上存在一个分片，并且每个分片拥有所在节点的全部资源。
 
 
 
@@ -619,41 +648,6 @@ PUT /blogs
 
 
 
-集群健康状况
-
-- Green: 健康状态，主分片与副本分片都正常
-- yellow：亚健康，主分片全部正常使用，有副本分片不能使用
-- Red: 不健康，部分主分配不能使用
-
-~~~json
-{
-  "cluster_name": "elasticsearch",
-  "status": "yellow",
-  "timed_out": false,
-  "number_of_nodes": 1,
-  "number_of_data_nodes": 1,
-  "active_primary_shards": 32,
-  "active_shards": 32,
-  "relocating_shards": 0,
-  "initializing_shards": 0,
-  "unassigned_shards": 2,
-  "unassigned_primary_shards": 0,
-  "delayed_unassigned_shards": 0,
-  "number_of_pending_tasks": 0,
-  "number_of_in_flight_fetch": 0,
-  "task_max_waiting_in_queue_millis": 0,
-  "active_shards_percent_as_number": 94.11764705882352
-}
-~~~
-
-
-
-
-
-分片与集群故障的转移
-
-重新选择主分片，与 kafka zk 哪些类似
-
 
 
 ### 分片的内部原理
@@ -682,8 +676,8 @@ PUT /blogs
 
 #### Lucene Index
 
-- Lucene 中，单个倒排索引文件被称为 Segment，Segement 是自包含的，不可变更的。多个 Segment 汇聚在一起，就称为 Lucene 的 Index，其对应的就是 ES 中的一个 Shard 分片
-- 当有新的文档写入时，会生成新的 Segment，查询时，会同时查询所有的 Segments，并对结果汇总。Lucene 中有一个文件 CommitPoint，用来记录所有的 Segements 信息
+- Lucene 中，==单个倒排索引文件被称为 Segment==，Segement 是自包含的、不可变更的。多个 Segment 汇聚在一起，就称为 Lucene 的 Index，其对应的就是 ES 中的一个 Shard 分片
+- 当有新的文档写入时，会生成新的 Segment，==查询时，会同时查询所有的 Segments==，并对结果汇总。Lucene 中有一个文件 CommitPoint，用来记录所有的 Segements 信息
 - 删除的文档信息，保存在 `.del` 文件中
 
 ![image-20250107210018237](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250107210019887.png)
@@ -729,7 +723,7 @@ PUT /blogs
 
 
 
-#### ES 的 Merge
+#### ES 的 Segment Merge
 
 ES 完成 Flush 后，Segments 会写入磁盘，随着时间的推移，Segment 会越来越多，所以会定期处理
 
@@ -3815,6 +3809,11 @@ ES 内置的用户和角色
 
 - Master eligible/Data Node/Ingest Node/Coordinating Node/Machine Learning Node 等
 
+- Master eligible：有资格成为Master节点的节点
+  - 其参与集群的管理和协调工作，但它们并不一定是当前Master节点
+
+eligible(符合条件的、合格的)
+
 
 
 开发环境：一个节点可承担多个角色
@@ -3907,14 +3906,16 @@ Delicate Master Node
 
 
 
-## 什么是 Hot & Warm Architecture
+## Hot & Warm Architecture
 
 - Hot Warm Architecture
-  - 数据通常不会有 update 操作；适用于 Time based 索引数据，同时数据量比较大的场景
+  - 数据通常不会有 update 操作；==适用于 Time based 索引数据==，同时数据量比较大的场景
   - 引入 Warm 节点，低配置大容量的机器存放老数据，以降低部署成本
 - 两类数据节点，不同的硬件配置
   - Hot 节点：索引不断有新文档写入。通常使用 SSD 固态硬盘
   - Warm 节点：索引不存在新数据的写入，同时也不存在大量的数据查询，通常采用 HDD 机械硬盘
+
+通过将数据从Hot节点迁移到Warm节点，可以显著的降低存储和计算成本，同时保持对历史数据的访问能力
 
 
 
@@ -3933,7 +3934,9 @@ Delicate Master Node
 
 
 
-旧的数据移动到 Warm 节点
+**旧的数据移动到 Warm 节点**
+
+可以使用索引生命中期管理ILM、Curator工具等
 
 ~~~
 index.routing.allocation.require.my_node_type: warm
@@ -4325,18 +4328,54 @@ ES 缓存主要分为 3 大类
 
 ## 索引生命周期管理
 
+> Index Lifecycle Management ,ILM，是一种自动化管理索引生命周期的机制
+
+它允许用户根据索引的年龄、大小或其他条件，自动执行诸如：滚动更新、分片分配、快照备份、删除等操作
 
 
-### 索引生命周期常见的阶段
 
-Hot-> Warm-> Cold-> Delete
+ILM是ES中管理时间序列数据的重要工具
+
+
+
+索引生命周期常见的阶段
+
+Hot-> Warm-> Cold-> Frozen>Delete
 
 
 
 - Hot：索引还存在大量的读写操作
 - Warm：索引不存在写操作，但是，有查询的需求
 - Cold：数据不存在写操作，读操作也不多
+- Frozen：数据不存在写造成，几乎不存在读操作，仅用于长期存档
 - Delete：索引不再需要，可被安全删除
+
+
+
+### ILM核心概念
+
+1. 生命周期策略：Lifecycle Policy
+   - 定义索引在不同阶段的行为和操作
+   - 每个策略包含多个阶段，每个阶段可定义具体的操作
+   - ==Kibana 里面可配置==、ES API可配置
+2. 滚动更新
+   - 当索引满足特定条件时，自动创建新索引
+   - 常用于Hot阶段，适合时间序列数据
+3. 索引别名
+   - 通过别名指向当前活跃的索引，滚动更新时自动切换别名到新索引
+4. 阶段转换条件
+   - 定义索引何时从一个阶段进入下一个阶段
+   - 条件可以基于：索引的年龄、文档数、大小等
+5. 操作：Action
+   - 每个阶段可以定义多个操作
+   - Rollover：滚动更新索引
+   - Force Merge：强制合并段
+   - Shrink：缩小索引分片数
+   - Delete
+   - Allocate：调整分片分配
+   - Freeze：冻结索引
+
+
 
 
 
@@ -4345,10 +4384,6 @@ ES Curator
 - ES 官方推出的基于 Python 的命令行工具
 
 
-
-Index lifecycel policy
-
-- Kibana 里面可配置
 
 
 
@@ -4498,67 +4533,7 @@ Lucene 的一些特性在这个过程中非常重要
 
 
 
-
-
-
-
-
-
-
-
-### ES 原理-读取文档流程
-
-> 第一阶段查询到匹配的 docId，第二阶段再查询 docId 对应的完整文档，这种方式在 ES 中成为 query_then_fetch
-
-
-
-![image-20230408230008696](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202304082300369.png)
-
-1. 在初始查询阶段时，查询会广播到索引中每一个分片拷贝（主分片或者副本分片）。 每个分片在本地执行搜索并构建一个匹配文档的大小为 from + size 的优先队列。PS：在 2. 搜索的时候是会查询 Filesystem Cache 的，但是有部分数据还在 Memory Buffer，所以搜索是近实时的。
-
-   
-
-2. 每个分片返回各自优先队列中 所有文档的 ID 和排序值 给协调节点，它合并这些值到自己的优先队列中来产生一个全局排序后的结果列表。
-
-   
-
-3. 接下来就是 取回阶段，协调节点辨别出哪些文档需要被取回并向相关的分片提交多个 GET 请求。每个分片加载并丰富文档，如果有需要的话，接着返回文档给协调节点。一旦所有的文档都被取回了，协调节点返回结果给客户端。
-
-
-
-ES 的读
-
-Elasticsearch 中每个 Shard 都会有多个 Replica，主要是为了保证数据可靠性，除此之外，还可以增加读能力，因为写的时候虽然要写大部分 Replica Shard，但是查询的时候只需要查询 Primary 和 Replica 中的任何一个就可以了
-
-![image-20230408230326431](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202304082303526.png)
-
-
-
-在上图中，该 Shard 有 1 个 Primary 和 2 个 Replica Node，当查询的时候，从三个节点中根据 Request 中的 preference 参数选择一个节点查询。preference 可以设置_local，_primary，_replica 以及其他选项。如果选择了 primary，则每次查询都是直接查询 Primary，可以保证每次查询都是最新的。如果设置了其他参数，那么可能会查询到 R1 或者 R2，这时候就有可能查询不到最新的数据
-
-
-
-es 查询是如何支持分布式的
-
-![image-20230408230614469](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202304082306614.png)
-
-
-
-Elasticsearch 中通过分区实现分布式，数据写入的时候根据_routing 规则将数据写入某一个 Shard 中，这样就能将海量数据分布在多个 Shard 以及多台机器上，已达到分布式的目标。这样就导致了查询的时候，潜在数据会在当前 index 的所有的 Shard 中，**所以 Elasticsearch 查询的时候需要查询所有 Shard，同一个 Shard 的 Primary 和 Replica 选择一个即可**，查询请求会分发给所有 Shard，每个 Shard 中都是一个独立的查询引擎，比如需要返回 Top 10 的结果，那么每个 Shard 都会查询并且返回 Top 10 的结果，然后在 Client Node 里面会接收所有 Shard 的结果，然后通过优先级队列二次排序，选择出 Top 10 的结果返回给用户。
-
-这里有一个问题就是请求膨胀，用户的一个搜索请求在 Elasticsearch 内部会变成 Shard 个请求，这里有个优化点，虽然是 Shard 个请求，但是这个 Shard 个数不一定要是当前 Index 中的 Shard 个数，只要是当前查询相关的 Shard 即可，这个需要基于业务和请求内容优化，通过这种方式可以优化请求膨胀数
-
-
-
-ES 中的查询分为两类：
-
-1. Get 请求：通过 id 查询特定 Doc
-2. Search 请求：通过 query 查询匹配的 Doc
-   - 这个是核心功能
-
-
-
-### Java 如何于 ES 交互
+# Java 如何于 ES 交互
 
 1. 节点客户端
    - node client：节点客户端作为一个非数据节点加入到本地集群中
