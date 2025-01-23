@@ -759,7 +759,7 @@ ES 的 Merge 主要做 2 个事情
 
 文档是存储在分片上
 
-> 当索引(存储、查询）一个文档的时候，文档会被存储到一个主分片中。ES 如何知道这个文档放到哪个分片？
+> 当索引(存储）一个文档的时候，文档会被存储到一个主分片中。ES 如何知道这个文档放到哪个分片？
 
 
 
@@ -773,9 +773,9 @@ ES 的 Merge 主要做 2 个事情
 
 
 
-#### 路由一个文档到一个分片
+### 路由一个文档到一个分片
 
-ES 文档到分片的路由算法
+ES 索引文档到分片的默认路由算法：
 
 - shard = hash(_routing)%number_of_primary_shards
 - hash 算法确保文档均匀分散到分片中
@@ -793,7 +793,7 @@ ES 文档到分片的路由算法
 
 
 
-#### 主分片与副本分片交互
+### 主分片与副本分片交互
 
 假设有一个集群由 3 个节点组成。包含一个 blogs 索引，两个主分片，每个主分片两个副本分片。相同的主分片与副本分片不会放在同一个节点
 
@@ -807,7 +807,7 @@ ES 文档到分片的路由算法
 
 当发送请求的时候， 为了扩展负载，更好的做法是轮询集群中所有的节点。
 
-#### 新建、索引、删除文档
+### 新建、索引、删除文档
 
 ![image-20220622164644609](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206221646160.png)
 
@@ -821,7 +821,7 @@ ES 文档到分片的路由算法
 
 
 
-#### 取回一个文档
+### 取回一个文档
 
 可以从主分片或者从其它任意副本分片检索文档
 
@@ -841,7 +841,7 @@ ES 文档到分片的路由算法
 
 
 
-#### 分布式存储-更新一个文档
+### 更新一个文档
 
 1. 请求发送到一个 Coordination node 节点
    - （所有节点默认都是 coordination node, 即都可以扮演协调者角色)
@@ -856,7 +856,7 @@ ES 文档到分片的路由算法
 
 
 
-#### 分布式存储-删除一个文档
+### 删除一个文档
 
 与更新类似
 
@@ -868,7 +868,7 @@ ES 文档到分片的路由算法
 
 
 
-#### 多文档模式
+### 多文档模式
 
 `mget` 和 `bulk` API 的模式类似于单文档模式。区别在于协调节点知道每个文档存在于哪个分片中。 它将整个多文档请求分解成 *每个分片* 的多文档请求，并且将这些请求并行转发到每个参与节点。
 
@@ -1406,27 +1406,6 @@ GET /bank/_search
 
 
 
-### 聚合查询
-
-Aggregation，SQL 中叫做 group by，ES 中叫 Aggregation 即聚合运算
-
-例如：统计每个州的数量
-
-~~~sh
-GET /bank/_search
-{
-  "size": 0,
-  "aggs": {
-    "group_by_state": {
-      "terms": {
-        "field": "state.keyword"
-      }
-    }
-  }
-}
-
-~~~
-
 ### 嵌套聚合
 
 聚合条件的嵌套，例如计算每个州的平均结余，需要在 state 分组基础上，嵌套计算 avg(balance)
@@ -1640,7 +1619,22 @@ GET /test-dsl-dis-max/_search
 
 #### function_score
 
-函数查询：自定义函数的方式计算 score
+函数查询：通过自定义函数的方式，来修改或替换文档的原始相关性评分 `_score`
+
+`function_score` 属性查询，可以优化算分
+
+可以在查询结束后，对每一个匹配的文档进行一系列的重新算分，根据新生成的分数进行排序
+
+
+
+**适用场景**
+
+- 基于业务逻辑调整文档的评分
+  - 例如：搜索商品时，结合商品名称匹配度与销量进行排序
+- 结合多个评分函数来优化搜索结果
+- 实现个性化推荐或基于地理位置、时间等因素的排序
+
+
 
 ES 的自定义函数：
 
@@ -1654,11 +1648,9 @@ ES 的自定义函数：
 
 
 
----
+### 基于文本查询
 
-### ES 查询-全文搜索
-
-DSL 查询极为常用的是对文本进行搜索，即全文搜索
+基于文本查询，是极为常用的是对文本进行搜索，即==全文搜索==
 
 ![image-20230408204816731](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202304082048447.png)
 
@@ -1666,7 +1658,30 @@ DSL 查询极为常用的是对文本进行搜索，即全文搜索
 
 
 
-#### Match 类型
+ES的DSL中Full Text Query内容是非常多的，主要分为3大类
+
+- Match类型
+  - match查询的本质：是对多个term的组合查询
+  - 但是，它并不是简单的term查询，是基于term查询构建的更高级查询
+  - 它支持全文搜索、模糊搜索、逻辑控制，适用于==大多数全文检索场景==
+- query string类型
+- intervals类型
+
+
+
+**基于全文搜索的特点**
+
+- 索引和搜索时，都会进行分词，查询字符串先传递到一个合适的分词器，然后生成一个供查询的词项列表
+- 查询时
+  - 先对输入的查询进行分词
+  - 然后每个词逐项进行底层查询，最终将结果进行合并
+  - 为每个文档生成一个算分，分数高的排在前面
+
+
+
+#### Match查询
+
+##### Match单个词
 
 数据如下：
 
@@ -1685,7 +1700,7 @@ POST /test-dsl-match/_bulk
 { "title": "Brown fox brown dog" }
 ~~~
 
-##### Match 单个词
+Match 单个词
 
 查询数据：
 
@@ -1702,15 +1717,20 @@ GET /test-dsl-match/_search
 
 
 
-match 查询步骤：
+match 类型的单个词查询步骤：
 
-1. 检查字段类型
+1. 检查查询字段类型
 2. 分析查询字符串
-   - 将查询字符串 quick 传入标准分析器中，输出项的结果是单个项 quick。因为只有一个单词项，所以 match 查询执行的是单个底层 term 查询
+   - 将待查询字符串(例如QUICK!) 传入分析器中
+   - 分析器给出输出项的结果是单个项 quick。因为只有一个单词项，所以 match 查询执行的是单个底层 term 查询
 3. 查找匹配文档
    - 用 term 查询在倒排索引中查找 quick 然后获取一组包含该项的文档，本例的结果是文档：1、2 和 3 
 4. 为每个文档评分
-   - 用 term 查询计算每个文档相关度评分 _score ，这是种将词频（term frequency，即词 quick 在相关文档的 title 字段中出现的频率）和反向文档频率（inverse document frequency，即词 quick 在所有文档的 title 字段中出现的频率），以及字段的长度（即字段越短相关度越高）相结合的计算方式
+   - 用 term 查询计算每个文档相关度评分 _score ，这是一种将词频（term frequency）和反向文档频率（即词 quick 在所有文档的 title 字段中出现的频率），以及字段的长度（即字段越短相关度越高）相结合的计算方式
+
+
+
+
 
 ##### Match 多个词
 
@@ -1725,9 +1745,11 @@ GET /test-dsl-match/_search
 }
 ~~~
 
+
+
 match 多个词的本质
 
-它在内部实际上先执行两次 term 查询，然后 **将两次查询的结果合并作为最终结果输出**。为了做到这点，它将两个 term 查询合并到了一个 bool 查询中
+它在内部实际上先执行两次 term 查询，然后 **将两次查询的结果合并作为最终结果输出**。为了做到这点，它将两个 term 查询合并到了一个 bool 查询中，下面语句与Match多个词的查询结果是等同的
 
 ~~~sh
 GET /test-dsl-match/_search
@@ -1751,7 +1773,9 @@ GET /test-dsl-match/_search
 }
 ~~~
 
-should：任意一个满足，是因为 match 有一个 operator 参数，默认是 or，所以对应的是 should
+should：任意一个满足
+
+match 有一个 operator 参数，默认是 or，所以对应的是 should
 
 等同于：
 
@@ -1771,33 +1795,115 @@ GET /test-dsl-match/_search
 
 
 
-### query_string 类型
+##### match的匹配精度
 
-> 这一类查询具有严格语法的解析器提供的查找字符串返回文档
+如果用户给定三个词：A、B、C，但是想要查找至少包含其中2个的文档，应该如何处理？
 
-此查询使用一种语法根据运算符（and or）来解析和拆分提供的查询字符串，然后，查询在返回匹配文档之前，独立分析每个拆分文本
-
-可以使用 `query_string` 查询来创建包含通配符、跨多个字段的搜索等复杂搜索。 虽然用途广泛，但查询很严格，如果查询字符串包含任何无效语法，则会返回错误
+`minimun_shouled_match`最小匹配 参数，可以指定必须匹配的词项数，用来表示一个文档是否相关
 
 
 
-### Intervals 类型
+`minimun_shouled_match`参数格式
 
-> 这一类是  Intervals：时间间隔，本质上是将多个规则按照顺序匹配
-
-
-
-
+1. 整数：指定必须匹配的should子句数量
+2. 百分比：指定必须匹配的should子句百分比
+3. 组合：整数与百分比组合使用
 
 
 
----
+例如：minimun_should_match："75%"
 
-### DSL 查询-Term
+- 当给定百分比时，其minimun_shouled_match会做合适的事情，以满足我们的需求
+- 此时：A、B、C3个词语*0.75=2.25，向下取值的最小词语数量为：2
+- 所以至少匹配2个词语的文档才会被查询返回
 
-> DSL 查询另一种极为常用的是 **对词项进行搜索**，官方称为 term level 查询
+
+
+##### match_phrase
+
+- 连续的term查询：Abc cde ff
+  - 文档必须连续包含：Abc cde ff xx xx才会匹配
+
+##### match_phrase_prefix
+
+- 有序的，前缀查询法，匹配的是最后一个词的前缀
+- Abc cde f(也能查询查上述文档)
+- Abc cde bc f(不能查询到文档)
+
+
+
+
+
+
+
+#### query_string 类型
+
+此查询使用语法根据运算符（and or）来解析和拆分提供的查询字符串，然后，查询在返回匹配文档之前，独立分析每个拆分的文本
+
+可以使用 `query_string` 查询来创建包含通配符、跨多个字段的搜索等复杂搜索。 
+
+虽然用途广泛，但==查询很严格==，如果查询字符串包含任何无效语法，则会返回错误
+
+
+
+#### Intervals 类型
+
+> Intervals：时间间隔，本质上是将多个规则按照顺序匹配
+
+
+
+
+
+
+
+### Term查询
+
+> 一种极为常用的是 **对词项进行搜索**，官方称为 term level 查询
 >
 > (基于单词查询)
+
+
+
+常见的Term-level查询类型
+
+- term查询：精确匹配某个字段的值
+- terms：匹配某个字段的多个值
+- exists：检查某个字段是否在文档中
+- prefix查询：匹配某个字段中的指定前缀开头的值
+- wildcard：支持通配符的匹配
+- regexp：支持正则表达式的匹配
+- range：匹配某个字段的范围值
+- fuzzy：模糊匹配
+- 等
+
+> 注意Term-level查询，并不是都是以为term关键字开始的，例如：prefix、exists等
+
+
+
+**Term level查询特点**
+
+- ES 中，Term 查询，对输入的搜索词 ==不做分词==。
+  - 会将输入作为一个整体作为搜索条件，在倒排索引中查找精确的词项，并且使用相关度算分公式，给每个包含该词项的文档进行相关性算分后返回。例如："Apple Store" 的匹配
+- 可以通过 `Constanc Score` 将一个查询转换为：==Filter, 避免算分==，并利用缓存，提供性能
+- 想要精确查询：增加子字段 keyword，进行严格匹配
+
+
+
+**与全文匹配的区别**
+
+全文搜索
+
+- 会对查询字符串进行分词
+- 基于相关性评分返回结果
+- 适用于`Text`类型的字段
+
+Term-levle
+
+- 查询不会对查询字符串进行分词
+- 基于精确匹配返回结果
+- 适用于`keyword`类型的字段
+
+
 
 ![image-20220620155926112](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201559600.png)
 
@@ -1843,15 +1949,252 @@ GET /test-dsl-term-level/_search
 
 
 
+## 聚合查询 Aggregation
+
+Aggregation，SQL 中叫做 group by，ES 中叫 Aggregation ，即聚合运算
+
+- ES 除了提供搜索功能外，提供了==针对 ES 数据统计分析功能==，就是：Aggregation
+  - 实时性高
+  - Hadoop(T+1)
+- 通过聚合，可以得到一个数据的概念，==聚合是分析和总结全套的数据，而不是寻找单个文档==
+- 高性能，只需要一条语句，就可以从 ES 得到分析结果
+
+
+
+Kibana 的可视化报表中，很多功能都是 ES 的聚合功能实现的
+
+
+
+
+
+ES 提供了几大类聚合方式
+
+1. Bucket Aggretation: 桶聚合
+   - 一些列满足特定条件的文档的集合
+2. Metric Aggretation：指标聚合
+   - 一些数学运算，可以对文档字段进行统计分析
+3. Pipeline Aggretation：管道聚合
+   - 对其他的聚合结果进行二次聚合
+4. Matrix Aggretation：矩阵聚合
+   - 支持对多个字段的操作，并提供一个结果矩阵
+
+
+
+### Bucket & Metric
+
+- Bucket 桶的概念类似于 SQL 中的分组，
+
+- Metric 指标类似于 SQL 中的统计函数 count、sum、max 等
+
+1. 桶 Buckets：满足特定条件的文档的集合
+2. 指标 Metrics：对桶内的文档进行统计计算
+
+
+
+==指标聚合与桶聚合大多数情况组合在一起使用==，桶聚合本质上是一种特殊的指标聚合，它的聚合指标就是数据的条数(count)
+
+
+
+官网给出了==好几十种桶聚合==，但是肯定是不能一个一个去看的，所以要站在设计的角度上来分类理解，主要有以下三类：
+
+1. 对流程的控制：多个管道Aggregation嵌套聚合
+2. 特殊字段或文档关系的聚合支持
+   - IP类型
+   - Number类型
+   - 地理位置
+   - 文档关系
+   - 日期
+   - 等
+3. 对特殊功能的聚合支持
+   - 柱状图
+   - 矩阵
+   - 样本
+   - 等等
+
+![image-20220620163557154](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201635557.png)
+
+
+
+
+
+#### 多个聚合
+
+~~~sh
+GET /test-agg-cars/_search
+{
+    "size" : 0,
+    "aggs" : { 
+    // agg 的名字
+        "popular_colors" : { 
+        //terms 桶的类型
+            "terms" : { 
+              "field" : "color.keyword"
+            }
+        },
+        //agg 的名字
+        "make_by" : { 
+            "terms" : { 
+              "field" : "make.keyword"
+            }
+        }
+    }
+}
+~~~
+
+![image-20220620165554791](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201655354.png)
+
+
+
+#### 聚合的嵌套
+
+这个新的聚合层让我们可以将 avg 度量嵌套置于 terms 桶内。实际上，这就为每个颜色生成了平均价格
+
+~~~sh
+GET /test-agg-cars/_search
+{
+   "size" : 0,
+   "aggs": {
+      "colors": {
+         "terms": {
+            "field": "color.keyword"
+         },
+         "aggs": { 
+            "avg_price": { 
+               "avg": {
+                  "field": "price" 
+               }
+            }
+         }
+      }
+   }
+}
+~~~
+
+![image-20220620165933604](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201659248.png)
+
+
+
+#### 动态脚本的聚合
+
+ES 支持一些基于脚本(生成运行时的字段)的复杂的动态聚合
+
+
+
+
+
+
+
+### Metrics 聚合
+
+> 指标聚合 Metrics Aggregation，类似于 sql 中的 avg()、count()、min()、max()
+
+适用时候，查看文档即可
+
+
+
+分类
+
+1. 单值分析
+
+   - avg、max、min、sum、value_count等
+   - cardinality基数（去重）、weighted_avg等
+
+2. 多值分析
+
+   - stats型（stats统计）
+
+   - 百分数型
+
+   - 地理位置型
+
+   - Top型
+
+     
+
+
+
+### Pipline聚合
+
+> 管道聚合：让上一步的聚合结果成为下一个聚合的输入
+
+管道机制的场景场景
+
+1. Tomcat 管道机制
+2. 责任链模式
+   - 管道机制在设计模式上属于责任链模式
+3. FilterChain
+   - 常见的责任链模式是FilterChain
+4. ElasticSearch 的管道机制
+   - 让上一步的聚合结果，成为下一个聚合的输入
+
+
+
+**Pipline聚合分类**
+
+1. 第一个维度：管道聚合有很多不同 **类型**，每种类型都与其他聚合计算不同的信息，可以将这些类型分为两类
+
+   - 父级：父级聚合的输出提供了一组管道聚合，它可以计算新的存储桶或新的聚合以添加到现有存储桶中
+   - 兄弟：同级聚合的输出提供的管道聚合，并且能够计算与该同级聚合处于同一级别的新聚合
+
+2. 第二个维度：根据功能设计的意图
+
+   - 前置聚合可能是 Bucket 聚合，后置的可能是基于 Metric 聚合，那么它就可以成为一类管道
+
+   - 进而引出了：`xxx bucket`
+     - Bucket 聚合-> metric 聚合：bucket 聚合的结果，成为下一步 metric 聚合的输入
+
+     - Average bucket
+
+     - Min/Max/Sum bucket
+
+     - Stats bucket
+
+     - Extended stats bucket
+
+
+
+
+
+
+### 聚合分析的原理及精准度问题
+
+
+
+分布式系统的近似统计算法
+
+![image-20250108143145040](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143146652.png)
+
+
+
+![image-20250108143354007](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143355382.png)
+
+
+
+![image-20250108143427699](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143429289.png)
+
+
+
+
+
+
+
+
+
+
+
 ## Mapping
 
 > GET /index/_mapping 查看 Mapping 关系
 
-Mapping
+Mapping是ES中，==定义索引中字段类型和相关属性的核心机制==
 
-- Mapping 类似数据库中的 schema 字段定义
-- 定义索引中的字段的名称、数据类型
-- 字段，倒排索引的相关配置（Analyzer 等）
+- Mapping 类似关系型数据库中的 schema 字段定义
+
+- 用于定义索引文档中每个字段的名称、数据类型、格式、分词方式等等
+
+- 通过Mapping，ES可以高效地存储和检索数据
+
+  
 
 
 
@@ -1865,7 +2208,26 @@ Mapping 会把 Json 文档映射成 Luncene 所需的扁平格式
 
 
 
-字段的数据类型
+**字段属性**
+
+每个字段可以设置多种属性
+
+- index
+  - 是否所有该字段
+- analyzer
+  - 为字段指定分词器，未指定则使用默认的
+- format
+  - 定义日期或数值的格式
+- store
+  - 是否单独存储字段值（默认不存储）
+    - 这个存储是独立于`_source`的存储
+- fields（子字段）
+  - 多字段设置，==允许一个字段以多种方式索引==
+- 等等
+
+
+
+**字段的数据类型**
 
 - 简单类型
   - 字符串: `string`
@@ -1881,7 +2243,7 @@ Mapping 会把 Json 文档映射成 Luncene 所需的扁平格式
 
 
 
-Dynamic Mapping
+**Dynamic Mapping**
 
 - 在写入文档的时候，如果这个文档不存在，会自动创建索引
 - Dynamic mapping 机制，使得我们无需手动定义 Mapping
@@ -1893,7 +2255,9 @@ Dynamic Mapping
 
 
 
-更改 Mapping 的字段类型
+**更改 Mapping 的字段类型**
+
+> Mapping一旦创建，就不能直接修改已有字段的类型，但可以添加新字段
 
 - 新增字段
 
@@ -1904,27 +2268,17 @@ Dynamic Mapping
 - 已存在的字段
 
   - 一旦已经有数据写入，就不支持修改字段定义
-  - Lucene（英：鲁森~）实现的倒排索引，一旦生成后，就不允许修改
-  - 如果想要改变字段类型，必须使用 ReIndex Api, 重建索引
+    - Lucene（英：鲁森~）实现的倒排索引，一旦生成后，就不允许修改
+    - 如果想要改变字段类型，必须使用 ReIndex Api, 重建索引
 
+  
   
 
 ![image-20250105231108572](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250105231111069.png)
 
 
 
-#### 自定义 mapping
 
-~~~json
-put index_name
-{
-    "mappings":{
-        "properties":{
-            ........
-        }
-    }
-}
-~~~
 
 
 
@@ -1967,177 +2321,95 @@ Null_Value
 
 
 
-Mapping 多字段属性及配置自定义 Analyzer
 
-- 默认 text 字属性，会加上一个 keyword 类型的子字段，用于精确值搜索
 
-- 使用不同的 analyzer
+## 模板
 
-  - 不同语言
+> Index Template，是一种用于自动为新索引预定义设置的机制
 
-  - 还支持为搜索和索引指定不同的 analyzer
+通过模板，可以统一管理索引的Mapping、Settings等配置，避免每次创建索引时重复定义
 
-  - 自定义 analyzer, es 提供的都不能满足我们需求时，我们自己写一个
 
-    - 主要就是定义这 3 个组件
 
-    - Character Filters：字符过滤器
+帮助我们设定 Mappings 和 Settings，并按照一定的规则，==自动匹配到新创建的索引上==
+- 模板仅在一个索引被新创建时，才会产生作用，修改模板不会影响已经创建的索引
+- 可以设定多个索引模板，这些设置会被 "merge" 在一起
+- 可以指定 "order" 的数值，控制 "merging" 的过程
 
-      - 针对原始文本处理
 
-    - Tokenizer：分词器
 
-      - 按照规则切分为单词
+### 模板类型
 
-    - Token Filters：Token(分词、词条)过滤器
+1. 组件模板
+2. 索引模板
+   - 可以包含组件模板的集合，也可以直接指定设置，映射和别名
 
-      
+二者可以结合使用，以更灵活地管理索引的配置
 
-    
 
 
+### 组件模板
 
-精确值(Exact values) vs 全文本（Full Text)
+- 是一种可重用的配置块，用于配置mapping、settings、aliases
+- ==它们不会直接应用于一组索引==
+- 它可以被多个索引模板引用，从而实现配置的复用
 
-- 精确值包含数字/日期/具体的字符串
-  - ES 中的 keyword
-- 全文本：非结构化的文本数据
-  - ES 中的 text
-- 区别
-  - 精确值不需要做分词的处理
 
 
+**核心组件**
 
+1. template：定义部分索引配置（settings、mappings等）
+2. version：定义模板的版本
 
 
 
+例如
 
+1. 创建一个settings的组件模板
+2. 创建一个mappings的组件模板
+3. 创建一个索引模板
+   - composed_of参数，引用这2个组件模板
 
+**模板合并规则**
 
-#### 内部对象的映射
+1. settings：后面的配置会覆盖前面的配置
+2. mappings：字段会合并，冲突字段以后面的配置为准
+3. aliases：别名会合并
 
-> ES 会动态监测新的对象域，并映射它们为对象，在 properties 属性下列出内部域
 
-~~~json
-{
-  "gb": {
-    "tweet": { 		//根对象
-      "properties": {
-        "tweet":            { "type": "string" },
-        "user": {  //内部对象
-          "type":             "object",
-          "properties": {
-            "id":           { "type": "string" },
-            "gender":       { "type": "string" },
-            "age":          { "type": "long"   },
-            "name":   { //内部对象
-              "type":         "object",
-              "properties": {
-                "full":     { "type": "string" },
-                "first":    { "type": "string" },
-                "last":     { "type": "string" }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-~~~
 
+### 索引模板核心组件
 
+1. index_patterns
 
-#### 内部对象是如何索引的
+   - 定义模板的匹配规则
+   - 支持通配符（*）和正则表达式
+   - 例如：log-*匹配所有log-开始的索引
 
-> Lucene 是不理解内部对象的，Lucene 文档是由一组 k-v 对列表组成的
->
-> 为了能让 ES 有效的索引内部对象，它会把文档做转换
+2. template
 
-即：内部域通过名称引用，出现多级时，跟着对象的引用一直引用下去就行了。例如：user.name.full
+   - 定义模板的具体配置信息
+   - 配置settings、mappings、aliases等
 
-~~~json
-{
-    "tweet":            [elasticsearch, flexible, very],
-    "user.id":          [@johnsmith],
-    "user.gender":      [male],
-    "user.age":         [26],
-    "user.name.full":   [john, smith],
-    "user.name.first":  [john],
-    "user.name.last":   [smith]
-}
-~~~
+3. priority
 
+   - 定义模板的优先级
+   - 当多个模板匹配同一个索引时，优先级高的模板回覆盖优先级低的模板
 
+   
 
-#### 内部对象数组
 
-~~~json
-{
-    "followers": [
-        { "age": 35, "name": "Mary White"},
-        { "age": 26, "name": "Alex Jones"},
-        { "age": 19, "name": "Lisa Smith"}
-    ]
-}
-~~~
 
-这个域，文档在处理的时候，会向上面一样，进行扁平化处理
 
-~~~json
-{
-    "followers.age":    [19, 26, 35],
-    "followers.name":   [alex, jones, lisa, smith, mary, white]
-}
-~~~
 
+### 模板索引的应用案例
 
+1. 日志索引模板
+2. 时间序列索引模板
 
 
 
-## 索引模板
-
-> Index Template
-
-- 帮助我们设定 Mappings 和 Settings，并按照一定的规则，自动匹配到新创建的索引上
-  - 模板仅在一个索引被新创建时，才会产生作用，修改模板不会影响已经创建的索引
-  - 可以设定多个索引模板，这些设置会被 "merge" 在一起
-  - 可以指定 "order" 的数值，控制 "merging" 的过程
-
-
-
-Dynamic Template
-
-- 根据 ES 识别的数据类型，结合字段名称，来动态设定字段类型
-  - 所有的字符串类型都设定成 keyword，或者关闭 keyword 字段
-  - is 开头的字段都设置为 boolean
-  - long_开头的都设置成 long 类型
-
-
-
-批量和脚本化是提供一种模板方式快速构建和管理索引的方式，索引模板，它是一种告诉 ES 在创建索引时如何配置索引的方法，为了更好的复用性，7.8 版本开始引入了组件模板
-
-索引模板是告诉 ES 在创建索引时，如何配置索引的方法。在创建索引之前可以先配置模板，这样在创建索引(手动或文档建立索引)时，模板设置将用作创建索引的基础
-
-#### 模板类型
-
-##### 组件模板
-
-是可重用的构建块，用于配置映射，设置和别名；它们不会直接应用于一组索引
-
-##### 索引模板
-
-可以包含组件模板的集合，也可以直接指定设置，映射和别名
-
-#### 索引模板中的优先级
-
-1. 可组合模板优先于旧模板。如果没有可组合模板匹配给定索引，则旧版模板可能仍匹配并被应用
-2. 如果使用显式设置创建索引并且该索引也与索引模板匹配，则创建索引请求中的设置将优先于索引模板及其组件模板中指定的设置
-3. 如果新数据流或索引与多个索引模板匹配，则使用优先级最高的索引模板
-
-
-
-#### 内置索引模板
+### ES内置索引模板
 
 ES 具有内置索引模板，每个索引模板的优先级为 100，适用于以下索引模式
 
@@ -2151,198 +2423,7 @@ ES 具有内置索引模板，每个索引模板的优先级为 100，适用于�
 
 
 
-## 聚合查询 Aggregation
 
-- ES 除了提供搜索功能外，提供的针对 ES 数据统计分析功能，就是 Aggregation
-  - 实时性高
-  - Hadoop(T+1)
-- 通过聚合，可以得到一个数据的概念，聚合是分析和总结全套的数据，而不是寻找单个文档
-- 高性能，只需要一条语句，就可以从 ES 得到分析结果
-
-Kibana 的可视化报表中，很多功能都是 ES 的聚合功能实现的
-
-
-
-
-
-ES 提供了几大类聚合方式
-
-- Bucket Aggretation: 桶聚合
-  - ==一些列== 满足特定条件的文档的集合
-
-- Metric Aggretation：指标聚合
-  - 一些数学运算，可以对文档字段进行统计分析
-
-- Pipeline Aggretation：管道聚合
-  - 对其他的聚合结果进行二次聚合
-
-- Matrix Aggretation：矩阵聚合
-  - 支持对多个字段的操作，并提供一个结果矩阵
-
-
-
-#### Bucket & Metric
-
-- Bucket 桶的概念类似于 SQL 中的分组，
-
-- Metric 指标类似于 SQL 中的统计函数 count、sum、max 等
-
-
-
-1. 桶 Buckets：满足特定条件的文档的集合
-2. 指标 Metrics：对桶内的文档进行统计计算
-
-指标聚合与桶聚合大多数情况组合在一起使用，桶聚合本质上是一种特殊的指标聚合，它的聚合指标就是数据的条数(count)
-
-
-
-官网给出了好几十种桶聚合，但是肯定是不能一个一个去看的，所以要站在设计的角度上来分类理解，主要有以下三类：
-
-![image-20220620163557154](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201635557.png)
-
-
-
-#### 多个聚合
-
-~~~sh
-GET /test-agg-cars/_search
-{
-    "size" : 0,
-    "aggs" : { 
-    // agg 的名字
-        "popular_colors" : { 
-        //terms 桶的类型
-            "terms" : { 
-              "field" : "color.keyword"
-            }
-        },
-        //agg 的名字
-        "make_by" : { 
-            "terms" : { 
-              "field" : "make.keyword"
-            }
-        }
-    }
-}
-~~~
-
-![image-20220620165554791](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201655354.png)
-
-
-
-##### 聚合的嵌套
-
-这个新的聚合层让我们可以将 avg 度量嵌套置于 terms 桶内。实际上，这就为每个颜色生成了平均价格
-
-~~~sh
-GET /test-agg-cars/_search
-{
-   "size" : 0,
-   "aggs": {
-      "colors": {
-         "terms": {
-            "field": "color.keyword"
-         },
-         "aggs": { 
-            "avg_price": { 
-               "avg": {
-                  "field": "price" 
-               }
-            }
-         }
-      }
-   }
-}
-~~~
-
-![image-20220620165933604](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206201659248.png)
-
-
-
-##### 动态脚本的聚合
-
-ES 支持一些基于脚本(生成运行时的字段)的复杂的动态聚合
-
-
-
----
-
-#### ES 聚合-Metrics 聚合
-
-> 指标聚合 Metrics Aggregation，类似于 sql 中的 avg()、count()、min()、max()
-
-适用时候，查看文档即可
-
-
-
-
-
-#### ES 聚合-Pipline
-
-> 管道聚合：让上一步的聚合结果成为下一个聚合的输入，这就是管道集合
-
-管道机制的场景场景
-
-1. Tomcat 管道机制
-2. 责任链模式
-   - 管道机制在设计模式上属于责任链模式
-3. ElasticSearch 的管道机制
-   - 简单而言：让上一步的聚合结果，成为下一个聚合的输入
-
-
-
-
-
-1. 第一个维度：管道聚合有很多不同 **类型**，每种类型都与其他聚合计算不同的信息，可以将这些类型分为两类
-
-   - 父级：父级聚合的输出提供了一组管道聚合，它可以计算新的存储桶或新的聚合以添加到现有存储桶中
-   - 兄弟：同级聚合的输出提供的管道聚合，并且能够计算与该同级聚合处于同一级别的新聚合
-
-2. 第二个维度：根据功能设计的意图
-
-   - 前置聚合可能是 Bucket 聚合，后置的可能是基于 Metric 聚合，那么它就可以成为一类管道
-
-   - 进而引出了：`xxx bucket`
-
-   - Bucket 聚合-> metric 聚合：bucket 聚合的结果，成为下一步 metric 聚合的输入
-
-     - Average bucket
-
-     - Min/Max/Sum bucket
-
-     - Stats bucket
-
-     - Extended stats bucket
-
-
-
-
-
-## 基于词项和全文的搜索
-
-#### 基于 Term 词项的查询
-
-- Term
-  - 是表达语意的最小单位，搜索和利用统计语言模型进行自然语言处理都需要处理 Term
-- 特点
-  - Term Level Query
-    - Term Query/Range 查询/Exists 查询/Prefix 查询/Wildcard 通配符查询
-  - ES 中，Term 查询，对输入的搜索词 ==不做分词==。
-    - 会将输入作为一个整体作为搜索条件，在倒排索引中查找精确的词项，并且使用相关度算分公式，给每个包含该词项的文档进行相关性算分后返回。例如："Apple Store" 的匹配
-  - 可以通过 `Constanc Score` 将一个查询转换为：==Filter, 避免算分==，并利用缓存，提供性能
-  - 想要精确查询：增加子字段 keyword，进行严格匹配
-
-
-
-#### 基于全文本的查询
-
-- Match Query/Match Phrase Query/Query String Query
-- 特点
-  - 索引和搜索时，都会进行分词，查询字符串先传递到一个合适的分词器，然后生成一个供查询的词项列表
-  - 查询时
-    - 先对输入的查询进行分词
-    - 然后每个词逐项进行底层查询，最终将结果进行合并
-    - 为每个文档生成一个算分，分数高的排在前面
 
 
 
@@ -2463,7 +2544,17 @@ post blogs/_search
 
 ## 结构化搜索
 
-#### 结构化数据
+> ES结构化搜索是值：对具有明确结构的数据进行精确匹配的搜索
+
+与全文搜索不同，结构化搜索通常用于查询：==非文本字段==（例如：日期、数字、枚举等）
+
+并且==结构化搜索不涉及分词与相关性评分==
+
+
+
+
+
+### 结构化数据
 
 - 日期、时间、数字、布尔这类的数据结构化
   - 有精确的格式，我们可对这些格式进行逻辑操作
@@ -2478,7 +2569,7 @@ post blogs/_search
 
 
 
-#### 结构化搜索
+### 结构化搜索
 
 > 结构化查询并不关心文件的相关度或评分，我们得到的结果总是：要么存在于集合中，要么不存在
 
@@ -2504,7 +2595,9 @@ post blogs/_search
 
    
 
+结构化搜索的常见查询类型
 
+- term、terms、range、existes、prefiex、wildcard、regexp，总的来说与Term-level类似
 
 
 
@@ -2522,7 +2615,11 @@ post blogs/_search
 
 
 
-#### 相关性 Relevance
+### 相关性
+
+相关性Relevance：指搜索结果与用户查询的匹配程度
+
+Relevance Score：用于量化这种匹配程度的数值
 
 - 搜索的相关性算分，==描述了一个文档和查询语句匹配的程度==
 - ES 会对每个匹配查询条件的结果进行算分：`_score` 表示
@@ -2537,7 +2634,13 @@ post blogs/_search
 
 
 
+==ES中，相关性基于以下因素：词频TF、逆文档频率IDF、字段长度==
+
+
+
 词频 TF
+
+> 查询词在文档中出现的次数越多，相关性越高
 
 - Term Frequency：检索词在一篇文档中出现的频率
   - 检索词出现的次数/文档的总字数
@@ -2549,6 +2652,8 @@ post blogs/_search
 
 
 逆文档频率 IDF
+
+> 查询词在整个索引中出现的频率越低，相关性越高
 
 - DF：检索词在文档中出现的频率
 - IDF：Inverse Document Frequency
@@ -2568,25 +2673,22 @@ BM25
 
 
 
-Boosting Relevance
 
-- Boosting 是控制相关度的一种手段
-  - 索引、字段、查询子条件，上面都可以设置 boost 值
-- 参数 boost 的含义
-  - boost > 1，打分的相关度相对性提升
-  - 0 < boost < 1, 打分的权重相对性降低
-  - boost < 0, 贡献负分
+
+字段长度
+
+> 文档中字段的长度越短，相关性越高（因为更短的字段通常更集中地描述了内容）
 
 
 
-#### 评分标准
+### 评分标准
 
 > 调试一条复杂的查询语句时，想要理解_score 如何计算的是非常困难的
 
 Explain API 查看 TF-IDF
 
 - ES 在每个查询语句中都有一个 explain 参数，将 `explain` 设为 `true` 就可以得到更详细的信息
-- explain 可以让返回结果添加一个_score 评分的得来依据
+- explain 可以让返回结果添加一个==_score 评分的得来依据==
 - explain 的输出结果代价是相当昂贵的，只能用作调试工具，不能用于生产环境
 
 ~~~json
@@ -2638,29 +2740,26 @@ GET /_search?explain
 
 
 
-#### Function Score Query
+### 影响相关性评分的因素
 
-`function_score` 属性查询，可以优化算分
-
-
-
-可以在查询结束后，对每一个匹配的文档进行一系列的重新算分，根据新生成的分数进行排序
-
-
-
-提供了几种默认的计算分值的函数
-
-- Weight
-  - 为每一个文档设置一个简单而不被规范化的权重
-- Field Value Factor
-  - 使用该数值来修改 `_score`，例如将 "热度"、"点赞数" 考虑进来
-  - 可以引入：modifier、factor 来进一步平滑分数
-- Random Score
-  - 为每一个用户使用一个不同的，随机计算分结果
-- 衰减函数
-  - 以某个字段的值为标准，距离某个值越近，得分越高
-- Script Scort
-  - 自定义脚本完全控制所需逻辑
+- 查询类型
+  - 不同的查询类型会影响评分
+- 字段权重
+  - 可以通过`boost`参数调整字段的权重
+  - Boosting Relevance
+    - Boosting 是控制相关度的一种手段
+      - 索引、字段、查询子条件，上面都可以设置 boost 值
+    - 参数 boost 的含义
+      - boost > 1，打分的相关度相对性提升
+      - 0 < boost < 1, 打分的权重相对性降低
+      - boost < 0, 贡献负分
+- 自定义评分：function_score函数
+- 文档长度
+  - 较短的文档，通常得分更高
+- 词频和逆文档频率
+  - 词频越高，逆文档频率越低，得分越高
+- 查询逻辑
+  - and、or会影响评分
 
 
 
@@ -2690,19 +2789,61 @@ GET /_search?explain
 
 > 索引别名，可以实现零停机运维
 
+Index alias：是一个==指向一个或多个索引的逻辑名称==
+
+它允许通过别名来访问多个索引，或者在不影响客户端的情况下切换底层索引
+
+
+
+例如：my_alias索引名指向2个索引
+
+~~~json
+{
+    "actions":[
+        {
+            "add":{
+                "index":"index1",
+                "alias":"my_alias"
+            }
+        },
+        {
+            "add":{
+                "index":"index2",
+                "alias":"my_alias"
+            }
+        }
+    ]
+}
+~~~
+
+
+
+应用场景
+
+1. 无缝切换索引
+   - 将my_alias从`index_v1`切换到`index_v2`,客户端无需修改代码
+2. 基于时间的索引
+   - 对应日志或时间序列的数据，通常会按天、周、月等创建索引
+   - 通过别名，可以方便的查询特定时间范围的数据
+   - 例如：每天创建一个索引，别名指向新的索引即可
+3. 多租户架构
+   - 为每个租户创建一个索引，使用别名指向租户的索引
+4. 读写分离
+   - 为索引创建2个别名，一个读、一个写
+   - 写入时使用：write_alias
+   - 查询时使用：read_alias
+
 
 
 ## Suggester 搜索建议
 
 现代的搜索引擎，一般会提供 Suggest as you type 的功能
 
-帮助用户在搜索的过程中，进行 ==自动补全或者纠错==。通过协助用户输入更精准的关键词，提高后续搜索阶段文档匹配的程度
+Suggester帮助用户在搜索的过程中，进行 ==自动补全或者纠错==。通过协助用户输入更精准的关键词，提高后续搜索阶段文档匹配的程度
 
 
 
-ES 使用 Suggester API 实现
-
-原理
+ES 使用 Suggester API 实现，原理如下：
 
 - 将输入的文本分解为 Token，然后在索引的字典里查找相似的 Term 并返回给用户
 - 根据不同的使用场景，ES 设计了 4 种类别的 Suggesters
@@ -2711,31 +2852,88 @@ ES 使用 Suggester API 实现
 
 
 
-#### Term Suggester
+### Term Suggester
 
-- Suggester 是一种特殊类型的搜索，text 里是调用时候提供的文本，通常来自于用户界面上用户输入的内容
-- 用户输入的 "lucen" 是一个错误的拼写
-- 会到指定的字段“body " 上搜索，当无法搜索到结果时，返回建议的词
+**用途：**基于编辑距离==提供拼写纠正建议==
 
+**原理：**根据用户输入的词条，从索引中查找相似的词条
 
-
-> 每个建议都包含了一个算分，相似性是通过 Levenshtein Edit Distance 算法实现的
-
-核心思想：一个词改动多少字符就可以和另一个词一致。提供了许多可选参数来控制相似性的模糊程度
+**适用场景：**拼写纠错、模糊匹配
 
 
+
+例如：
+
+- 用户输入的 text中："helo" 是一个错误的拼写
+- ES会到指定的字段field：“title" 上搜索，当无法搜索到结果时，返回建议的词
+
+~~~json
+{
+    "suggest":{
+        "my_sugg":{
+            "text":"helo",
+            "term":{
+                "field":"title"
+            }
+        }
+    }
+}
+~~~
+
+
+
+返回结果：
+
+- > 每个建议都包含了一个算分，相似性是通过 Levenshtein Edit Distance 算法实现的，用于衡量2个字符串之间的相似度
+
+- 核心思想：一个词改动多少字符就可以和另一个词一致。提供了许多可选参数来控制相似性的模糊程度
+
+~~~json
+{
+  "suggest": {
+    "my_suggestion": [
+      {
+        "text": "helo",
+        "offset": 0,
+        "length": 4,
+        "options": [
+          {
+            "text": "hello",
+            "score": 0.8,
+            "freq": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+~~~
 
 
 
 Suggestion 的几种 Mode
 
-- Missing: 如果索引中已经存在，就不提供建议
+- Missing： 如果索输入词在索引中不存在时，提供建议，==默认模式==
 - Popular：推荐出现频率更加高的词
 - Always：无论是否存在，都提供建议
+- Prefix：基于前缀匹配返回建议词
+- 等等
 
 
 
-#### Phrase Suggester
+### Phrase Suggester
+
+Phrase(短语、词组、惯用语)
+
+**用途：**提供==短语级别==的拼写纠正建议
+
+**原理：**分析用户输入的短语，推荐更合适的完整短语
+
+**适用场景：**短语拼写纠错
+
+
+
+
 
 - 在 Term Suggester 上增加了一些额外的逻辑
 - 支持更多的一些参数
@@ -2745,14 +2943,20 @@ Suggestion 的几种 Mode
 
 
 
-#### Completion Suggester
+### Completion Suggester
 
-> 提供了自动完成（Auto Complete)的功能，用户每输入一个字符，就需要即时发送一个查询请求到后端查找匹配项
+> 提供了==自动补全==（Auto Complete)的功能，用户每输入一个字符，就需要即时发送一个查询请求到后端查找匹配项
+
+**原理：**使用内存中的数据结构（FST,Finite State Transducer)快速匹配前缀
+
+**适用场景：**搜索框自动补全
+
+
 
 - 对性能比较苛刻
   - ES 采用了不同的数据结构，并发采用倒排索引完成
   - 采用了将 Analyze 的数据编码成 FST 和索引一起存放。FST 会被 ES 整个加载进内存，速度很快
-- FST 只能用于前缀查找
+- ==FST 只能用于前缀查找==
 
 
 
@@ -2766,13 +2970,19 @@ Suggestion 的几种 Mode
 
 
 
-#### Context Suggester
+### Context Suggester
 
-> 实现上下文感知的搜索
+> 实现上下文感知的搜索，在自动补全的基础上，支持上下文过滤
+
+**原理：**结合上下文信息，提供更精准的建议
+
+**适用场景：**带上下文过滤的自动补全
+
+
 
 可以定义 2 种类型的 Context 上下文
 
-- Categroy：任意的字符串
+- Categroy：任意种类分类的字符串
 - Geo：地理位置信息
 
 
@@ -2785,10 +2995,16 @@ Suggestion 的几种 Mode
 
 
 
-精准度和召回率
+### 精准度和召回率
 
-- 精准度：Completion > Phrase > Term
-- 召回率：Term > Phrase > Completion
+- 精准度：返回的建议中，有多少是用户真正想要的
+  - 精准度=相关建议数量/总的建议数量
+  - Completion > Phrase > Term
+
+- 召回率：用户真正想要的建议中，有多少被返回
+  - 召回率Recall = 相关建议数量/总的相关建议数量
+  - Term > Phrase > Completion
+
 - 性能：Completion > Phrase > Term
 
 
@@ -2806,7 +3022,7 @@ Suggestion 的几种 Mode
 
 ## 分布式查询及其相关性算分
 
-#### 分布式搜索的运行机制
+分布式搜索的运行机制
 
 - ES 的搜索分为 2 个阶段
   - 第一个阶段：Query
@@ -2814,21 +3030,31 @@ Suggestion 的几种 Mode
 
 
 
-#### Query 阶段
+### Query 阶段
 
 ![image-20250107213824815](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250107213826803.png)
 
-例子：3 个主分片、3 个副本分片
+例子：3 个主分片、3 个副本分片，同时`my_index`分布在这3个分片上
 
-- 用户发出搜索请求到 ES 节点。节点收到请求后，会以 Coordinating 节点的身份角色，在主、副分片（例子是 6 个）中随机选择分片（3 个），发送查询请求
+1. 客户端向ES集群发送请求
+2. 协调节点的身份角色接收请求
+   - 请求首先到达协调节点Coordinating Node
+3. 分发查询
+   - 协调节点将查询分发到索引的所有相关分片（Primary或Replica Shard)
+   - 通常会选择负载较低的分片（主分片或者副本分片任意选择一个）
+     - 假设（可能）选择P0、P1、P2
+4. 分片执行查询
+   - 每个分片在本地执行查询，找到匹配的文档，并计算相关性算法
+   - 每个分片会返回 from+size 个排序后的文档 id 和排序值给 Coordinating node
+5. 返回结果给协调节点
 
-- 被选中的分片执行查询，进行排序。
 
-  - 然后每个分片会返回 from+size 个排序后的文档 id 和排序值值给 Coordinating node
 
-    
 
-#### Fetch 阶段
+
+
+
+### Fetch 阶段
 
 - Coordinating node 将从 Query 阶段，每个分片获取的排序后的文档 id 列表重新排序，选取 from+size 个文档 id
 - 以 `multi get` 请求的方式，到相应的分片获取详细的文档信息
@@ -2837,32 +3063,32 @@ Suggestion 的几种 Mode
 
 
 
-#### Query  Then Fetch 潜在的问题
+### Query  Then Fetch 潜在的问题
 
-- 性能问题
+1. 深度分页及性能问题
 
-  - 每个分片上需要查询的文档个数：X = from+size
-  - 最终协调者节点需要处理：分片数*X
-  - 深度分页问题
+   - 每个分片上需要查询的文档个数：X = from+size
 
-- 相关性算分
+   - 最终协调者节点需要处理：分片数*X
 
-  - 每个分片都基于自己的分片上的数据进行相关性算分
-  - 这会导致打分偏离的情况，特别是数据量少的时
-  - 相关性算分在分片之间是相互独立的，当文档总数很少的情况下，如果主分片 > 1, 主分片越多，相关性算分越不准
+   - 深度分页问题
 
-- 解决算分不准问题？
+2. 相关性算分不一致问题
 
-  1. 数据量不大时，可以将主分片数设置为 1
-  2. 使用 DFS Query Then Fetch
+   - 查询阶段，每个分片都基于自己的分片上的数据进行相关性算分
 
-  - 搜索的 URL 中，指定参数 `dfs_query_then_fetch`
-  - 到每个分片把每个分片的词频和文档频率进行搜集，然后完整的进行一次相关性算分
-  - 但是，耗费更多的 cpu 和内存，性能低下，==一般不建议使用==
+   - 这会导致打分偏离的情况，特别是数据量少的时
+
+   - 相关性算分在分片之间是相互独立的，当文档总数很少的情况下，如果主分片 > 1, 主分片越多，相关性算分越不准
+     - 数据量不大时，可以将主分片数设置为 1
+     - 使用 DFS Query Then Fetch
+       - 搜索的 URL 中，指定参数 `dfs_query_then_fetch`
+       - 查询阶段，每个分片把所有分片的词频和逆文档频率进行搜集，然后在取回阶段，完整的进行一次相关性算分
+       - 但是，耗费更多的 cpu 和内存，性能低下，==一般不建议使用==
 
 
 
-### 排序及 Doc values & Fielddata
+## 排序及 Doc values & Fielddata
 
 - ES 默认采用相关性算分对结果进行降序排序
 - 支持对一个、多个字段排序
@@ -2871,36 +3097,99 @@ Suggestion 的几种 Mode
 
 
 
+Doc Values和Fielddata是支持排序和聚合的两种数据结构
+
+### ES排序的实现方式
+
+> 排序的实现方式取决于字段的类型和存储结构（Doc Values、Fielddata
+
+**排序基本原理**
+
+- ES执行排序时，需要获取每个文档中指定字段的值
+- 这些值加载到内存中，然后根据指定的排序规则进行排序
+- 排序的效率取决于字段的类型及存储方式(Doc Values、Fielddata)
 
 
-#### 排序的过程
 
-- 排序是针对 ==字段原始内容== 进行的，倒排索引无法发挥作用
-- 需要用到正排索引，通过文档 Id 和字段, 快速得到字段原始内容
-- ES 有 2 种实现排序的方式
-  - Fielddata
-  - Doc Values(列式存储，对 Text 类型无效)
-    - 默认开启的
-    - 对 text 字段排序，需要将 fielddata 设置为 true
-    - 不建议，同时对 text 排序也没有啥意义
+**排序的字段类型**
 
-|          | Doc Values                   | Field data                                   |
-| -------- | ---------------------------- | -------------------------------------------- |
-| 何时创建 | 索引时，和倒排索引以前创建   | 搜索时候动态创建                             |
-| 创建位置 | 磁盘文件                     | JVM Heap                                     |
-| 优点     | 避免占用大量内存             | 索引速度快，不要占用额外的磁盘空间           |
+1. 数值类型
+   - integer、float、日期等等，默认使用：Doc Values，排序效率高
+2. 字符串类型
+   - 如果是`keyword`类型，默认使用Doc Values
+   - 如果是`text`类型，默认不支持排序（因为会被分词），除非启用fielddata属性来支持排序
+
+
+
+### Doc Values
+
+它以列式存储的方式，将字段值存储在磁盘上，适合处理大量数据
+
+**工作原理**
+
+- 列式存储
+  - 将每个字段的值按列存储
+  - 例如：对于price字段，所有文档的price值会存储在一起
+- 磁盘存储
+  - Doc Values的数据在磁盘上，只要需要时，才会加载到内存中
+  - 减少了内存的占用，适合处理大规模数据
+
+对于数值、日期、keyword字段，默认启用Doc Values排序
+
+
+
+**缺点**
+
+- 不支持分词文本字段
+  - 对于`text`类型，默认不会启用doc_values，除非字段是`keyword`类型
+- 磁盘I/O
+  - 频繁排序和聚合操作可能会导致磁盘I/O增加
+
+
+
+**启用禁用Doc Values**
+
+- mapping时，可以指定字段的`doc_values`是否启用
+- 关闭 Doc Values
+  - 默认开启，可通过 Mapping 设置关闭
+    - 增加索引的速度/减少磁盘占用空间
+  - 关闭后，如果要重新打开，需要重建索引
+  - 什么时候关闭？
+    - ==很明确不需要做排序及聚合分析==
+
+
+
+### Fielddata
+
+- Fielddata是ES中，对于分词文本字段（text）进行排序和聚合的数据结构
+- 与doc values不同，fielddata是存储在内存中
+- 默认fielddata是禁用的，因为对内存消耗大
+
+
+
+**工作原理**
+
+- 内存存储
+  - 将字段的值加载到JVM内存中
+  - 对于分词字段，Fielddata会存储分词后的词项及其对应的文档
+- 动态加载
+  - 第一次需要排序或聚合时动态加载的
+  - 加载后，数据会一直保留在内存中，直到段（segment)被合并或删除
+
+
+
+在设计mapping时，要合理选择字段类型和Doc values或Fielddata
+
+|          | Doc Values                   | Field data                                    |
+| -------- | ---------------------------- | --------------------------------------------- |
+| 何时创建 | 索引时，和倒排索引以前创建   | 搜索时候动态创建                              |
+| 存储位置 | 磁盘文件                     | JVM Heap                                      |
+| 适用字段 | 数值、日期、keyword          | 分词文本字段（text)                           |
+| 优点     | 避免占用大量内存             | 索引速度快，不要占用额外的磁盘空间            |
 | 缺点     | 索引速度慢，占用额外磁盘空间 | 文档过多时，动态创建开销大，占用过多 JVM Heap |
-| 默认值   | ES 2.x 后                     | ES1.x 及以前                                  |
+| 默认值   | ES 2.x 后                    | ES1.x 及以前                                  |
 
 
-
-关闭 Doc Values
-
-- 默认开启，可通过 Mapping 设置关闭
-  - 增加索引的速度/减少磁盘占用空间
-- 关闭后，如果要重新打开，需要重建索引
-- 什么时候关闭？
-  - ==很明确不需要做排序及聚合分析==
 
 
 
@@ -2908,13 +3197,99 @@ Suggestion 的几种 Mode
 
 ES 默认根据相关性算分返回前 10 条数据
 
-from: 开始位置
-
-Size: 期望获取文档的总数
 
 
+### 基本分页
 
-#### ES 分布式系统中深度分页问题
+- from+size
+- from：指定从第几条数据开始返回，默认0
+- Size：期望获取返回文档的总数
+
+
+
+**优点**
+
+- 简单易用，适合小规模分页
+
+
+
+**缺点**
+
+- 深度分页性能问题
+- 限制：ES默认from+size不能超过1w条，可调整，但是不建议
+
+
+
+### 游标分页
+
+> search_after，是一种基于游标的分页方式，适合深度分页
+
+- 原理
+  - 通过指定上一页最后一条数据的排序值（sort字段），获取下一页的数据
+- 使用条件
+  - 必须指定一个唯一的排序字段（例如`_id`或时间戳）
+  - 需要与`sort`参数配合使用
+
+
+
+**游标分页优点**
+
+- 适合深度分页，性能由于from+size
+- 不受1w条限制
+
+
+
+**缺点**
+
+- 需要维护排序值和游标状态
+- 不支持跳页，只能顺序分页
+
+
+
+
+
+### 滚动查询scorll（遍历）
+
+Scroll Api是用于遍历大量数据的机制，适合一次性获取大量数据（例如：导出数据）。是一个==对结果进行遍历的操作==
+
+
+
+**原理**
+
+- 创建一个快照，在指定时间内报错所有状态不变，通过游标逐批获取数据。当有新的数据写入后，无法被查到
+- 每次查询后，输入上一次的 scorll Id
+
+
+
+**使用条件**
+
+- 需要维护`scroll_id`
+- 适合离线任务或数据导出
+
+
+
+**缺点**
+
+- 占用资源多，滚动上下文消耗内存
+- 不适合实时查询
+
+
+
+### 不同的搜索类型和使用场景
+
+- Regular
+  - 需要实时获取顶部部分文档（平时普通的 10 条记录）
+- 遍历
+  - 使用scorll，需要全部文档，例如：导出全部数据
+- 实时遍历
+  - search_after：适合实时性较高的遍历场景，不需要维护滚动上下文
+- 分页
+  - 普通小规模：选用 From 和 Size
+  - 如需要深度分页：选用 Search After（考虑局限性）
+
+
+
+### ES 分布式系统中深度分页问题
 
 ![image-20250107231751829](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250107231753417.png)
 
@@ -2922,43 +3297,24 @@ Size: 期望获取文档的总数
 
 - 当查询：From = 990, Size = 10，需要查询的数据：from+size
 
-  - 会在每个分片上先都获取 1000 个文档，然后，通过 coordinating node 整合所有结果。最后，再通过排序选择前 1000 个文档
+  - 会在每个分片上先都获取 1000 个文档，返回给协调节点
+
+  - 协调节点
+
+    - 整合所有分片的结果
+    - 再通过排序选择前 1000 个文档，返回最前面的10条
 
   - 页数越深，占用内存越多
-
+  
     - 为了避免深度分片带来的内存开销
     - ==ES 有一个设定，默认限定到了 10000 个文档==
-
+  
     
 
-如何避免深度分页问题？
+深度分页替代方案
 
-- `search_after`, 可以实现实时获取下一页文档信息
-  - 不支持指定页数（From)
-  - 只能往下翻
-- 第一步搜索需要指定 sort，并保证值是唯一的
-- 然后使用上一次结果的 sort 值，在下一个文档的 sort 值进行查询，从而实现翻页
-
-
-
-Scroll Api
-
-> 对结果进行遍历的操作
-
-- 创建一个快照，有新的数据写入后，无法被查到
-- 每次查询后，输入上一次的 scorll Id
-
-
-
-不同的搜索类型和使用场景
-
-- Regular
-  - 需要实时获取顶部部分文档（平时普通的 10 条记录）
-- Scorll
-  - 需要全部文档，例如：导出全部数据
-- Pagination
-  - 普通：选用 From 和 Size
-  - 如下需要深度分页：选用 Search After（考虑局限性）
+1. search_after
+2. scorll api
 
 
 
@@ -2966,7 +3322,7 @@ Scroll Api
 
 
 
-#### ES 采用乐观并发控制
+### ES 采用乐观并发控制
 
 - ES 中的文档是不可变更的。如果要更新一个文档，会将文档标记为删除，同时增加一个全新的文档，同时新文档的 version 字段加 1
 - 内部版本控制
@@ -2976,94 +3332,6 @@ Scroll Api
   - `version`+`version_type` = external
 
 
-
-## Bucket & Metric Aggregation
-
-~~~mysql
-select
-count(brand)     //Metric: 一系列的统计方法
-from cars
-group by brand;  //Bucket：一组满足条件的文档
-~~~
-
-~~~json
-post employees/_search
-{
-    "aggs":{
-        //agg1
-        "max_salary":{
-            "max":{
-                "field": "salary"
-            }
-        },
-        //agg2
-        "min_salary":{
-            "min":{
-                "field": "salary"
-            }
-        }
-    }
-}
-~~~
-
-
-
-Bucket
-
-- 按照一定的规则，将文档分配到不同的桶 Bucket 中，从而达到分类的目的
-- ES 提供了一些常见的 Bucket Aggregation
-  - Terms
-  - 数字类型
-    - Range/Data Range
-    - Histogram/Date Histogram
-- 支持嵌套：桶里面再做分桶
-
-
-
-#### Pipeline 聚合分析
-
-支持对聚合分析的结果，再次进行聚合分析
-
-`buckets_path`: 指定聚合的层级关系
-
-
-
-#### 聚合的作用范围与排序
-
-(分组的条件)
-
-- ES 聚合分析的默认作用范围是：query 的查询结果集
-- ES 同时还支持以下方式聚合的作用范围
-  - query
-  - Filter
-  - Post Filter
-  - Global：忽略 query 中的条件
-
-
-
-聚合中的排序
-
-- 指定 order, 按照 conunt 和 key 进行排序
-  - 默认按照 count 降序排序
-  - 指定 size，就能返回相应的桶
-
-
-
-#### 聚合分析的原理及精准度问题
-
-
-
-分布式系统的近似统计算法
-
-![image-20250108143145040](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143146652.png)
-
-
-
-![image-20250108143354007](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143355382.png)
-
-
-
-![image-20250108143427699](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108143429289.png)
 
 
 
@@ -3126,10 +3394,21 @@ Nested Data Type
 - 索引的 Mappings 发生变更：字段类型更改、分词器、字典更新等
 - 索引的 Settings 发生变更：索引的主分片数发生改变
 - 集群内，集群间需要做数据迁移
+- 数据转换
+- 版本升级
+- 等等
+
+Reindex是ES 提供的内置的API，用于将一个索引中的数据复制到另一个索引中
 
 
 
-ES 提供了内置的 API
+支持的功能
+
+1. 从源索引读取数据
+2. 将数据写入目标索引中
+3. 支持数据过滤、转换、脚本处理
+
+
 
 - Update By Query: 在原有索引上重建
 - Reindex: 在其他索引上重建索引
@@ -3138,11 +3417,66 @@ ES 提供了内置的 API
 
 
 
+基本用法
+
+- source：原索引
+- dest：目标索引
+
+~~~json
+POST _reindex
+{
+  "source": {
+    "index": "source_index",
+    "slices":5 //提高并行化
+  },
+  "dest": {
+    "index": "target_index",
+    "refresh":false //禁止刷新
+  }
+}
+~~~
+
+
+
+高级用法
+
+- 过滤数据：reindex过程中只要满足条件的数据
+- 数据转换：可通过script脚本进行数据转换
+- 批量大小控制：每个批次复制多少数据
+- 跨级群Reindex：可以从远程集群复制数据到本地集群
+
+
+
+### Reindex性能优化
+
+1. 并行化Reindex：通过指定`slices`参数，将Reindex操作并行化，提高性能
+2. 禁止刷新
+   - Reindex过程中，禁止目标索引的刷新（refresh），减少资源消耗
+3. 使用任务管理API
+   - Reindex操作可能花费很长时间，可以使用任务管理API监控和管理Reindex任务
+
+### Reindex注意事项
+
+- 数据一致性
+  - Reindex过程中，源索引的数据可能发生变化，导致数据不一致
+  - 可通过版本控制或快照机制确保数据一致性问题
+- 性能影响
+  - Reindex操作可能占用大量资源，影响集群性能
+  - 建议低峰期执行Reindex操作，==并使用并发化和批量大小控制优化性能==
+- 索引设置
+  - 目标索引的mapping和分片设置，应该与源索引一致，否则可能导致数据丢失或性能问题
+
+
+
 ## Ingest Pipline
+
+ES提供的一种数据预处理管道工具，==允许在文档被索引之前，对数据进行转换、丰富和过滤==，从而减少后续查询和分析的复杂度
+
+
 
 ![image-20250108171637255](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108171638479.png)
 
-ES5.0 之后，引入了一种新的节点类型 Ingest Node。默认配置下，每个节点都是 Ingest Node
+ES5.0 之后，引入了一种新的节点类型 Ingest Node。==默认配置下，每个节点都是 Ingest Node==
 
 - 具有预处理数据的能力，可拦截 Index 或 Bulk Api 的请求
 - 对数据进行转换，并重新返回给 Index 或 Bulk APi
@@ -3154,6 +3488,10 @@ ES5.0 之后，引入了一种新的节点类型 Ingest Node。默认配置下�
 
 
 
+
+
+Ingest Pipeline由一系列的处理器（Processor）组成，每个processer可以对文档进行特定的操作
+
 ![image-20250108172115439](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/20250108172116975.png)
 
 
@@ -3162,11 +3500,15 @@ ES5.0 之后，引入了一种新的节点类型 Ingest Node。默认配置下�
 
 - Split Processor
   - 例如：将给定字段值分成一个数组
+- set processor
+  - 设置字段的值
+
 - Remove/Rename
   - 例：移除一个重命名字段
 - Append
   - 例: 为商品增加一个标签
 - Covert
+  - 转换字段的数据类型
   - 例: 从字符串转换为 float
 - Data/Json
   - 例：日期格式转换、字符串-Json 格式转换
@@ -3176,7 +3518,7 @@ ES5.0 之后，引入了一种新的节点类型 Ingest Node。默认配置下�
 
 
 
-Ingest Node VS Logstash
+**Ingest Node VS Logstash**
 
 Ingest Node 与 Logstash 有一些功能上的重合
 
@@ -3184,13 +3526,13 @@ Ingest Node 与 Logstash 有一些功能上的重合
 
 
 
-#### painless script
+## painless script
 
-- ES5.0 后引入，专门为 ES 设计的，扩展了 Java 语法
+- ES5.0 后引入，专门为 ES 设计的脚本语言，扩展了 Java 语法
 
-- 6.0 开始，ES 只支持 Painless。Groovy、JavaScript、Python 都不再支持
+- 6.0 开始，ES 只支持 Painless脚本语言。Groovy、JavaScript、Python 都不再支持
 
-- Painless 支持所有 Java 的数据类型及 Java API 子集
+- Painless 语法与Java和Groovy类似，支持所有 Java 的数据类型及 Java API 子集
 
 - Painless Script 特性
 
