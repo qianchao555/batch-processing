@@ -1008,7 +1008,7 @@ PUT /my_index
     - update api: version+1
 - 查询文档
 - Bulk Api
-  - 一次 api 调用，对索引进行不同的操作
+  - 一次 api 调用，对索引进行不同的操作，每个操作都是独立的，即使某个操作失败，也不影响其他操作的执行
   - 并且可以多不同索引进行操作
   - 操作中，单条失败，不会影响其他操作
 - 批量读取：mget Api
@@ -4391,110 +4391,9 @@ ES Curator
 
 # ES 原理初步认识
 
-集群中，一个白正方形代表一个节点-Node，节点之间多个绿色小方块组成一个 ES 索引，一个 ES 索引本质是一个 Lucene Index
-
-一个索引下，分布在多个 Node 中的绿色方块为一个分片-Shard
-
-即 Shard = Lucene Index
-
-![image-20220620211959189](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202120849.png)
 
 
-
-
-
-Lucene 是一个全文搜索库，ES 建立在 Lucene 之上：
-
-![image-20220620212355322](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202123427.png)
-
-
-
-
-
-#### Lucene
-
-在 Lucene 里面有很多的 segment，我们可以把它们看成 Lucene 内部的 mini-index
-
-![image-20220620212718856](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202127950.png)
-
-
-
-segment 内部有很多数据结构
-
-1. **Inverted index**(倒排索引)
-
-   - 最为重要
-
-   - ![image-20220620213016476](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202130604.png)
-
-   - 主要包括两个部分
-
-     - 有序的数据字段 dictionary(包括单词 term 和它出现的频率)
-     - 与单词 term 对应的 postings(即存在这个单词的文件)
-
-   - 当进行搜索时，首先将搜索的内容分解，然后再字典里找到对应的 term，从而查找到与搜索相关的文件内容
-
-   - ![image-20220620213310255](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202133361.png)
-
-   - 查询 the fury
-
-   - ![image-20220620213409957](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202134032.png)
-
-     
-
-2. Stored Fields
-
-   - stored fields 是一个简单的键值对，默认情况下 ES 会存储整个文件的 Json source
-
-   - 例如查找包含特定标题内容的文件时
-
-   - ![image-20220620213753421](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202137520.png)
-
-     
-
-3. Document values
-
-   - 上述两种结构无法解决排序、聚合等问题，所有提出了 document values
-   - 本质上是一个列式的存储，它高度优化了具有相同类型的数据的存储结构
-   - ![image-20220620214013344](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202140445.png)
-
-4. cache
-
-
-
-搜索时，Lucene 会搜索所有的 segment，然后将每个 segment 的搜索结果返回，最后合并呈现给用户
-
-Lucene 的一些特性在这个过程中非常重要
-
-1. segment 是不可变的
-   - delete：当删除发生时，Lucene 做的只是将其标志位置为删除，但是文件还是会在它原来的地方，不会发生改变
-   - update：所以对于更新来说，本质上它做的工作是：先删除，然后重新索引（Re-index
-2. 随处可见的压缩
-   - Lucene 非常擅长压缩数据，基本上所有教科书上的压缩方式，都能在 Lucene 中找到
-3. 缓存所有的数据
-   - Lucene 也会将所有的信息做缓存，这大大提高了它的查询效率
-
-
-
-当 ES 搜索一个文件时，会为文件建立相应的缓存，并且会定期(每秒)刷新这些数据，然后这些文件就可以被搜索到
-
-![image-20220620214547223](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202145321.png)
-
-所有 ES 会将这些 Segment 合并，这个过程中 segment 最终会被删除掉，生成一个新的 segment，这就是为什么添加文件可能会使索引所占空间变小，它会发生 merge，从而可能会有更多的压缩
-
-![image-20220620214739766](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202215396.png)
-
-
-
-路由 routing
-
-每个节点都保留一份路由表，当请求到达任何一个节点时，ES 都有能力将请求转发的期望的节点 shard 上进一步处理
-
-
-
-
-
-#### ES 整体结构
+## ES 整体结构
 
 ![image-20220620231634563](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202316667.png)
 
@@ -4505,13 +4404,13 @@ Lucene 的一些特性在这个过程中非常重要
    - 由多个 segment 组成(就是倒排索引)，每个 segment 存储着 doc 文档
    - commit point 记录了索引 segment 的信息
 
-#### Lucene 索引结构
+## Lucene 索引结构
 
 ![image-20220620231950382](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202319532.png)
 
 ![image-20220620232007170](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202320315.png)
 
-#### Lucene 处理流程
+## Lucene 处理流程
 
 ![image-20220620231120127](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/es_img/202206202311241.png)
 
