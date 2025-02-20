@@ -1,6 +1,4 @@
-## Docker学习与总结
-
-### 虚拟化技术与虚拟机
+# 虚拟化技术与虚拟机
 
 > **为了提高系统以及硬件资源的利用率，引入了虚拟化技术。虚拟化是一种资源管理技术，**它可以将各种实体资源抽像后再分隔，从而打破实体结构的限制，最大程度的提高资源的利用率。**Docker属于软件虚拟化技术中操作系统层虚拟化技术**，它是基于LXC(Linux容器)实现的一个应用容器引擎。Docker可以让开发者打包他们的应用以及依赖环境到一个可移植的容器中，然后可以将这个容器快速部署开发、测试或生产环境中
 
@@ -41,7 +39,7 @@
 
 
 
-### Docker是什么
+# Docker是什么
 
 1. **Docker** 使用 `Google` 公司推出的 [Go 语言](https://golang.google.cn) 进行开发实现，基于 `Linux` 内核的 [cgroup](https://zh.wikipedia.org/wiki/Cgroups)，[namespace](https://en.wikipedia.org/wiki/Linux_namespaces)，以及 [OverlayFS](https://docs.docker.com/storage/storagedriver/overlayfs-driver/) 类的 [Union FS](https://en.wikipedia.org/wiki/Union_mount) 等技术，对进程进行封装隔离，属于 [操作系统层面的虚拟化技术](https://en.wikipedia.org/wiki/Operating-system-level_virtualization)。由于隔离的进程独立于宿主和其它的隔离的进程，因此也称其为容器。
 2. **Docker** 在容器的基础上，进行了进一步的封装，从文件系统、网络互联到进程隔离等等，极大的简化了容器的创建和维护。使得 `Docker` 技术比虚拟机技术更为轻便、快捷。
@@ -51,7 +49,7 @@
 
 ---
 
-### Docker架构
+# Docker架构
 
 Docker使用客户端-服务器架构模式，使用远程API来管理和创建Docker容器
 
@@ -62,68 +60,102 @@ Docker使用客户端-服务器架构模式，使用远程API来管理和创建D
 
 
 
----
-
-### 基本概念
+# 镜像、容器、仓库
 
 
 
-#### 镜像
+## Docker 镜像
 
 1. 操作系统分为 **内核** 和 **用户空间**。对于 `Linux` 而言，内核启动后，会挂载 `root`文件系统为其提供用户空间支持
+
 2. **Docker 镜像**（Image），就相当于是一个 `root` 文件系统。比如官方镜像 `ubuntu:18.04` 就包含了完整的一套 Ubuntu 18.04 最小系统的 `root` 文件系统
-3. **Docker 镜像** 是一个特殊的文件系统，除了提供容器运行时所需的程序、库、资源、配置等文件外，还包含了一些为运行时准备的一些配置参数（如匿名卷、环境变量、用户等）。镜像 **不包含** 任何动态数据，其内容在构建之后也不会被改变
+
+3. **Docker 镜像** 是一个特殊的文件系统，除了提供容器运行时所需的程序、库、资源、配置等文件外，还包含了一些为运行时准备的一些配置参数（如匿名卷、环境变量、用户等）
+
 4. 分层存储
    - 因为镜像包含操作系统完整的 `root` 文件系统，其体积往往是庞大的，因此在 Docker 设计时，就充分利用 [Union FS](https://en.wikipedia.org/wiki/Union_mount) 的技术，将其设计为分层存储的架构。所以严格来说，镜像并非是像一个 `ISO` 那样的打包文件，镜像只是一个虚拟的概念，其实际体现并非由一个文件组成，而是**由一组文件系统组成，或者说，由多层文件系统联合组成**。
-   - 镜像构建时，会一层层构建，前一层是后一层的基础。每一层构建完就不会再发生改变，后一层上的任何改变只发生在自己这一层。比如，删除前一层文件的操作，实际不是真的删除前一层的文件，而是仅在当前层标记为该文件已删除。在最终容器运行的时候，虽然不会看到这个文件，但是实际上该文件会一直跟随镜像。因此，在构建镜像的时候，需要额外小心，**每一层尽量只包含该层需要添加的东西，任何额外的东西应该在该层构建结束前清理掉**。
+   - 镜像构建时，会一层层构建，前一层是后一层的基础。
+     - 每一层构建完就不会再发生改变，后一层上的任何改变只发生在自己这一层
+     - 比如，删除前一层文件的操作，实际不是真的删除前一层的文件，而是仅在当前层标记为该文件已删除。在最终容器运行的时候，虽然不会看到这个文件，但是实际上该文件会一直跟随镜像
+     - 因此，在构建镜像的时候，需要额外小心，**每一层尽量只包含该层需要添加的东西，任何额外的东西应该在该层构建结束前清理掉**。
    - 分层存储的特征还使得镜像的复用、定制变的更为容易。甚至可以用之前构建好的镜像作为基础层，然后进一步添加新的层，以定制自己所需的内容，构建新的镜像。
+   
+   
 
-#### 容器
+## 容器
 
-1. 镜像和容器的关系
-   - 镜像（`Image`）和容器（`Container`）的关系，就像是面向对象程序设计中的 `类` 和 `实例` 一样，镜像是静态的定义，容器是镜像运行时的实体。容器可以被创建、启动、停止、删除、暂停等
-2. **容器的实质是进程**，但与直接在宿主执行的进程不同，容器进程运行于属于自己的独立的 [命名空间](https://en.wikipedia.org/wiki/Linux_namespaces)。因此容器可以拥有自己的 `root` 文件系统、自己的网络配置、自己的进程空间，甚至自己的用户 ID 空间。**容器内的进程是运行在一个隔离的环境里，使用起来，就好像是在一个独立于宿主的系统下操作一样**。这种特性使得容器封装的应用比直接在宿主运行更加安全。也因为这种隔离的特性，很多人初学 Docker 时常常会混淆容器和虚拟机
-3. 每一个容器运行时，是以镜像为基础层，在其上创建一个当前容器的存储层，我们可以称这个为容器运行时读写而准备的存储层为 **容器存储层**
-4. 容器存储层的生存周期和容器一样，容器消亡时，容器存储层也随之消亡。因此，任何保存于容器存储层的信息都会随容器删除而丢失
-5. 容器不应该向其存储层内写入任何数据，容器存储层要保持无状态化。所有的文件写入操作，都应该使用 [数据卷（Volume）]()、或者 [绑定宿主目录]()，在这些位置的读写会跳过容器存储层，直接对宿主（或网络存储）发生读写，其性能和稳定性更高。
+镜像（`Image`）和容器（`Container`）的关系：
+
+1. 就像是面向对象程序设计中的 `类` 和 `实例` 一样
+2. 镜像是静态的定义，容器是镜像运行时的实体
+3. 容器可以被创建、启动、停止、删除、暂停等
+
+
+
+1. **容器的实质是进程**，但与直接在宿主执行的进程不同，容器进程运行于属于自己的独立的 [命名空间](https://en.wikipedia.org/wiki/Linux_namespaces)。因此容器可以拥有自己的 `root` 文件系统、自己的网络配置、自己的进程空间，甚至自己的用户 ID 空间。**容器内的进程是运行在一个隔离的环境里，使用起来，就好像是在一个独立于宿主的系统下操作一样**。这种特性使得容器封装的应用比直接在宿主运行更加安全。也因为这种隔离的特性，很多人初学 Docker 时常常会混淆容器和虚拟机
+2. 每一个容器运行时，是以镜像为基础层，在其上创建一个当前容器的存储层，我们可以称这个为容器运行时读写而准备的存储层为 **容器存储层**
+3. 容器存储层的生存周期和容器一样，容器消亡时，容器存储层也随之消亡。因此，任何保存于容器存储层的信息都会随容器删除而丢失
+4. 容器不应该向其存储层内写入任何数据，容器存储层要保持无状态化。所有的文件写入操作，都应该使用 [数据卷（Volume）]()、或者 [绑定宿主目录]()，在这些位置的读写会跳过容器存储层，直接对宿主（或网络存储）发生读写，其性能和稳定性更高。
 6. 数据卷的生存周期独立于容器，容器消亡，数据卷不会消亡。因此，使用数据卷后，容器删除或者重新运行之后，数据却不会丢失
 
-#### 仓库
+
+
+## 仓库
 
 1. 镜像构建完成后，可以很容易的在当前宿主机上运行，但是，如果需要在其它服务器上使用这个镜像，我们就需要一个集中的存储、分发镜像的服务，[Docker Registry]() 就是这样的服务
 2. 一个 **Docker Registry** 中可以包含多个 **仓库**（`Repository`）；每个仓库可以包含多个 **标签**（`Tag`）；每个标签对应一个镜像；通常，一个仓库会包含同一个软件不同版本的镜像，而标签就常用于对应该软件的各个版本。我们可以通过 `<仓库名>:<标签>` 的格式来指定具体是这个软件哪个版本的镜像。如果不给出标签，将以 `latest` 作为默认标签
-3. 例子：以 [Ubuntu 镜像](https://hub.docker.com/_/ubuntu) 为例，`ubuntu` 是仓库的名字，其内包含有不同的版本标签，如，`16.04`, `18.04`。我们可以通过 `ubuntu:16.04`，或者 `ubuntu:18.04` 来具体指定所需哪个版本的镜像。如果忽略了标签，比如 `ubuntu`，那将视为 `ubuntu:latest`
 4. 仓库名经常以 **两段式路径**形式出现，比如 `jwilder/nginx-proxy`，前者往往意味着 Docker Registry 多用户环境下的用户名，后者则往往是对应的软件名。但这并非绝对，取决于所使用的具体 Docker Registry 的软件或服务
 
-##### Docker Registry 公开服务
 
-1. Docker Registry 公开服务是开放给用户使用、允许用户管理镜像的 Registry 服务。一般这类公开服务允许用户免费上传、下载公开的镜像，并可能提供收费服务供用户管理私有镜像
-2. 最常使用的 Registry 公开服务是官方的 [Docker Hub](https://hub.docker.com)，这也是默认的 Registry，并拥有大量的高质量的 [官方镜像](https://hub.docker.com/search?q=&type=image&image_filter=official)。除此以外，还有 Red Hat 的 [Quay.io](https://quay.io/repository/)；Google 的 [Google Container Registry](https://cloud.google.com/container-registry/)，[Kubernetes](https://kubernetes.io) 的镜像使用的就是这个服务；代码托管平台 [GitHub](https://github.com) 推出的 [ghcr.io](https://docs.github.com/cn/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-3. 在国内访问这些服务可能会比较慢。国内的一些云服务商提供了针对 Docker Hub 的镜像服务（`Registry Mirror`），这些镜像服务被称为 **加速器**。常见的有 [阿里云加速器](https://www.aliyun.com/product/acr?source=5176.11533457&userCode=8lx5zmtu)、[DaoCloud 加速器](https://www.daocloud.io/mirror#accelerator-doc) 等。使用加速器会直接从国内的地址下载 Docker Hub 的镜像，比直接从 Docker Hub 下载速度会提高很多
-4. 国内也有一些云服务商提供类似于 Docker Hub 的公开服务。比如 [网易云镜像服务](https://c.163.com/hub#/m/library/)、[DaoCloud 镜像市场](https://hub.daocloud.io)、[阿里云镜像库](https://www.aliyun.com/product/acr?source=5176.11533457&userCode=8lx5zmtu) 等
 
-##### 私有Docker Registry
+### Docker Registry 公开服务
 
-1. 除了使用公开服务外，用户还可以在本地搭建私有 Docker Registry。Docker 官方提供了 [Docker Registry](https://hub.docker.com/_/registry/) 镜像，可以直接使用做为私有 Registry 服务
+Docker Registry 公开服务是开放给用户使用、允许用户管理镜像的 Registry 服务
 
-### 安装Docker
+1. 最常使用的 Registry 公开服务是官方的 [Docker Hub](https://hub.docker.com)，这也是默认的 Registry，并拥有大量的高质量的 [官方镜像](https://hub.docker.com/search?q=&type=image&image_filter=official)。
 
-1. 参照我的下一篇单独提取出来的文章
-2. https://blog.csdn.net/qq_41884536/article/details/122645209?spm=1001.2014.3001.5501
+2. 除此以外，还有 Red Hat 的 [Quay.io](https://quay.io/repository/)；Google 的 [Google Container Registry](https://cloud.google.com/container-registry/)，[Kubernetes](https://kubernetes.io) 的镜像使用的就是这个服务；代码托管平台 [GitHub](https://github.com) 推出的 [ghcr.io](https://docs.github.com/cn/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 
-### 使用镜像
+3. 在国内访问这些服务可能会比较慢。
 
-Docker运行容器前需要本地存在对应的容器，如果本地不存在该镜像，Docker会从镜像仓库下载该镜像
+   - 国内的一些云服务商提供了针对 Docker Hub 的镜像服务（`Registry Mirror`），这些镜像服务被称为 **加速器**。常见的有 [阿里云加速器](https://www.aliyun.com/product/acr?source=5176.11533457&userCode=8lx5zmtu)、[DaoCloud 加速器](https://www.daocloud.io/mirror#accelerator-doc) 等。使用加速器会直接从国内的地址下载 Docker Hub 的镜像，比直接从 Docker Hub 下载速度会提高很多
 
-#### 获取镜像
+   
 
-1. 从Docker镜像仓库获取镜像的命令：docker pull
+### 私有Docker Registry
 
-   ~~~shell
-   $ docker pull [选项] [Docker Registry 地址[:端口号]/]仓库名[:标签]
-   ~~~
+除了使用公开服务外，用户还可以在本地搭建私有的Docker Registry，Docker 官方提供了 [Docker Registry](https://hub.docker.com/_/registry/) 镜像，可以直接使用做为私有 Registry 服务
 
-2. docker pull --help查看详细格式
+
+
+# Docker 镜像
+
+Docker运行容器前需要本地存在对应的容器，如果本地不存在该镜像，Docker会从镜像仓库下载该镜像后再运行，默认是从Docker Hub 公共镜像源下载
+
+
+
+## 查找镜像
+
+1. Docker hub中查找
+2. 命令搜索，列出所有相关的镜像
+
+~~~shell
+docker search ubuntu(xxx)
+~~~
+
+
+
+现在可以从镜像仓库拉取镜像了
+
+## 获取镜像
+
+docker pull
+
+~~~shell
+$ docker pull [选项] [Docker Registry 地址[:端口号]/]仓库名[:标签]
+~~~
+
+1. docker pull --help查看详细格式
 
    ~~~shell
    $ docker pull ubuntu:18.04
@@ -136,7 +168,7 @@ Docker运行容器前需要本地存在对应的容器，如果本地不存在�
    docker.io/library/ubuntu:18.04
    ~~~
 
-3. 上述镜像完整名为：docker.io/library/ubuntu:18.04
+2. 上述镜像完整名为：docker.io/library/ubuntu:18.04
 
 ##### 运行
 
@@ -169,7 +201,7 @@ Docker运行容器前需要本地存在对应的容器，如果本地不存在�
    - --------以下为shell命令
    - cat /etc/os-release ：查看当前系统版本的命令
 
-#### 列出镜像
+## 列出镜像
 
 docker image ls
 
@@ -177,8 +209,7 @@ docker image ls
 $ docker image ls
 REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
 redis                latest              5f515359c7f8        5 days ago          183 MB
-nginx                latest              05a60462f8ba        5 days ago          181 MB
-mongo                3.2                 fe9198c04d62        5 days ago          342 MB
+
 <none>               <none>              00285df0df87        5 days ago          342 MB
 ubuntu               18.04               329ed837d508        3 days ago          63.3MB
 ubuntu               bionic              329ed837d508        3 days ago          63.3MB
@@ -192,56 +223,107 @@ ubuntu               bionic              329ed837d508        3 days ago         
 
 2. docker system df：查看镜像、容器、数据卷所占用的空间
 
-##### 虚悬镜像
 
-1. 在上面的仓库中，可以看到镜像既没有仓库没标签，均为<none>
 
-2. 这是由于这个镜像与新的镜像名同名，就镜像名被取消，这一类称为虚悬镜像
+### 虚悬镜像
 
-3. ~~~shell
+在上面的仓库中，可以看到镜像既没有仓库没标签，均为<none>
+
+1. 这是由于这个镜像与新的镜像名同名，旧镜像名被取消，这一类称为虚悬镜像
+
+2. ~~~shell
    $ docker image ls -f dangling=true
    REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
    <none>              <none>              00285df0df87        5 days ago          342 MB
    ~~~
 
-4. 这一类镜像是可以随意删除的 docker image prune
+3. 这一类镜像是可以随意删除的
 
-##### 中间层镜像
+
+
+### 中间层镜像
 
 1. docker image ls：只会列出顶层镜像
 2. docker image ls -a：可以查看包括中间层镜像在内的所有镜像
 3. 删除那些依赖它们的镜像后，这些中间层依赖镜像也会被连带删除
 
-##### 列出部分镜像
 
-1. docker image ls ubuntu：根据仓库名列出镜像
-2. docker image ls ubuntu:18.04 ：列出特定的某个镜像
 
-#### 删除本地镜像
+### 列出部分镜像
 
-使用docker image rm 命令删除
+- docker image ls ubuntu：根据仓库名列出镜像
+- docker image ls ubuntu:18.04 ：列出特定的某个镜像
+
+
+
+
+
+## 删除本地镜像
+
+使用docker image rm 命令删除、docker rmi  XXXimage
 
 ~~~shell
 $ docker image rm [选项] <镜像1> [<镜像2> ...]
 ~~~
 
+如果镜像存在实例运行，需要先删除实例才行
 
 
 
+## 更新镜像
 
----
+针对上面的ubuntu镜像，我们可以在里面安装一些软件，然后重新生成一个新的镜像，这就是更新 重新commit出一个新的镜像
 
-### 构建镜像
 
-> 以下关于Dockerfile的介绍参见[文章链接](https://blog.csdn.net/qq_41884536/article/details/122709159)
->
+
+## 镜像的导入导出
+
+注意：区别容器的导入导出
+
+
+
+1. 镜像导出
+   - docker save > xxxImage.tar  xxximageId
+2. 镜像导入
+   - docker load < xxImage.tar
+
+
+
+# 构建镜像
+
+如何构建我们自己的镜像？
+
 > 1. 通过docker commit命令，基于一个存在的容器构建出镜像
->    - 不建议采用这种方式构建镜像
+>   - 不建议采用这种方式构建镜像
 > 2. 编写dockerfile文件，并使用docker build命令来创建镜像
 
 
 
-#### 镜像底层原理
+例如
+
+~~~dockerfile
+From ubuntu
+MAINTAINER chao "chao"
+
+RUN /bin/echo 1234
+CMD /usr/sbin/ssh -D
+~~~
+
+接下来生成新的镜像文件
+
+~~~
+docker build -t chao/ubuntu:v1 .
+~~~
+
+注意：
+
+- v1：表示镜像的Tag标签
+- 每个指令都会在镜像上面创建新的层，每个指令的前缀必须是==大写==
+- `.`结尾表示Dockerfile文件所在的目录，可以使用绝对路径
+
+
+
+## 镜像底层原理
 
 1. 联合文件系统：UnionFS
    - Union文件系统：是一种分层、轻量级且高性能的文件系统，它支持对文件系统的修改作为一次提交来一层层的叠加。同时，可以将不同目录挂载到同一个虚拟文件系统下
@@ -253,9 +335,15 @@ $ docker image rm [选项] <镜像1> [<镜像2> ...]
 
 
 
-#### 使用Dockerfile定制镜像
 
-镜像的定制，实际上就是定制每一层所添加的配置、文件。
+
+# Dockerfile
+
+> 一个用来构建镜像的文本文件，文件内包含一条条构建镜像所需的指令和说明
+
+
+
+镜像的定制，实际上就是定制每一层所添加的配置、文件
 
 如果把每一层修改、安装、构建、操作的命令写入一个脚本文件，利用脚本来构建镜像，那么镜像构建透明性、体积性的问题都会解决。这个脚本就是Dockerfile。
 
@@ -273,28 +361,31 @@ Dockerfile文件结构大致分为4个部分
 Dockerfile文件包含一条条的指令，每一条指令构建一层，因此**每一条指令的内容，就是描述该层应当如何构建**。
 
 ~~~dockerfile
---例如：
 FROM nginx
 RUN echo 'hello,Docker!'
 ~~~
 
 
 
-##### FORM指定基础镜像
+## FORM指定基础镜像
 
-定制镜像，就是以一个镜像为基础，在其上进行定制。Dockerfile中，**FROM 必须是第一条指令**
+定制镜像，就是以一个基础镜像为基础，在其上进行定制
 
-同一个Dockerfile中构建多个镜像时，可以使用多个FROM指令
+Dockerfile中，**FROM 必须是第一条指令**
+
+在同一个Dockerfile中构建多个镜像时，可以使用多个FROM指令
 
 
 
-##### Maintainer维护人信息
+## Maintainer
 
 说明新镜像的维护人信息，格式为MAINTAINER userName  userEmail
 
+该指令不是必须的
 
 
-##### RUN命令
+
+## RUN命令
 
 此命令并不是docker run里面的run命令。
 
@@ -307,7 +398,7 @@ Run是镜像创建阶段使用的命令，RUN命令在构建时会创建一个�
 
 
 
-##### 构建镜像
+## 构建镜像
 
 docker build 命令进行镜像构建，可以从Dockerfile和上下文构建镜像
 
@@ -342,7 +433,7 @@ Successfully built 44aa4490ce2c
 
 
 
-##### 镜像构建上下文
+## 镜像构建上下文
 
 首先我们要理解 `docker build` 的工作原理。
 
@@ -367,7 +458,7 @@ docker build 还支持从url等方式构建
 
 
 
-##### git repo进行构建
+## git repo进行构建
 
 通过git仓库来构建镜像
 
@@ -394,7 +485,7 @@ Successfully built 038ad4142d2b
 
 
 
-##### 给定tar包构建
+## 给定tar包构建
 
 如果所给出的 URL 不是个 Git repo，而是个 `tar` 压缩包，那么 Docker 引擎会下载这个包，并自动解压缩，以其作为上下文，开始构建。
 
@@ -406,122 +497,26 @@ $ docker build http://server/context.tar.gz
 
 
 
-#### Dockerfile指令详解
-
-
-
-##### COPY复制文件
-
-COPY指令将从上下文目录中<源路径>的文件或目录复制到容器里的<目标路径>位置
-
-格式：
-
-1. COPY [--chown=<user>:<group>] <源路径>....<目标路径>      --chown(可选参数)用户改变复制到容器内文件的拥有者和属组
-2. COPY[--chown=<user>:<group>] ["<源路径>",..."<目标路径>"]
-
-~~~shell
-COPY package.json /usr/src/app/
-
-#源路径可以包含多个，甚至可以是通配符
-COPY hom* /mydir/
-COPY hom?.txt /mydir/
-~~~
-
-<目标路径>可以是容器内的绝对路径，也可以是相对于工作目录的相对路径(工作目录可以通过WORKDIR指令指定)，目标路径不需要事先创建，如果目录不存在会在复制文件前先行创建缺失的目录
-
-
-
-##### ADD更高级的复制文件
-
-ADD指令和COPY的格式和性质基本一致，但是在copy基础上增加了一些功能。
-
-尽可能的使用COPY，使用ADD的场合为自动解压等
-
-
-
-##### CMD容器启动命令
-
-CMD指令的格式和RUN相似，作用是**用于指定容器启动时，执行的命令**
-
-1. shell格式：cmd <命令>
-2. exec格式：**cmd ["可执行命令"，"参数1"，"参数2".。]  这是推荐的方式**
-3. 参数列表格式：cmd["参数1"，"参数2"...]。在指定了ENTRYPOINT指令后，用cmd指定具体的参数
-
-CMD指令就是用于指定默认的容器主进程的启动命令，每个Dockerfile只能有一个CMD命令，多个CMD命令存在时，只执行最后一个。若容器启动时，指定了运行的命令，则会覆盖CMD中指定的命令
-
-
-
-##### ENTRYPOINT入口点
-
-目的和CMD一样，都是在指定容器启动程序及参数，指定了entrypoint后，cmd的含义就发生了改变，不再是直接的运行其命令，而是将CMD的内容作为参数传给entrypoint指令。
-
-
-
-##### ENV
-
-设置环境变量，这些变量后续可被RUN指令使用，容器运行之后，也可以在容器中获取这些环境变量
-
-格式：
-
-1. ENV<key>     <value>     中间有一个空格
-2. ENV<key1>=<value1>  <key2>=<value2>
-
-
-
-##### EXPOSE暴露端口
-
-EXPOSE<端口1> [<端口2>...]
-
-expose指令是声明容器运行时提供服务的端口，这只是一个声明，在容器运行时并不会因为这个声明应用就会开启这个端口的服务。Expose仅仅是声明打算使用什么端口，并不会自动在宿主进行端口映射。
-
-docker run -p 这里会自动映射Expose的端口
-
-docker run -p <宿主端口>:<容器端口>  这个是映射宿主端口和容器端口，这里指定了端口，则不会映射Expose的端口
-
-
-
-##### WORKDIR指定工作目录
-
-WORKDIR <工作目录路径>，用于为Dockerfile中所有的RUN、CMD、COPY、ADD指令设定工作目录
 
 
 
 
-
-##### USER指定当前用户
-
-##### HEALTHCHECK健康检查
-
-##### ONBUILD
-
-##### LABEL为镜像添加元数据
-
-##### SHELL指令
-
-
-
-#### Dockerfile多阶段构建
-
-#### 构建多种系统架构支持的Docker镜像
-
-#### 实现原理
-
-
-
----
-
-### 操作容器
+# Docker 容器
 
 容器是独立运行的一个或一组应用，以及他们的运行态环境。
 
 虚拟机可以理解为模拟运行的一整套操作系统和跑在上面应用。
 
-#### 启动
+
+
+## 容器启动
 
 1. 基于镜像新建一个容器并启动
 2. 将在终止状态的容器重新启动
 
-##### 新建并启动
+
+
+
 
 主要命令为docker run
 
@@ -532,28 +527,48 @@ WORKDIR <工作目录路径>，用于为Dockerfile中所有的RUN、CMD、COPY�
 
 2. 以上命令启动之后，终止容器
 
-3. ~~~shell
+
+
+交互启动：-it
+
+1. ~~~shell
    $ docker run -t -i ubuntu:18.04 /bin/bash
    root@af8bae53bdd3:/#
    ~~~
 
-4. 以上命令启动容器后，会启动一个bash终端，允许用户进行交互。-t参数让Docker分配一个伪终端，并绑定到容器的标准输入上，-i参数让容器的标准输入保持打开，但是退出终端后，容器随着终止。
+2. -t参数：让Docker分配一个伪终端，并绑定到容器的标准输入上
 
-5. 利用docker run来创建容器时，Docker在后台允许的操作包括：
+3. -i参数：让容器的标准输入保持打开，但是退出终端后，容器随着终止
 
-   - 检查本地是否存在指定的镜像，没有就从registry下载
-   - 利用镜像创建并启动一个容器
-   - 分配一个文件系统，并在只读的镜像层外面挂载一层可读可写
-   - 从宿主主机配置的网桥接口中桥接一个虚拟接口到容器中
-   - 从地址池配置一个ip地址给容器
-   - 执行用户指定的应用程序
-   - 执行完毕后容器被终止 
+   
 
-##### 启动已终止容器
 
-1. docker container start 将一个已经终止(exited)的容器启动允许
 
-#### 守护态运行
+启动已终止容器
+
+- docker  start  containerID：将一个已经终止(exited)的容器启动允许
+
+
+
+## 容器查看
+
+docker ps -a ：`-a`表示all
+
+
+
+## 容器停止
+
+~~~shell
+docker stop containerID
+~~~
+
+
+
+
+
+
+
+## 守护态运行
 
 大多数情况都需要Docker在后台运行，而不是直接把执行命令的结果输出在当前宿主主机下，可以通过-d参数来使得容器在后台运行
 
@@ -570,54 +585,28 @@ WORKDIR <工作目录路径>，用于为Dockerfile中所有的RUN、CMD、COPY�
    77b2dc01fe0f3f1265df143181e7b9af5e05279a884f4776ee75350ea9d8017a
    ~~~
 
-3. 可见带有-d参数的容器并不会把结果输出到当前宿主主机上面
+3. 可见带有==-d参数==的容器并不会把结果输出到当前宿主主机上面
 
-#### 终止
 
-docker container stop终止一个运行中的容器
 
-docker container restart 命令会将一个运行态的容器终止，然后再重新启动它
+## 容器后台模式与进入容器
 
-#### 进入容器
+-d参数启动容器时，容器启动后如何进入容器？
 
-启动容器时，加入了-d参数，容器会进入后台，当需要进入容器进行操作时，可以采用docker attach 或者 docker exec 命令
+1. docker attach containerId
+   - 退出后，会导致容器也跟着停止
+2. docker exec containerId
+   - 退出后，容器正常运行，推荐使用
 
-1. 采用docker attach进入容器，当退出标准输入输出后，会导致该容器终止
 
-2. ~~~shell
-   $ docker run -dit ubuntu
-   243c32535da7d142fb0e6df616a3c3ada0b8ab417937c853a9e1c251f499f550
-   
-   $ docker container ls
-   CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
-   243c32535da7        ubuntu:latest       "/bin/bash"         18 seconds ago      Up 17 seconds                           nostalgic_hypatia
-   
-   $ docker attach 243c
-   root@243c32535da7:/#
-   ~~~
 
-3. 采用exec命令进入容器，从这个标准输入输出exit后，不会终止容器的停止
 
-4. ~~~shell
-   $ docker run -dit ubuntu
-   69d137adef7a8a689cbcb059e94da5489d3cddd240ff675c640c8d96e84fe1f6
-   
-   $ docker container ls
-   CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
-   69d137adef7a        ubuntu:latest       "/bin/bash"         18 seconds ago      Up 17 seconds                           zealous_swirles
-   
-   $ docker exec -i 69d1 bash
-   ls
-   bin
-   boot
-   dev
-   ...
-   
-   $ docker exec -it 69d1 bash
-   root@69d137adef7a:/#
-   ~~~
 
-#### 导出和导入
+## 容器的导出导入
+
+生成环境中，很多时候无法连接外网，所以有时候需要用到容器的导入导出
+
+
 
 1. 导出容器，docker export <容器id>
 
@@ -644,40 +633,74 @@ docker container restart 命令会将一个运行态的容器终止，然后再�
    $ docker import http://example.com/exampleimage.tgz example/imagerepo
    ~~~
 
-#### 删除
+
+
+## 删除
 
 docker container rm 来删除一个处于终止状态的容器
 
 docker container rm -f参数   可以删除一个处于运行中的容器 ，Doker会发送sigkill信号给容器
 
-清理所有处于终止状态的容器
+## 清零所有处于终止状态的容器
 
 docker container prune 
 
 
 
-------------------------------------以上对应CSDN博客上第一章节-----------------
+## 容器别名
+
+`--name`启动容器时，指定别名，后续操作中就可以不用使用容器ID进行操作了，直接使用别名操作
 
 
 
-### 访问仓库
+## 容器日志查看
 
-Repository是集中存放镜像的地方
+例如：容器名为user-uat
 
-注册服务器Registry，实际上Registry是管理仓库的具体服务器，每个服务器可以有多个仓库，而每个仓库下面有多个镜像。
+实时查看docker容器名为user-uat的最后10行的日志
 
-仓库可以被认为是一个具体的项目或目录，例如对于docker.io/ubuntu来说，docker.io是注册服务器地址，ubuntu是仓库名，但是大部分时候并不严格区分
+~~~shell
+docker logs -f -t --tail 10 user-uat
+~~~
 
-#### Docker Hub
+
+
+
+
+
+
+# Docker仓库
+
+仓库（Repository）是集中存放镜像的地方
+
+注册服务器Registry
+
+- 实际上Registry是管理仓库的具体服务器，每个服务器可以有多个仓库，而每个仓库下面有多个镜像
+
+仓库可以被认为是一个具体的项目或目录
+
+- 例如对于docker.io/ubuntu来说，docker.io是注册服务器地址，ubuntu是仓库名，但是大部分时候并不严格区分
+
+
+
+## 公有仓库
 
 Docker官方维护的一个公共仓库，里面包含了超过2650000个镜像，大部分需求都可以通过Docker Hub直接下载镜像来实现
 
-##### 拉取镜像
+Docker hub，现在叫做Docker Cloud
 
-1. 可以通过docker search 命令来查找官方仓库中的镜像
-2. 通过docker pull命令来将镜像下载到本地
+https://hub.docker.com/
 
-##### 推送镜像
+1. 注册
+2. 用注册的账号，本地登陆
+3. 镜像准备
+4. 推送镜像到Docker hub服务器
+
+
+
+
+
+### 推送镜像
 
 1. 用户可以登录Docker Hub后通过docker push命令将自己的镜像推送到doucker hub
 
@@ -700,11 +723,15 @@ Docker官方维护的一个公共仓库，里面包含了超过2650000个镜像�
    username/ubuntu
    ~~~
 
-##### 自动构建
+### 自动构建
 
 此功能收费。。。。
 
-#### 私有仓库
+
+
+
+
+## 私有仓库
 
 通过docker-registry工具，可以构建私有的镜像仓库
 
@@ -787,258 +814,212 @@ REPOSITORY                         TAG                 IMAGE ID            CREAT
 127.0.0.1:5000/ubuntu:latest       latest              ba5877dc9bec        6 weeks ago         192.7 MB
 ~~~
 
-#### 私有仓库高级配置
+## 私有仓库高级配置
 
 暂未写
 
-#### Nexus3
+## Nexus3
 
 暂未写
 
 
 
+# Web应用实例
 
-
-
-
----
-
-### 数据管理
-
-Docker内部以及容器之间管理数据，容器中管理数据主要有两种方式：数据卷（Volumes）、挂载主机目录（Bind mounts)
-
-Docker]将应用与运行的环境打包形成容器运行， Docker容器产生的数据，如果不通过docker commit生成新的镜像，使得数据做为镜像的一部分保存下来， 那么当容器删除后，数据自然也就没有了。 为了能保存数据在Docker中我们使用卷
-
-卷就是目录或文件，设计目的就是：数据的持久化，完全独立于容器的生存周期，因此Docker不会在容器删除时删除其挂载的数据卷
-
-#### 数据卷
-
-**数据卷是一个可供一个或多个容器使用的特殊目录**，主要特性：
-
-1. 数据卷可以在容器之间共享和重用
-2. 对数据卷的修改会立马生效
-3. 对数据卷的更新，不用影响镜像
-4. 数据卷默认会一直存在，即使容器被删除
-
-提醒：数据卷的使用，类似与Linux下对目录或文件进行mount（挂载），镜像中被指定为挂载点的目录中的文件会复制到数据卷中（仅数据卷为空时会复制）
-
-##### 创建数据卷
-
-1. docker volume create my-volume
-2. 查看所有的数据卷：docker volume ls
-3. 查看指定数据卷的信息：docker volum inspect my-volume
-
-##### 启动一个挂载数据卷的容器
-
-使用--mount参数标记将数据卷挂载到容器里，在一次docker run中可以挂载多个数据卷。
-
-以下为通过nginx:alpine镜像来创建一个名为web的容器，并加载一个数据卷到容器的/usr/share/nginx/html目录
+例如拉取一个 Python的应用，training/webapp
 
 ~~~shell
-$ docker run -d -P \
-    --name web \
-    # -v my-vol:/usr/share/nginx/html \
-    --mount source=my-vol,target=/usr/share/nginx/html \
-    nginx:alpine
+docker pull training/webapp
+docker run -d -P training/webapp python app.py
 ~~~
 
-查看数据卷的具体信息：
-
-1. 查看web容器的信息：docker inspect web
-
-2. 数据卷在Mounts下面
-
-3. ~~~shell
-   "Mounts": [
-       {
-           "Type": "volume",
-           "Name": "my-volume",
-           "Source": "/var/lib/docker/volumes/my-volume/_data",
-           "Destination": "/usr/share/nginx/html",
-           "Driver": "local",
-           "Mode": "",
-           "RW": true,
-           "Propagation": ""
-       }
-   ],
-   ~~~
-
-##### 删除数据卷
-
-docker volume rm my-volume
-
-数据卷是设计来持久化数据的，它的生命周期独立于容器，Doker不会在容器被删除后自动删除数据卷，如果需要在删除容器时，同时删除数据卷，使用命令：docker rm -v my-volume
-
-#### 挂载主机目录
-
-##### 挂载一个主机目录作为数据卷
+- `-d`：让容器后台启动
+- `-P`：将容器内部使用的网络端口，映射到我们使用的主机上
+  - ==这个端口映射是随机的==
 
 ~~~shell
-$ docker run -d -P \
-    --name web \
-    # -v /src/webapp:/usr/share/nginx/html \
-    --mount type=bind,source=/src/webapp,target=/usr/share/nginx/html \
-    nginx:alpine
+[root@pdai ~]# docker run -d -P training/webapp python app.py
+ec3eb9ae218494d5aa5902c1ca4435733567b5e81319f02e5d2509d45cbc25da
+[root@pdai ~]# docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS                     NAMES
+ec3eb9ae2184        training/webapp     "python app.py"     18 seconds ago      Up 17 seconds       0.0.0.0:32768->5000/tcp   gifted_agnesi
 ~~~
 
-上述命令加载主机/src/webapp目录到容器的/usr/share/nginx/html目录，再次查看数据卷具体信息：docker inspect web。此时挂载主机目录的配置信息如下：
+
+
+## 访问webapp
+
+注意看：容器启动后端口映射关系👆
+
+Docker开放了5000端口（默认Python Flask端口），映射到主机端口32768上面
+
+- 即：从宿主机看，宿主机暴露了端口32768给我们使用
+- 从容器内部看，容器暴露了一个5000端口
+
+浏览器访问：localhost:32768，就可以访问这个页面了
+
+有点像nginx反向代理：Java应用采用的10510端口，nginx配置的80端口，隐藏了服务器主机的端口
+
+
+
+## 设置自定义映射端口
 
 ~~~shell
-"Mounts": [
-    {
-        "Type": "bind",
-        "Source": "/src/webapp",
-        "Destination": "/usr/share/nginx/html",
-        "Mode": "",
-        "RW": true,
-        "Propagation": "rprivate"
-    }
-],
+docker run -d -P 5001:5000 training/webapp python app.py
 ~~~
 
-##### 挂载一个本地主机文件作为数据卷
+此时，已经跑了2个docker应用了，主机的5001、32768端口都映射到容器内部的5000端口上，并且这2个应用是完全隔离的
 
-`--mount` 标记也可以从主机挂载单个文件到容器中
+
+
+## 查看web应用网络端口
+
+查看指定容器的某个端口映射到宿主机的端口号
+
+1. docker ps 
+2. docker port 容器ID/容器名字
+
+
+
+## 查看web应用程序 容器的进程
+
+docker top 容器ID/容器名字
+
+
+
+## 检查web应用程序
+
+docker inspect 容器ID/容器名字
+
+返回一个JSON文件，记录着该Docker 容器的配置和状态等相关信息
+
+
+
+## 停止、重启Web容器
+
+docker stop 容器ID/容器名字
+
+docker restart 容器ID/容器名字 
+
+
+
+## ==容器互联==
+
+如果这个web容器，需要访问数据库，那么就需要启动一个数据库容器，这就涉及到容器互联
+
+
 
 ~~~shell
-$ docker run --rm -it \
-   # -v $HOME/.bash_history:/root/.bash_history \
-   --mount type=bind,source=$HOME/.bash_history,target=/root/.bash_history \
-   ubuntu:18.04 \
-   bash
-
-root@2affd44b4667:/# history
-1  ls
-2  diskutil list
+docker run -d --name pgDB training/postgres
 ~~~
 
-##### 匿名挂载
-
-默认挂载到宿主机的/var/lib/docker/volumes/目录下生成的随机命名
 
 
+db容器与web容器互联
 
+~~~shell
+docker run -d -p 5001:5000 --name web --link pgDB:pgDBAlias training/webapp python app.py
+~~~
 
+--link参数格式为 --link name:alias
 
-#### 数据卷容器
+- name：要链接的容器的名称
+- alias：这个连接的别名
 
-数据卷用于容器之间共享数据，如果有一些持续更新的数据需要在容器之间共享，最好的办法就是创建数据卷容器
-
-数据卷容器就是一个正常的容器，专门用来提供数据卷供其他容器挂载
-
-
-
-可以利用数据卷对其中的数据进行备份、恢复、迁移
-
+> Docker 在两个互联的容器之间创建了一个安全隧道，而且不用映射它们的端口到宿主主机上
+>
+> 在启动 db 容器的时候并没有使用 -p 和 -P 标记，从而避免了暴露数据库端口到外部网络上
 
 
 
+## 容器公开的连接信息
+
+docker通过2种方式，为容器公开连接信息
+
+1. 环境变量env
+2. 更新/etc/hosts文件
 
 
 
 
 
----
-
-### 使用网络
-
-> docker容器与容器之间如何通信？主机和容器之间为何可以通信？如何自定义网络配置？
 
 
+# Docker网络配置
 
-#### 单机中的Docker网络
+> docker容器与容器之间如何通信？
+>
+> 主机和容器之间为何可以通信？
+>
+> 如何自定义网络配置？
 
-Docker服务启动后，默认会创建一个docker0的网桥(其上有一个docker0的内部接口)，它在内核层连通了其他的物理或虚拟网卡，这就将所有容器和本地主机都放到同一个物理网络上，从而主机和容器之间可以通信
+
+
+## 单机Docker网络
+
+### docker默认网桥
+
+物理机上安装Docker服务，默认会创建一个docker0的网桥(其上有一个docker0的内部接口)，它在内核层连通了其他的物理或虚拟网卡，这就将所有容器和本地主机都放到同一个物理网络上，从而主机和容器之间可以通信
 
 
 
 Docker允许通过外部访问容器或容器互联的方式来提供网络服务
 
-安装docker时，会在host上创建三个网络：bridge、none、host
+
+
+docker network ls命令查看：
+
+安装docker时，会自动在host上创建三个网络：bridge、none、host
 
 1. host：容器不会虚拟出自己的网卡、配置自己的ip等，而是使用宿主机的ip和端口
 2. none：该模式关闭了容器的网络功能
 3. **bridge：此模式会为每一个容器分配、设置ip等信息，并将容器连接到docker0虚拟网桥，通过docker0网桥以及Iptables nat表配置与宿主机通信**
 4. Container模式：容器不会创建自己的网卡、配置的ip，而是和一个指定的容器共享IP、端口范围
 
-#### Bridge模式
 
-Docker server启动时，会在宿主机创建一个名叫docker0的虚拟网桥，此主机上启动的容器会连接到这个虚拟网桥上。
 
-分配IP：Docker从私有IP网段中选择一个与宿主机不同的IP地址和子网分配给docker0，连接到docker0的所有容器从这个子网中选择一个未占用的ip使用
+## Bridge模式
+
+Docker server启动时，会在宿主机创建一个名叫docker0的虚拟网桥，此主机上启动的容器默认情况下会桥接连接到这个虚拟网桥上。
 
 该模式下的通信：连接在同一网桥上的容器可以相互通信
 
-容器之间要互相通信，必须要有属于同一个网络的网卡
+容器之间要互相通信，必须要有属于同一个网络的网卡，即使用docker0接口的ip作为所有容器的默认网关
 
 ![](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/docker_img/202303141108070.png)
 
 
 
+### 容器创建时的IP分配
+
+docker在创建一个新容器时，会执行如下操作
+
+1. 创建一对虚拟接口/网卡，即veth-eth0 pair，分别放到本地宿主机和新容器中
+2. 本地主机一端桥接到默认的docker0或指定网桥上，并且具有唯一的名字，例如：vethxxx
+3. 容器一端放到新容器中，并修改名字为eth0，这个网卡/接口只在容器的名字空间可见
+4. 从网桥可以地址段中，获取一个空闲的地址分配给容器eth0，并配置默认路由到桥接网卡vethXX
 
 
-#### 外部访问容器
 
-容器中可以运行一些网络应用，要让外部也可以访问容器内的这些应用，可以通过-p或者-P参数来指定端口映射
+### 容器和docker0的虚拟网卡配对
 
-使用-P标记时，Docker会随机映射一个端口到内部容器开发的网络端口
+ip a命令，然后可以查看到对应的配对信息
 
-~~~shell
-$ docker run -d -P nginx:alpine
-
-$ docker container ls -l
-CONTAINER ID IMAGE COMMAND  CREATED  STATUS  PORTS NAMES
-fae320d08268    nginx:alpine   "/docker-entrypoint.…"   24 seconds ago      Up 20 seconds       0.0.0.0:32768->80/tcp   bold_mcnulty
-
-
-#可以看出32768映射到了容器的80端口，此时访问本机的32768端口即可访问容器内Nginx的默认界面
-#例如：localhost:32876即可访问Nginx的默认界面
-~~~
-
-使用-p时，可以指定要映射的端口，并且在一个指定端口上只可以绑定一个容器
-
-格式：ip:hostPort:containerPort 、ip::containerPort 、hostPort:containerPort
-
-##### 映射所有接口地址
-
-~~~shell
-$ docker run -d -p 80:80 nginx:alpine
-
-#hostPort:containerPort格式
-#本地的80端口映射到容器的80端口，此时默认会绑定本地所有接口上的所有地址
-~~~
-
-##### 映射到指定地址的指定端口
-
-~~~shell
-$ docker run -d -p 127.0.0.1:80:80 nginx:alpine
-
-#ip:hostPort:continerPort格式
-#指定映射使用一个特定地址，例如localhost
-~~~
-
-##### 映射到指定地址的任意端口
-
-~~~shell
-$ docker run -d -p 127.0.0.1::80 nginx:alpine
-
-#ip::containerPort
-#绑定localhost的任意端口到容器的80端口
-
-
-$ docker run -d -p 127.0.0.1:80:80/udp nginx:alpine
-#使用udp标记来指定udp端口
-~~~
+分别在host和container中运行指令`ethtool -S <interface>`，可以来确认这种对应关系
 
 
 
 
 
-#### 容器互联
 
-建议将容器加入自定义的Docker网络来连接多个容器，而不是采用--link参数
 
-##### 新建网络
+## 容器互联
+
+建议==将容器加入自定义的Docker网络来连接多个容器==，而不是采用--link参数
+
+
+
+新建网络
 
 ~~~shell
 $ docker network create -d bridge my-net
@@ -1047,7 +1028,9 @@ $ docker network create -d bridge my-net
 #overlay使用swarm 模式 ，后续swarm集群介绍
 ~~~
 
-##### 连接容器
+
+
+连接容器
 
 ~~~shell
 $ docker run -it --rm --name busybox1 --network my-net busybox sh
@@ -1082,15 +1065,21 @@ PING busybox2 (172.19.0.3): 56 data bytes
 
 
 
-##### Docker Compose
-
-后续单独章节介绍
 
 
 
 
+## 多物理机之间互联
 
-#### 配置DNS
+> 企业内部应用中或多物理机的集群中，==可能需要将多个物理主机的容器组到一个物理网络中==，那么就需要将这个网桥桥接到我们指定的网卡上
+
+![image-20230314111558982](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/docker_img/202303141116899.png)
+
+
+
+
+
+## 配置DNS
 
 Docker采用虚拟文件来挂载容器的3个相关配置文件
 
@@ -1124,21 +1113,202 @@ tmpfs on /etc/resolv.conf type tmpfs ...
 
 
 
-#### 多物理机之间互联的网络
+# Docker 数据管理
 
-> 企业内部应用中或多物理机的集群中，可能需要将多个物理主机的容器组到一个物理网络中，那么就需要将这个网桥桥接到我们指定的网卡上
-
-![image-20230314111558982](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/docker_img/202303141116899.png)
+Docker每一个容器里面的数据存储在哪里？
 
 
 
+Docker内部以及容器之间管理数据，容器中管理数据主要有两种方式
+
+- 数据卷（Data Volumes）
+- 挂载主机目录（Bind mounts)
+
+Docker将应用与运行的环境打包成镜像，并形成容器运行， Docker容器产生的数据，如果不通过docker commit生成新的镜像，使得数据做为镜像的一部分保存下来， 那么当容器删除后，数据自然也就没有了。 为了能保存数据在Docker中，我们使用卷，就是目录或文件，设计目的就是：数据的持久化，完全独立于容器的生存周期，因此Docker不会在容器删除时删除其挂载的数据卷
+
+
+
+## 数据卷
+
+> 数据卷的使用，类似与Linux下对目录或文件进行mount（挂载）
+>
+> 镜像中被指定为挂载点的目录中的文件，会复制到数据卷中（仅数据卷为空时会复制）
+
+
+
+**数据卷是一个可供一个或多个容器使用的特殊目录**，它绕过UFS，主要特性：
+
+1. 数据卷可以在容器之间共享和重用
+2. 对数据卷的修改会立马生效
+3. 对数据卷的更新，不用影响镜像
+4. 数据卷默认会一直存在，即使容器被删除，直到没有容器使用
+
+
+
+创建一个数据卷
+
+1. docker volume create my-volume
+2. 查看所有的数据卷：docker volume ls
+3. 查看指定数据卷的信息：docker volum inspect my-volume
+
+
+
+启动一个挂载数据卷的容器
+
+- 使用--mount参数，将数据卷挂载到容器里，在一次docker run中可以挂载多个数据卷。
+- 使用`-v`参数，创建一个数据卷，并挂载到容器里，在一次docker run中可以挂载多个数据卷。
+- 在dockerfile使用volume指定
+
+
+
+以下为通过nginx:alpine镜像来创建一个名为web的容器，并加载一个数据卷到容器的/usr/share/nginx/html目录
+
+~~~shell
+$ docker run -d -P --name web \
+    # -v my-vol:/usr/share/nginx/html \
+    --mount source=my-vol,target=/usr/share/nginx/html \
+    nginx:alpine
+~~~
+
+查看数据卷的具体信息：
+
+1. 查看web容器的信息：docker inspect web
+
+2. 数据卷在Mounts下面
+
+3. ~~~shell
+   "Mounts": [
+       {
+           "Type": "volume",
+           "Name": "my-volume",
+           "Source": "/var/lib/docker/volumes/my-volume/_data",
+           "Destination": "/usr/share/nginx/html",
+           "Driver": "local",
+           "Mode": "",
+           "RW": true,
+           "Propagation": ""
+       }
+   ],
+   ~~~
 
 
 
 
----
 
-### Docker  Compose
+删除数据卷
+
+~~~shell
+docker volume rm my-volume
+~~~
+
+数据卷是设计来持久化数据的，它的生命周期独立于容器，Doker不会在容器被删除后自动删除数据卷，如果需要在删除容器时，同时删除数据卷，需要使用命令删除数据卷
+
+
+
+## 挂载主机
+
+
+
+挂载一个主机目录作为数据卷
+
+> 挂载一个本地主机的目录，到容器中去
+
+注意：
+
+- **本地目录的路径必须是绝对路径，如果目录不存在 Docker 会自动为你创建它**
+- dockerfile是不支持这种用法的
+
+~~~shell
+$ docker run -d -P \
+    --name web \
+    # -v /src/webapp:/usr/share/nginx/html \
+    --mount type=bind,source=/src/webapp,target=/usr/share/nginx/html \
+    nginx:alpine
+~~~
+
+即：/src/webapp目录指向 《===》 容器内/usr/share/nginx/html目录，但是，删除容器后，主机上该目录的数据不会删除的
+
+
+
+
+
+挂载一个本地主机文件作为数据卷
+
+> 从主机挂载单个文件到容器中
+
+- `--mount` 
+- `-v`
+
+例如：记录容器输入过的命令
+
+~~~shell
+$ docker run --rm -it \
+   # -v $HOME/.bash_history:/root/.bash_history \
+   --mount type=bind,source=$HOME/.bash_history,target=/root/.bash_history \
+   ubuntu:18.04 \
+   bash
+
+root@2affd44b4667:/# history
+1  ls
+2  diskutil list
+~~~
+
+
+
+
+
+匿名挂载
+
+~~~shell
+[root@pdai ~]# docker run -d -P --name web -v /webapp-data training/webapp python app.py
+~~~
+
+`-v /webapp-data`这种挂载方式就是匿名卷挂载
+
+默认挂载到宿主机的/var/lib/docker/volumes/目录下生成的随机命名
+
+- 例如/var/lib/docker/volumes/随机哈希值_data
+
+
+
+## 命名卷挂载 与 绑定 挂载
+
+| **挂载类型** | **命令示例**                 | **宿主机路径**                           | **特点**               |
+| ------------ | ---------------------------- | ---------------------------------------- | ---------------------- |
+| 匿名卷       | `-v /webapp-data`            | /var/lib/docker/volumes/自动生成随机路径 | Docker 管理生命周期    |
+| 命名卷       | `-v webdata:/webapp-data`    | `/var/lib/docker/volumes/webdata`        | 可读性高，便于维护     |
+| 绑定挂载     | `-v /host/path:/webapp-data` | 用户指定绝对路径（如 `/data`）           | 直接操作宿主机文件系统 |
+
+
+
+## 数据卷容器
+
+Data Volume Container
+
+数据卷用于**主机与容器之间**共享数据
+
+如果有一些持续更新的数据需要在**容器与容器之间**共享，最好的办法就是创建**数据卷容器**
+
+数据卷容器，就是一个正常的docker容器，专门用来管理数据卷，其他容器可以通过它来共享数据
+
+`volumes-form`，使用该参数来引用数据卷容器
+
+
+
+## 数据备份、恢复、迁移数据卷
+
+可以利用数据卷容器，对其中的数据进行备份、恢复、迁移
+
+1. 创建数据卷容器，将其它容器的数据都备份到数据卷容器中
+2. 其它容器，直接挂载该容器卷即可获取到数据
+
+
+
+
+
+
+
+# Docker  Compose
 
 Docker Compose是Docker官方编排项目之一，负责快速的部署分布式应用，实现对Docker容器集群的快速编排
 
@@ -1384,7 +1554,7 @@ services:
 
 ---
 
-### Swarm mode
+# Swarm mode
 
 swarm mode内置K-V存储功能，提供了众多新特性，比如：具有容错能力的去中心化设计、内置服务发现、负载均衡、路由网格、动态伸缩、滚动更新、安全传输等。使得 Docker 原生的 `Swarm` 集群具备与 Mesos、Kubernetes 竞争的实力
 
