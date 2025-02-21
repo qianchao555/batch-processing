@@ -4,13 +4,13 @@
 
 
 
-#### 虚拟化技术分类
+## 虚拟化技术分类
 
 虚拟化技术可分为硬件的虚拟化和基于软件的虚拟化
 
 
 
-##### 软件虚拟化
+### 软件虚拟化
 
 1. 完全虚拟化
    - 虚拟机模拟完整的底层硬件环境和特权指令的执行过程，使得客户端操作系统可以独立运行
@@ -27,7 +27,7 @@
 
 
 
-#### LXC
+## LXC
 
 > Linux Container，Linux容器，是一种轻量级的虚拟化手段。它可以提供轻量级的虚拟化，以隔离进程和资源，而且不需要提供指令解释机制和全虚拟化的其他复杂性。
 >
@@ -289,47 +289,7 @@ $ docker image rm [选项] <镜像1> [<镜像2> ...]
 
 
 
-# 构建镜像
 
-如何构建我们自己的镜像？
-
-> 1. 通过docker commit命令，基于一个存在的容器构建出镜像
->   - 不建议采用这种方式构建镜像
-> 2. 编写dockerfile文件，并使用docker build命令来创建镜像
-
-
-
-例如
-
-~~~dockerfile
-From ubuntu
-MAINTAINER chao "chao"
-
-RUN /bin/echo 1234
-CMD /usr/sbin/ssh -D
-~~~
-
-接下来生成新的镜像文件
-
-~~~
-docker build -t chao/ubuntu:v1 .
-~~~
-
-注意：
-
-- v1：表示镜像的Tag标签
-- 每个指令都会在镜像上面创建新的层，每个指令的前缀必须是==大写==
-- `.`结尾表示Dockerfile文件所在的目录，可以使用绝对路径
-
-
-
-## 镜像底层原理
-
-1. 联合文件系统：UnionFS
-   - Union文件系统：是一种分层、轻量级且高性能的文件系统，它支持对文件系统的修改作为一次提交来一层层的叠加。同时，可以将不同目录挂载到同一个虚拟文件系统下
-   - AUFS、OberlayFS、Devicemapper都是一种UnionFS
-   - UnionFS是Docker镜像的基础，镜像可以通过分层来进行继承、基于基础镜像，可以制作各种具体的应用镜像
-   - 一次同时加载多个文件系统，但从外面看起来，只能看到一个文件系统，联合加载会把各层文件系统叠加起来，这样最终的文件系统会包含所有底层的文件和目录
 
 
 
@@ -367,21 +327,25 @@ RUN echo 'hello,Docker!'
 
 
 
-## FORM指定基础镜像
+## FORM基础镜像
 
 定制镜像，就是以一个基础镜像为基础，在其上进行定制
 
-Dockerfile中，**FROM 必须是第一条指令**
+Dockerfile中，**FROM 必须是第一条指令**,如果本地没有指定的镜像，会自动从公共库pull镜像
 
 在同一个Dockerfile中构建多个镜像时，可以使用多个FROM指令
 
+如果FROM没有指定镜像的Tag标签，那么默认使用latest标签
 
 
-## Maintainer
 
-说明新镜像的维护人信息，格式为MAINTAINER userName  userEmail
+## Maintainer/Label
 
-该指令不是必须的
+说明新镜像的维护人信息
+
+- 格式为MAINTAINER  <userName>  
+
+该指令不是必须的，该指令已经弃用了，现在用Label
 
 
 
@@ -391,12 +355,258 @@ Dockerfile中，**FROM 必须是第一条指令**
 
 
 
-Run是镜像创建阶段使用的命令，RUN命令在构建时会创建一个新层，并提交为新的镜像
+Run是镜像创建阶段使用的命令，每一条RUN命令会在构建时创建一个新层，并提交为新的镜像
 
-1. shell格式：RUN<命令>
-2. exec格式：RUN["可执行文件"，"参数一"，"参数二"]
+1. shell格式：RUN <命令>
+2. exec格式：RUN ["可执行文件"，"参数一"，"参数二"]
 
 
+
+- Run参数的缓存会在下一次构建的时候重用
+
+
+
+## CMD
+
+> CMD的目的：在启动容器的时候，提供一个默认的命令
+>
+> 如果用户启动容器时指定了运行的命令，则会覆盖CMD指令的命令
+>
+> CMD命令，在Dockerfile中只能被使用一次，如果有多个，那么只有最后一个会生效
+
+三种命令格式
+
+- CMD "executable","param1","param2"
+- CMD "param1","param2"
+- CMD command param1 param2
+
+
+
+CMD与RUN区别：
+
+- CMD会在启动容器的时候执行，build的时候不执行
+
+- RUN在build镜像的时候执行，构建镜像完成后，启动容器就与RUN无关了
+
+
+
+## EXPOSE
+
+告诉Docker服务端容器对外映射的本地端口，它本身并不进行端口的映射
+
+即：
+
+- 容器内的该应用可能在该端口上提供服务
+- 需要在docker run的时候使用-p(指定端口）或者-P（随机）生效
+
+~~~shell
+EXPOSE <port> [<port>...]
+~~~
+
+
+
+## ENV
+
+> 指定一个环境变量，会被后续RUN指令使用，并在容器运行时保留
+>
+> 即：在容器允许的生命周期内有效
+
+~~~shell
+ENV <key> <value>			#只能设置一个变量
+ENV <key>=<value>...		#允许一次设置多个变量
+ENV myName="qc" myCat="fz"
+~~~
+
+
+
+
+
+## ADD
+
+> 复制本地主机文件、目录或者远程Url下载，并添加到容器指定的路径中
+>
+> 支持正则匹配、支持url、解压
+
+~~~shell
+ADD <src>...<dest>
+
+# 将当前目录下的 app.py 文件复制到镜像的 /app 目录下
+ADD app.py /app/
+
+
+~~~
+
+
+
+## COPY
+
+> 复制新文件、目录，并添加到容器指定路径中
+
+~~~shell
+COPY <src>...<dest>
+~~~
+
+
+
+## Entrypoint
+
+> 配置容器启动后执行的命令，即容器启动时候的主程序
+>
+> 并且不可被docker run提供的参数覆盖，如果需要覆盖，可以使用docker run --entrypoint选项
+
+每个Dockerfile中，只能有一个Entrypoint，当指定多个时，只要最后一个生效
+
+~~~shell
+ENTRYPOINT "executable","param1","param2"
+ENTRYPOINT command param1 param2
+~~~
+
+~~~dockerfile
+FROM ubuntu
+ENTRYPOINT ["top","-b"] 	#top -b命令
+~~~
+
+
+
+## VOLUME
+
+定义匿名数据卷挂载
+
+~~~shell
+VOLUME /data
+~~~
+
+
+
+## USER
+
+> 指定容器运行时的用户名或ID
+>
+> 指定在容器内运行后续命令的用户和用户组
+
+~~~dockerfile
+USER <用户名>[:<用户组>]
+~~~
+
+
+
+## Arg
+
+> 定义构建参数变量，仅在构建时有效，即：定义一个变量，供其它地方引用
+
+~~~dockerfile
+ARG base_image=ubuntu:latest
+
+~~~
+
+
+
+
+
+## WorkDir
+
+> 配置后续命令的工作目录
+
+~~~dockerfile
+WORKDIR <路径> #这个路径是容器内的相对路径，建议使用绝对路径，相对路径是基于上一个workdir指令的路径的，可读性差一些
+
+FROM ubuntu
+WORKDIR /app #指定工作目录为/app
+RUN touch text.txt #在该目录下创建一个文件
+~~~
+
+
+
+## OnBuild
+
+> 当前所创建的镜像，作为其它新创建镜像的基础镜像
+
+~~~dockerfile
+ONBUILD <其它dockerfile指令> #除去这些命令外的之前指令都可以FROM、MAINTAINER、ONBUILD
+~~~
+
+其它镜像复用这个父镜像时，才会触发onbuild后面的相关指令（定义延迟执行的指令）
+
+
+
+
+
+## StopSignal
+
+> 设置容器停止信号
+
+
+
+## HealthCheck
+
+设置健康检查
+
+
+
+## From As
+
+> 多阶段构建，定义多阶段构建的命名
+
+~~~dockerfile
+FROM node:14 AS builderNode
+WORKDIR /app
+COPY . .
+RUN npm install && npm run build
+
+FROM nginx:alpine
+COPY --from=builderNode /app/dist /user/share/nginx/html
+~~~
+
+
+
+
+
+# 构建镜像
+
+如何构建我们自己的镜像？
+
+> 1. 通过docker commit命令，基于一个存在的容器构建出镜像
+>
+>   - 不建议采用这种方式构建镜像
+>
+> 2. 编写dockerfile文件，并使用docker build命令来创建镜像
+
+
+
+例如
+
+~~~dockerfile
+From ubuntu
+MAINTAINER chao "chao"
+
+RUN /bin/echo 1234
+CMD /usr/sbin/ssh -D
+~~~
+
+接下来生成新的镜像文件
+
+~~~
+docker build -t chao/ubuntu:v1 .
+~~~
+
+注意：
+
+- v1：表示镜像的Tag标签
+- 每个指令都会在镜像上面创建新的层，每个指令的前缀必须是==大写==
+- `.`结尾表示Dockerfile文件所在的目录，可以使用绝对路径
+
+
+
+## 镜像底层原理
+
+1. 联合文件系统：UnionFS
+
+   - Union文件系统：是一种分层、轻量级且高性能的文件系统，它支持对文件系统的修改作为一次提交来一层层的叠加。同时，可以将不同目录挂载到同一个虚拟文件系统下
+   - AUFS、OberlayFS、Devicemapper都是一种UnionFS
+   - UnionFS是Docker镜像的基础，镜像可以通过分层来进行继承、基于基础镜像，可以制作各种具体的应用镜像
+   - 一次同时加载多个文件系统，但从外面看起来，只能看到一个文件系统，联合加载会把各层文件系统叠加起来，这样最终的文件系统会包含所有底层的文件和目录
+
+   
 
 ## 构建镜像
 
@@ -1312,20 +1522,24 @@ Data Volume Container
 
 Docker Compose是Docker官方编排项目之一，负责快速的部署分布式应用，实现对Docker容器集群的快速编排
 
-Compose定位是：定义和运行对个Docker容器的应用
+Compose定位是：定义和运行多个Docker容器的应用
 
 它允许用户通过一个单独的docker-compose.yml文件来定义一组相关联的应用容器作为一个项目
 
 两个重要概念
 
-1. 服务：一个应用的容器，实际上可以包含若干运行相同镜像的容器实例
-2. 项目：由一个关联的应用容器组成的一个完整业务单元，在docker-compose.yml文件中定义
+1. 服务：一个应用的容器，实际上可以包含若干运行相同镜像的容器实例（一个服务提供多实例）
+2. 项目：由一个关联的应用容器组成的一个完整业务单元，在docker-compose.yml文件中定义（多个服务组成一个完整项目）
 
 Compose默认管理的对象是项目，通过子命令对项目中的一组容器进行便捷的生命周期管理
 
-#### 安装
 
-##### 二进制包
+
+## 安装
+
+docker compose是一个可行性的二进制文件，下载到bin目录，赋予执行权限即可
+
+
 
 从官方下载[Git hub Release](https://github.com/docker/compose/releases)编译好的二进制文件即可
 
@@ -1335,27 +1549,93 @@ $ sudo curl -L https://github.com/docker/compose/releases/download/1.27.4/docker
 # 国内用户可以使用以下方式加快下载
 $ sudo curl -L https://download.fastgit.org/docker/compose/releases/download/1.27.4/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
 
+#可执行权限
 $ sudo chmod +x /usr/local/bin/docker-compose
 ~~~
 
-#### 卸载
+
+
+## 卸载
 
 ~~~shell
-$ sudo rm /usr/local/bin/docker-compose
-
 #删除二进制文件即可
+$ sudo rm /usr/local/bin/docker-compose
 ~~~
 
-#### 使用
 
-##### 术语
 
-1. 服务：一个应用容器，实际上可以运行多个相同镜像的实例
-2. 项目：由一组关联的应用容器组成的一个完整业务单元
 
-一个项目可以由多个服务(容器)关联而成，Compose面向项目进行管理
 
-#### 命令
+## Compose模板文件
+
+模板文件是compose的核心，默认模板文件名为docker-compose.yml
+
+
+
+例如：一个wordpress网站，依赖mysql及redis
+
+~~~yaml
+version: '3' #docker compose的版本
+services:
+	mysql:
+		image: mysql:latest
+		ports: 
+			- "3306:3306"
+        enviroment:
+            Mysql_root_password: 123456
+        # 命名卷挂载: docker将容器内路径/var/lib/mysql目录挂载到宿主机mysql_data目录下
+        volumes:
+            mysql_data: /var/lib/mysql
+    reids:
+    	image: redis:latest
+    	ports: 
+    		- "6379:6379"
+    	volumes:
+    		- reids_data: /data
+    wordpress:
+    	image: wordpress:latest
+    	ports: 
+    		- "8080:80"
+    	enviroment:
+    		wp_db_host: mysql
+    		wp_db_user: root
+    		wp_db_password: 123
+    		wp_db_name: wordpress
+    		#redis配置
+    		redis_host: redis
+    		redis_port: 6379
+    	#依赖关系，确保服务启动之前，先启动依赖的服务
+    	depends_on:   
+    		- mysql
+    		- redis
+    		
+    		
+# 数据卷定义：docker compose启动服务时，会自动创建这些命名卷，通常是存储在宿主机的：/var/lib/docker/volumes/下面
+volumes:
+	mysql_data:
+		driver: local  #数据卷使用的驱动程序，默认这个，将数据存储在宿主机某个位置上
+  		driver_opts:	#不同的驱动有不同的选项
+    		type: 'none'    
+	redis_data:
+~~~
+
+
+
+## docker componse命令
+
+~~~shell
+# 启动容器
+docker-compose up -d
+
+# 重启
+docker-compose restart
+
+# 停止删除容器
+docker-compose down
+
+~~~
+
+
 
 docker-compose [command] --help
 
@@ -1498,49 +1778,6 @@ docker-compose [command] --help
 
 
 
-#### Compose模板文件
-
-模板文件是compose的核心，默认模板文件名为docker-compose.yml
-
-~~~shell
-version: "3"
-
-services:
-  webapp:
-    image: examples/web
-    ports:
-      - "80:80"
-    volumes:
-      - "/data"
-     
-#每个服务都必须通过image指令或build指令(需要dockerfile)等来自动构建生成镜像
-
-#如果使用 build 指令，在 Dockerfile 中设置的选项(例如：CMD, EXPOSE, VOLUME, ENV 等) 将会自动被获取，无需在 docker-compose.yml 中重复设置
-~~~
-
-1. build：指定Dockerfile所在文件夹的路径，compose将会利用它自动构建这个镜像，然后使用镜像
-
-   ~~~shell
-   version: '3'
-   services:
-     webapp:
-       build: ./dir
-   ~~~
-
-   也可以使用context指令指定Dockerfile所在文件夹的路径，dockerfile指令指定Dockerfile文件名，arg指令指定构建镜像时的变量
-
-   ~~~shell
-   version: '3'
-   services:
-     webapp:
-       build:
-         context: ./dir
-         dockerfile: Dockerfile-alternate
-         args:
-           buildno: 1
-   ~~~
-
-2. 更多命令参加[官方网站](https://docs.docker.com/compose/compose-file/)
 
 
 
@@ -1551,38 +1788,54 @@ services:
 
 
 
+# Swarm模式
 
----
+> Docker Swarm是Docker的集群管理工具
 
-# Swarm mode
+
 
 swarm mode内置K-V存储功能，提供了众多新特性，比如：具有容错能力的去中心化设计、内置服务发现、负载均衡、路由网格、动态伸缩、滚动更新、安全传输等。使得 Docker 原生的 `Swarm` 集群具备与 Mesos、Kubernetes 竞争的实力
 
 swarm是使用swarmKit构建的Docker引擎内置的集群管理和编排工具
 
-#### 节点
 
-运行Docker的主机可以主动初始化一个Swarm集器或者加入一个已存在的swarm集群，这样这个运行Docker的主机就成为一个swarm集群的节点。
+
+## 节点
+
+一个运行Docker的主机可以主动初始化一个Swarm机器或者加入一个已存在的swarm集群，这样这个运行Docker的主机就成为一个swarm集群的一个节点
+
+
+
+swarm集群节点由管理节点和工作节点构成
 
 节点分为管理节点和工作节点
 
-1. 管理节点：用于swarm集群的管理，docker swarm命令基本只能在管理节点执行(节点退出集群命令 docker swarm leave 可以在工作节点执行)。一个swarm集群可以有多个管理节点，但只有一个管理节点可以成为leader，leader通过raft协议实现
+1. 管理节点
 
-2. 工作节点：任务执行节点，管理节点将服务下发至工作节点执行，管理节点默认也可以作为工作节点，也可以通过配置让服务只运行在管理节点
+   - 一个swarm集群可以有多个管理节点，但只有一个管理节点可以成为leader，leader通过raft协议选举
+
+2. 工作节点
+
+   - 任务执行节点，管理节点将服务下发至工作节点执行，管理节点默认也可以作为工作节点，也可以通过配置让服务只运行在管理节点
+   - 主要负责运行相应的服务来执行任务（Task）
 
 3. 集群中管理节点于工作节点的关系
 
    ![image-20220130092459196](https://pic-typora-qc.oss-cn-chengdu.aliyuncs.com/img/image-20220130092459196.png)
 
-#### 服务和任务
 
-任务(Task)是swarm中最小的调度单位，目前来说就是一个单一的容器
 
-服务(Services)指一组任务的集合，服务定义了任务的属性，服务有两种模式
+## 服务和任务
+
+任务(Task)：是swarm中最小的调度单位，目前来说就是一个单一的容器
+
+服务(Services)：一组任务的集合，服务定义了任务的属性，服务有两种模式
 
 1. replicated Services：按照一定规则在各个工作节点上运行指定个数的任务
 2. global Services：每个工作节点上运行一个任务
 3. 这两种模式通过docker swarm create --mode参数指定
+
+
 
 容器、任务、服务的关系
 
@@ -1590,7 +1843,7 @@ swarm是使用swarmKit构建的Docker引擎内置的集群管理和编排工具
 
 
 
-#### 创建Swarm集群
+## 创建Swarm集群
 
 例子：创建一个管理节点，两个工作节点的swram集群
 
@@ -1639,7 +1892,7 @@ dxn1zf6l61qsb1josjja83ngz *  manager   Ready   Active        Leader
 
 
 
-#### 部署服务
+## 部署服务
 
 使用docker service命令来管理swarm集群中的服务，该命令只能在管理节点运行
 
@@ -1687,7 +1940,7 @@ $ docker service rm nginx
 
 
 
-#### 使用compose文件
+## 使用compose文件
 
 swarm集群中也可以使用compose文件来配置、启动多个服务
 
@@ -1777,7 +2030,7 @@ Removing network wordpress_default
 
 
 
-#### 管理配置信息
+## 管理配置信息
 
 在动态的、大规模的分布式集群上，管理和分发配置文件也是很重要的工作。传统的配置文件分发方式（如配置文件放入镜像中，设置环境变量，volume 动态挂载等）都降低了镜像的通用性。
 
@@ -1785,9 +2038,11 @@ Docker 新增了 `docker config` 子命令来管理集群中的配置信息，�
 
 注意：`config` 仅能在 Swarm 集群中使用。
 
+
+
 以在 Swarm 集群中部署 `redis` 服务为例
 
-##### 创建Config
+## 创建Config
 
 ~~~shell
 #新建redis.cof文件
@@ -1799,7 +2054,7 @@ port 6380
 $docker config create redis.conf redis.conf
 ~~~
 
-##### 查看config
+## 查看config
 
 ~~~shell
 $ docker config ls
@@ -1810,7 +2065,7 @@ yod8fx8iiqtoo84jgwadp86yk   redis.conf          4 seconds ago       4 seconds ag
 
 
 
-##### 创建redis服务
+## 创建redis服务
 
 ~~~shell
 $ docker service create \
@@ -1824,7 +2079,7 @@ $ docker service create \
 
 
 
-#### 滚动升级
+## 滚动升级
 
 docker service update命令，使用 `nginx:1.13.7-alpine` 镜像部署了一个名为 `nginx` 的服务。现在我们想要将 `NGINX` 版本升级到 `1.13.12`
 
@@ -1837,7 +2092,7 @@ $ docker service update \
 $ docker service update --image nginx:1.13.12-alpine  nginx
 ~~~
 
-#### 服务回退
+## 服务回退
 
 假设我们发现 nginx 服务的镜像升级到 `nginx:1.13.12-alpine` 出现了一些问题，我们可以使用命令一键回退
 
