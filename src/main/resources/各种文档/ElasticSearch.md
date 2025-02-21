@@ -1548,7 +1548,20 @@ bool 查询包含 4 种操作符
 
 #### boosting
 
-> 与bool查询不同，boosting是降低显示的权重/优先级(即 score)
+> 一种特殊的查询类型，boosting是==对查询结果的评分（score）进行调节==
+
+boosting查询的3个重要参数
+
+- positive：定义对文档评分有积极贡献的调节
+- negative: 定义对文档评分有消极影响的调节
+- negative_boost：指定一个比例，用于降低满足negative条件的文件评分
+  - 对于满足negative条件的文档，其评分会乘以negative_boost的值
+
+> [!NOTE]
+>
+> 注意虽然没有直接设置增加权重的postitive_boost，但是可以通过positive子查询，指定boost参数来调整正向的权重
+
+
 
 比如搜索逻辑是 name = 'apple' and type ='fruit'，对于只满足部分条件的数据，不是不显示，而是降低显示的优先级（即 score)
 
@@ -1593,9 +1606,26 @@ GET /test-dsl-boosting/_search
 
 #### constant_score
 
-固定分数查询：查询某个条件时，固定的返回指定的 score，显然当不需要计算 score 时，只需要 filter 条件即可，因为 filter 忽略分数
+> 固定分数查询
+>
+> 查询某个条件时，固定返回指定的 score的文档。显然当不需要计算 score 时，只需要 filter 条件即可，因为 filter 忽略分数
 
-例如：score 为 1.2
+
+
+忽略相关性评分问题
+
+- 固定分数查询中，文档的相关性评分被完全忽略，所有匹配的文档的分数值都被设置为一个固定值
+
+
+
+constant_score核心参数
+
+- filter:过滤文档，忽略分数值
+- boost:为所有匹配的文档分值设置一个加权值
+
+
+
+例如：score 为 1.2，先过滤（不会评分），在同一复制1.2分
 
 ~~~sh
 GET /test-dsl-constant/_search
@@ -1615,11 +1645,19 @@ GET /test-dsl-constant/_search
 
 #### dis_max
 
-disjunction max query：分离最大化查询，指的是，将任何与任意查询匹配的文档作为结果返回，但只将 **最佳匹配的评分作为查询的评分结果返回** 。
+> disjunction max query：分离最大化查询，或最佳匹配查询
+>
+> 指的是，将任何与任意查询匹配的文档作为结果返回，但只将 **最佳匹配的评分作为查询的评分结果返回** 。
 
-最佳匹配查询
 
-分离的意思是 或 or
+
+工作机制
+
+1. 对每个文档，分别计算所有子查询的得分
+2. 取得所有子查询中得分最高的值，作为文档的相关性得分
+3. 如果设置的`tie_breaker`,将其他子查询的得分乘以该值并累加到最终的得分中
+
+
 
 ~~~sh
 GET /test-dsl-dis-max/_search
@@ -1640,9 +1678,9 @@ GET /test-dsl-dis-max/_search
 
 #### function_score
 
-函数查询：自定义函数的方式计算 score
+>  函数查询：自定义函数的方式计算 score
 
-ES 的自定义函数：
+ES 可以自定义的函数：
 
 1. script_score：使用自定义的脚本来完全控制分值计算逻辑。如果需要预定义函数之外的功能，可以根据需要通过脚本进行实现
 2. weight：对每份文档使用一个简单的提升，且该提升不会被归约。当 weight 为 2 时，结果为 2 * _score
@@ -1653,8 +1691,6 @@ ES 的自定义函数：
 
 
 
-
----
 
 ### ES 查询-全文搜索
 
