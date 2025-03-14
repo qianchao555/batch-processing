@@ -211,6 +211,24 @@ Java DataBase Connectivity ：是Java和数据库之间的一个桥梁，是一�
 
 
 
+### 架构分层
+
+1. 接口层
+   1. Statement ID
+   2. Mapper接口
+2. 数据处理层
+   1. ParameterHandler参数处理
+   2. SqlSource SQL解析
+   3. Executor SQL执行
+   4. ResultSetHandler 结果处理和映射
+3. 框架支持层
+   1. SQL语句配置方式
+   2. 事务管理
+   3. 连接池管理
+   4. 缓存机制
+
+
+
 
 
 ### 总体架构设计
@@ -964,9 +982,10 @@ list<Stu> stuList=mapper.selectLike(val);
 
 mybatis提供了一个插件的功能，**虽然叫插件，但是它的实质是拦截器的功能**
 
-Mybatis插件存在的目的：相当于JavaWeb中的拦截器，可拦截要操作的四大对象，包装对象额外添加内容，使得Mybatis的灵活性更强
+Mybatis插件存在的目的：拦截要操作的四大对象，包装对象，额外添加内容，使得Mybatis的灵活性更强
 
-Mybatis支持用插件对四大核心对象进行拦截，对mybatis来说插件就是拦截器，用来增强核心对象的功能，增强功能本质上是借助第层的动态代理实现的，即：Mybatis的四大对象都是代理对象
+- Mybatis支持用插件对四大核心对象进行拦截，对mybatis来说插件就是拦截器，用来增强核心对象的功能
+- 增强功能本质上是借助动态代理实现的，即：Mybatis的四大对象都是代理对象
 
 
 
