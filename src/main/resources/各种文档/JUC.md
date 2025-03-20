@@ -452,7 +452,7 @@ public final synchronized void join(long millis)
 
 
 
-Java是如何解决并发问题的：volatile、JMM、happen-before原则等方式来解决上述3个问题
+Java是如何解决并发问题的：JMM
 
 
 
@@ -462,7 +462,16 @@ Java是如何解决并发问题的：volatile、JMM、happen-before原则等方�
 
 ### Java内存模型
 
-> Java线程之间的通信对程序员是完全透明的，内存可见性问题很容易困扰我们，Java内存模型将揭开它的神秘面纱
+> Java线程之间的通信是通过共享变量，隐式通信的，对程序员是完全透明的，内存可见性问题很容易困扰我们，Java内存模型将揭开它的神秘面纱
+
+学习JMM理解2点
+
+1. 核心知识点
+   - JMM本质上可以理解为，==Java内存模型规范了 JVM 如何提供按需禁用缓存和编译优化的方法==，具体就是
+     - synchronized、final、volatile
+     - happens-before规则
+2. 三个维度
+   - 可见性、有序性、原子性
 
 
 
@@ -629,7 +638,7 @@ as-if-serial语义：不管怎么重排序，程序(单线程)的执行结果不
 
 
 
-#### volatile保证可见性实现原理
+#### volatile保证可见性
 
 可见性问题：一个线程修改了共享变量的值，而另一个线程却看不到。引起可见性问题的主要原因是JMM，Java内存模型，即：每条线程拥有自己的的一个缓存区—线程工作内存
 
@@ -683,7 +692,8 @@ volatile禁止指令重排
 
 #### volatile不完全保证原子性
 
-> Volatile不能完全保证原子性，只能保证单次的读/写操作具有原子性
+> 1. Volatile不能完全保证原子性
+> 2. 只能保证单次的读/写操作具有原子性（真的long/double）
 
 但是，例如：i++、--i 等操作是不能保证原子性的
 
@@ -712,6 +722,14 @@ i++;
 2. cpu切换到Thread1时，Thread1就会将data = 0 use 进cpu里面计算data++的操作，但是没来得及将计算结果data = 1, assign回Thread1的工作内存中。cpu此时切换到了Thread2，然后在Thread2线程也做了同样的操作（将data = 0 use进cpu并执行data++），继续assign回Thread2的工作内存，并store+write将data = 1写回主存。
 3. 因为data是用volatile修饰的，根据缓存一致性协议，其他的线程（这里指的是Thread1）就会立即知道自己工作内存中的数据（data = 0）已经失效了。然而，并没有用！因为Thread1之前已经将data = 0 use 进cpu进行计算去了，cpu切换回Thread1时，Thread1将之前计算好的data = 1 assign 到自己的工作内存中，并store+write写回主存。
 4. 通过以上的执行顺序，两个线程分别对data做了一次data++操作之后，得到的data = 1 而不是我们预期中的data = 2
+
+
+
+注意：
+
+- 只有再次读取volatile变量的时候，才会发现工作内存的副本失效，并强制从主内存加载新值
+- 读取到工作内存中值，后续操作时，即使该变量此时被其他线程修改了，并写会主存了
+- vol写 happens 读  ：只能保证单个（次）读、写操作的顺序，无法保证复合操作的原子性
 
 
 
@@ -804,6 +822,8 @@ public class CheesyCounter {
 
 ##### 单例-双重校验
 
+> 经典案例
+
 ~~~java
 class Singleton {
     private volatile static Singleton instance;
@@ -822,11 +842,23 @@ class Singleton {
 }
 ~~~
 
+出现问题的地方：创建对象的时候，实例化一个对象的过程分为三个步骤
+
+1. 为其分配内存空间
+2. 初始化对象（调用构造方法，设置字段值）
+3. 将引用执行内存地址
+
+核心问题点：JVM会对底层指令进行重排序优化，单线程不会有问题，多线程就会出现可能看到的instance不为null,因为2、3指令重排了
+
+解决：volatile，编译器或者CPU不会对vo
+
+latile变量的读写操作进行重排序优化
+
+- 同时还提供了可见性：使得当instance被线程写入后，其他线程立即可以看到最新值
 
 
 
-
-
+另外，双重校验的目的是：减少同步的次数，只有第一次创建实例时需要同步，减少线程阻塞唤醒的消耗，更加高效
 
 
 
@@ -946,27 +978,11 @@ class Singleton {
 
 
 
----
-
-### JUC正式开始—JUC中主要包含哪些部分
-
-Lock框架
-
-Tools类：CountDownLatch、CyclicBarrier、Semaphore、Exchager
-
-Collections：并发集合
-
-Atomic：原子类
-
-Executors：线程池
 
 
 
 
 
-
-
----
 
 ### Java中的锁
 
